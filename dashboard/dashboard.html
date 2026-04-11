@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>SPOT</title>
+
+  <link rel="stylesheet" href="dashboard.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+
+<body>
+
+<div class="sidebar">
+  <div class="sidebar-top">
+    <button class="icon-btn">
+      <img src="4.png">
+    </button>
+    <span class="icon-label">Saved</span>
+  </div>
+
+  <div class="sidebar-bottom">
+    <button class="icon-btn">
+      <img src="3.png">
+    </button>
+  </div>
+</div>
+
+<div class="search-bar">
+  <span class="search-icon">🔍</span>
+  <input id="search-input" placeholder="Search location...">
+  <button class="filter-btn">
+    <img src="5.png">
+  </button>
+</div>
+
+<div id="map"></div>
+
+<div id="street-view"></div>
+<button id="closeSV">✕ Close</button>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="dashboard.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,163 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  overflow: hidden;
+}
+
+#map {
+  width: 100vw;
+  height: 100vh;
+}
+
+.sidebar {
+  width: 70px;
+  background: #dce5ef;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 0;
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 1002;
+}
+
+.sidebar-top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.sidebar-bottom {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.icon-btn {
+  width: 44px;
+  height: 44px;
+  background: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  transition: transform 0.2s, box-shadow 0.2s;
+  border: none;
+}
+
+.icon-btn:hover {
+  transform: scale(1.08);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+.icon-btn img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.icon-label {
+  font-size: 10px;
+  color: #4a5568;
+  font-weight: 500;
+  text-align: center;
+}
+
+.search-bar {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: white;
+  border-radius: 25px;
+  padding: 10px 16px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+  z-index: 1001;
+  width: 340px;
+}
+
+.search-bar input {
+  border: none;
+  outline: none;
+  font-size: 14px;
+  flex: 1;
+  background: transparent;
+  color: #333;
+}
+
+.search-bar input::placeholder {
+  color: #aaa;
+}
+
+.search-icon {
+  color: #888;
+  font-size: 16px;
+}
+
+.filter-btn {
+  width: 36px;
+  height: 36px;
+  background: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  flex-shrink: 0;
+  transition: transform 0.2s;
+}
+
+.filter-btn:hover {
+  transform: scale(1.08);
+}
+
+.filter-btn img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+#street-view {
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
+  width: 320px;
+  height: 220px;
+  border-radius: 12px;
+  overflow: hidden;
+  display: none;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  z-index: 1001;
+}
+
+#closeSV {
+  position: absolute;
+  right: 25px;
+  bottom: 250px;
+  background: white;
+  border: none;
+  border-radius: 8px;
+  padding: 5px 12px;
+  cursor: pointer;
+  display: none;
+  z-index: 1002;
+  font-size: 13px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
