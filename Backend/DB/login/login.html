@@ -1,68 +1,70 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <title>SPOT</title>
-
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <link rel="stylesheet" href="login.css">
 </head>
 
 <body>
 
-<div class="left">
-  <a class="about-btn" href="#">ABOUT US</a>
+  <div class="left">
+    <a class="about-btn" href="#">ABOUT US</a>
 
-  <div>
-    <img src="Spot.png" width="120">
-    <h1>Hello user, Welcome!</h1>
-    <p class="tagline">
-      Helping you choose the perfect business location through smart data analysis.
-    </p>
-  </div>
-
-  <div class="footer">&copy; 2025 Spot All Rights Reserved</div>
-</div>
-
-<div class="right">
-  <div class="form-box">
-
-    <img src="Spot.png" width="100" class="logo">
-
-    <div id="login-form">
-      <h2>Login to your account</h2>
-      <p class="note">
-        Don't have an account yet?
-        <a onclick="showRegister()">Click here to create.</a>
+    <div>
+      <img src="Spot.png" width="120">
+      <h1>Hello user, Welcome!</h1>
+      <p class="tagline">
+        Helping you choose the perfect business location through smart data analysis.
       </p>
-
-      <label>Username</label>
-      <input type="text" id="login-username" placeholder="Enter your username">
-
-      <label>Password</label>
-      <input type="password" id="login-password" placeholder="Enter your password">
-
-      <button onclick="login()">Login account</button>
     </div>
 
-    <div id="register-form" style="display:none;">
-      <h2>Create your account</h2>
-      <p class="note">
-        Already have an account?
-        <a onclick="showLogin()">Login here</a>
-      </p>
-
-      <label>Username</label>
-      <input type="text" id="reg-username"  placeholder="Create your username">
-
-      <label>Password</label>
-      <input type="password" id="reg-password"  placeholder="Create your password" >
-
-      <button onclick="register()">Create account</button>
-    </div>
-
+    <div class="footer">&copy; 2025 Spot All Rights Reserved</div>
   </div>
-</div>
 
-<script src="login.js"></script>
+  <div class="right">
+    <div class="form-box">
+
+      <img src="Spot.png" width="100" class="logo">
+
+      <div id="login-form">
+        <h2>Login to your account</h2>
+        <p class="note">
+          Don't have an account yet?
+          <a onclick="showRegister()">Click here to create.</a>
+        </p>
+
+        <label>Username</label>
+        <input type="text" id="login-username" placeholder="Enter your username">
+
+        <label>Password</label>
+        <input type="password" id="login-password" placeholder="Enter your password">
+
+        <button onclick="login()">Login account</button>
+      </div>
+
+      <div id="register-form" style="display:none;">
+        <h2>Create your account</h2>
+        <p class="note">
+          Already have an account?
+          <a onclick="showLogin()">Login here</a>
+        </p>
+
+        <label>Username</label>
+        <input type="text" id="reg-username" placeholder="Create your username">
+
+        <label>Password</label>
+        <input type="password" id="reg-password" placeholder="Create your password">
+
+        <button onclick="register()">Create account</button>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="login.js"></script>
 </body>
+
 </html>
