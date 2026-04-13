@@ -5,57 +5,6 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 19
 }).addTo(map);
 
-const redIcon = new L.Icon({
-  iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
-
-const markersLayer = L.layerGroup().addTo(map);
-
-async function loadBusinesses() {
-  try {
-    const res = await fetch('/api/businesses');
-    const data = await res.json();
-
-    console.log("API DATA:", data);
-
-    if (!Array.isArray(data)) {
-      console.error("Invalid API response");
-      return;
-    }
-
-    data.forEach(b => {
-
-      const lat = Number(b.lat);
-      const lon = Number(b.lon);
-
-      if (Number.isFinite(lat) && Number.isFinite(lon)) {
-
-        const marker = L.marker([lat, lon], { icon: redIcon });
-
-        marker.bindPopup(`
-          <b>${b.business_name || ''}</b><br>
-          ${b.address || ''}
-        `);
-
-        markersLayer.addLayer(marker);
-      }
-
-    });
-
-    console.log("Markers loaded:", markersLayer.getLayers().length);
-
-  } catch (error) {
-    console.error("Failed to load businesses:", error);
-  }
-}
-
-loadBusinesses();
-
 map.on('click', function(e) {
   const lat = e.latlng.lat.toFixed(6);
   const lng = e.latlng.lng.toFixed(6);
@@ -105,7 +54,7 @@ input.addEventListener('keydown', async function(e) {
 
     map.setView(latlng, 16);
 
-    L.marker(latlng, { icon: redIcon })
+    L.marker(latlng)
       .addTo(map)
       .bindPopup(display_name)
       .openPopup();

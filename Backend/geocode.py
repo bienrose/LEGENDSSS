@@ -7,7 +7,7 @@ from tqdm import tqdm
 # =========================
 # 1. LOAD EXCEL FILE
 # =========================
-df = pd.read_excel("Classified_Small_SMES_UPDATED.xlsx")
+df = pd.read_excel("Classified_MICRO_SMES_UPDATED.xlsx")
 
 # CLEAN DATA
 df = df.dropna(subset=["BUSINESS ADDRESS"])

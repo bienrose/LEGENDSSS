@@ -7,7 +7,6 @@ const path = require("path");
 const app = express();
 
 const db = new sqlite3.Database("./database.db");
-const geoDB = new sqlite3.Database("C:/Users/PLP/LEGENDSSS/Backend/geocoding.db");
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -91,26 +90,6 @@ app.get("/dashboard", (req, res) => {
 app.post("/logout", (req, res) => {
   req.session.destroy();
   res.send("Logged out");
-});
-
-app.get("/api/businesses", (req, res) => {
-
-  console.log("API CALLED");
-
-  geoDB.all("SELECT * FROM geocoded", [], (err, rows) => {
-
-    if (err) {
-      console.error("SQL ERROR:", err.message);
-      return res.status(500).json({ error: err.message });
-    }
-
-    console.log("ROW COUNT:", rows.length);
-
-    console.log("SAMPLE ROW:", rows[0]);
-
-    res.json(rows);
-  });
-
 });
 
 app.listen(3000, () => {
