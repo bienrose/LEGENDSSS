@@ -11,31 +11,40 @@
 
 <div class="sidebar">
   <div class="sidebar-top">
-    <button class="icon-btn">
+
+    <button class="icon-btn" id="saved-btn">
       <img src="4.png">
     </button>
     <span class="icon-label">Saved</span>
+
   </div>
 
   <div class="sidebar-bottom">
-    <button class="icon-btn">
+
+    <button class="icon-btn" id="profile-btn">
       <img src="3.png">
     </button>
+
   </div>
 </div>
 
 <div class="search-bar">
   <span class="search-icon">🔍</span>
   <input id="search-input" placeholder="Search location...">
+
   <button class="filter-btn">
     <img src="5.png">
   </button>
 </div>
 
-<div id="map"></div>
 
-<div id="street-view"></div>
-<button id="closeSV">✕ Close</button>
+<div id="map" style="height: 100vh; width: 100%;"></div>
+
+
+<div id="street-view" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:999;"></div>
+
+<button id="closeSV" style="display:none; position:fixed; top:20px; right:20px; z-index:1000;">
+</button>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="dashboard.js"></script>
