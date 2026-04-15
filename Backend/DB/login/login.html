@@ -1,70 +1,76 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta charset="UTF-8">
-  <title>SPOT</title>
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <link rel="stylesheet" href="login.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Your App</title>
+    <link rel="stylesheet" href="login.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
-
 <body>
-
-  <div class="left">
-    <a class="about-btn" href="about_us.html">ABOUT US</a>
-
-    <div>
-      <img src="Spot.png" width="120">
-      <h1>Hello user, Welcome!</h1>
-      <p class="tagline">
-        Helping you choose the perfect business location through smart data analysis.
-      </p>
+    <div class="left">
+        <div>
+            <a class="about-btn" href="about_us.html">ABOUT US</a>
+        </div>
+        <div>
+            <h1>Hello user, Welcome!</h1>
+            <div class="tagline">Helping you choose the perfect business location through smart data analysis.
+            </div>
+        </div>
+        <div class="footer">© 2024 Your Company. All rights reserved.</div>
     </div>
 
-    <div class="footer">&copy; 2025 Spot All Rights Reserved</div>
-  </div>
+    <div class="right">
+        <div id="login-form" class="form-box">
+            <img src="Spot.png" alt="Logo" class="logo" style="width: 80px;">
+            <h2>LOGIN TO YOUR ACCOUNT</h2>
+            <div class="note">Don't have an account? <a onclick="showRegister()">Sign up</a></div>
+            
+            <label>Username</label>
+            <input type="text" id="login-username" placeholder="Enter your username">
+            
+            <label>Password</label>
+            <input type="password" id="login-password" placeholder="Enter your password">
+            
+            <button onclick="login()">Login</button>
+            <p>Forgot password?</p>
+        </div>
 
-  <div class="right">
-    <div class="form-box">
+        <div id="register-form" class="form-box" style="display: none;">
+            <img src="Spot.png" alt="Logo" class="logo" style="width: 80px;">
+            <h2>CREATE AN ACCOUNT</h2>
+            <div class="note">Already have an account? <a onclick="showLogin()">Sign in</a></div>
+            
+            <label>Full Name</label>
+            <input type="text" id="reg-fullname" placeholder="Enter your full name">
+            
+            <label>Email</label>
+            <input type="text" id="reg-email" placeholder="Enter your email">
+            
+            <label>Username</label>
+            <input type="text" id="reg-username" placeholder="Choose a username">
+            
+            <label>Password</label>
+            <input type="password" id="reg-password" placeholder="Create a password">
+            
+            <button onclick="register()">Register</button>
+        </div>
 
-      <img src="Spot.png" width="100" class="logo">
-
-      <div id="login-form">
-        <h2>Login to your account</h2>
-        <p class="note">
-          Don't have an account yet?
-          <a onclick="showRegister()">Click here to create.</a>
-        </p>
-        
-        <label>Username</label>
-        <input type="text" id="login-username" placeholder="Enter your username">
-
-        <label>Password</label>
-        <input type="password" id="login-password" placeholder="Enter your password">
-
-        <button onclick="login()">Login account</button>
-      </div>
-
-      <div id="register-form" style="display:none;">
-        <h2>Create your account</h2>
-        <p class="note">
-          Already have an account?
-          <a onclick="showLogin()">Login here</a>
-        </p>
-
-        <label>Username</label>
-        <input type="text" id="reg-username" placeholder="Create your username">
-
-        <label>Password</label>
-        <input type="password" id="reg-password" placeholder="Create your password">
-
-        <button onclick="register()">Create account</button>
-      </div>
-
+        <div id="verification-section" class="form-box" style="display: none;">
+            <img src="Spot.png" alt="Logo" class="logo" style="width: 80px;">
+            <h2>VERIFY YOUR EMAIL</h2>
+            <div class="note">We sent a 6-digit code to your email</div>
+            
+            <label>Verification Code</label>
+            <input type="text" id="verification-code-input" maxlength="6" placeholder="Enter 6-digit code">
+            
+            <button onclick="verifyCode()">Verify Account</button>
+            <button onclick="resendVerificationCode()" style="background-color: #4a9fd4; margin-top: 5px;">Resend Code</button>
+            <button onclick="showRegister()" style="background-color: #6e99b4; margin-top: 5px;">Back to Registration</button>
+        </div>
     </div>
-  </div>
 
-  <script src="login.js"></script>
+    <script src="login.js"></script>
 </body>
-
 </html>
