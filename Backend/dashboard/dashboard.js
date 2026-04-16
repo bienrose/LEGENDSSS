@@ -270,7 +270,7 @@ function renderSavedPanel() {
         <div class="saved-card-title">Recommended Businesses in ${escapeHtml(loc.locationName)}</div>
         <div class="saved-card-actions">
           <button class="card-icon-btn" title="Unsave" onclick="promptUnsaveLocation('${loc.id}')">
-            <img src="4.png" alt="unsave">
+            <img src="save.png" alt="unsave">
           </button>
           <button class="card-icon-btn" title="Toggle details" onclick="toggleSavedCard('${loc.id}', this)">
             <img src="down.png" alt="expand" class="collapsible-arrow">

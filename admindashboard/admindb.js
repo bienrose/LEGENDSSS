@@ -33,13 +33,3 @@ const bars = [
     logoutModal.classList.remove('open');
     alert('You have been logged out.');
   });
-
-  document.getElementById('add-data-btn').addEventListener('click', () => {
-    alert('Add data — connect your backend here.');
-  });
-  document.getElementById('edit-data-btn').addEventListener('click', () => {
-    alert('Edit data — connect your backend here.');
-  });
-  document.getElementById('delete-data-btn').addEventListener('click', () => {
-    alert('Delete data — connect your backend here.');
-  });

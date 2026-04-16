@@ -2,7 +2,7 @@
       --navy:       #1a3a5c;
       --navy-dark:  #122840;
       --sidebar-bg: #d6e4f0;
-      --content-bg: #eaf1f8;
+      --content-bg: #ffffff;
       --card-bg:    #dce8f2;
       --card-bg2:   #c8daea;
       --btn-bg:     #cfdde9;
@@ -82,6 +82,16 @@
     }
     .nav-icon svg { width: 20px; height: 20px; }
 
+    #logout-nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  justify-content: flex-start;
+  padding: 10px 22px;
+  cursor: pointer;
+}
+
     .sidebar-bottom { margin-top: auto; width: 100%; padding: 0 10px; }
 
     .main {
@@ -110,7 +120,7 @@
       box-shadow: var(--shadow);
     }
     .users-count {
-      font-size: 28px; font-weight: 700; color: var(--text-muted);
+      font-size: 28px; font-weight: 400; color: var(--text-muted);
       line-height: 1;
     }
     .users-label {
@@ -125,7 +135,7 @@
       box-shadow: var(--shadow);
     }
     .search-card-title {
-      font-size: 17px; font-weight: 900; color: var(--navy);
+      font-size: 17px; font-weight: 600; color: var(--navy);
       margin-bottom: 14px;
     }
     .biz-list { list-style: disc; padding-left: 20px; display: flex; flex-direction: column; gap: 5px; }
@@ -138,8 +148,8 @@
       background: var(--btn-bg);
       border: none; border-radius: 10px;
       padding: 13px 0;
-      font-family: 'Nunito', sans-serif;
-      font-size: 14px; font-weight: 700; color: var(--navy);
+      font-family: 'Arial', sans-serif;
+      font-size: 14px; font-weight: 400; color: var(--navy);
       cursor: pointer;
       transition: background 0.18s, transform 0.12s;
       width: 100%;
@@ -168,7 +178,7 @@
     }
     .axis-labels {
       display: flex; justify-content: space-between;
-      flex: 1; font-size: 12px; font-weight: 700; color: var(--text-muted);
+      flex: 1; font-size: 12px; font-weight: 400; color: var(--text-muted);
     }
 
     .bar-row {
@@ -176,7 +186,7 @@
     }
     .bar-label {
       width: 160px; min-width: 160px;
-      font-size: 13.5px; font-weight: 700; color: var(--navy);
+      font-size: 13.5px; font-weight: 400; color: var(--navy);
       text-align: right; padding-right: 12px; flex-shrink: 0;
     }
     .bar-track {
@@ -192,12 +202,12 @@
       display: flex; align-items: center;
     }
     .bar-pct {
-      font-size: 13px; font-weight: 800; color: var(--white);
+      font-size: 13px; font-weight: 500; color: var(--white);
       padding-left: 12px; white-space: nowrap;
     }
 
     .bar-pct-outside {
-      font-size: 13px; font-weight: 800; color: var(--navy);
+      font-size: 13px; font-weight: 500; color: var(--navy);
       margin-left: 8px; white-space: nowrap;
     }
 
@@ -219,22 +229,22 @@
       padding: 30px 28px 22px; width: 300px;
       box-shadow: 0 8px 32px rgba(0,0,0,0.18); text-align: center;
     }
-    .modal-box h3 { font-size: 18px; font-weight: 900; color: var(--navy); margin-bottom: 8px; }
+    .modal-box h3 { font-size: 18px; font-weight: 600; color: var(--navy); margin-bottom: 8px; }
     .modal-box p  { font-size: 14px; color: #718096; margin-bottom: 24px; }
     .modal-actions { display: flex; gap: 10px; }
     .modal-cancel {
       flex: 1; padding: 11px; border: 1.5px solid #cbd5e0;
       background: white; border-radius: 10px;
-      font-family: 'Nunito', sans-serif;
-      font-size: 14px; font-weight: 700; color: #4a5568;
+      font-family: 'Arial', sans-serif;
+      font-size: 14px; font-weight: 400; color: #4a5568;
       cursor: pointer; transition: background 0.15s;
     }
     .modal-cancel:hover { background: #f7fafc; }
     .modal-confirm {
       flex: 1; padding: 11px; border: none;
       background: #e53e3e; border-radius: 10px;
-      font-family: 'Nunito', sans-serif;
-      font-size: 14px; font-weight: 700; color: white;
+      font-family: 'Arial', sans-serif;
+      font-size: 14px; font-weight: 400; color: white;
       cursor: pointer; transition: background 0.15s;
     }
     .modal-confirm:hover { background: #c53030; }
