@@ -182,7 +182,6 @@ button:disabled {
     margin-top: 10px;
 }
 
-/* Responsive adjustments for verification section */
 @media (max-width: 768px) {
     .form-box {
         width: 280px;
@@ -194,4 +193,14 @@ button:disabled {
         font-size: 16px;
         letter-spacing: 3px;
     }
+}
+.Forgot-Pass{
+  text-align: left;
+  margin-top: 10px;
+  margin-left: 14px;
+  font-size: 12px;
+}
+.Forgot-Pass a {
+  color: #4a9fd4;
+  cursor: pointer; 
 }
