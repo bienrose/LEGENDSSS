@@ -1,6 +1,5 @@
 console.log("login.js loaded");
 
-// ========== Device ID Management ==========
 function getDeviceId() {
   let deviceId = localStorage.getItem('deviceVerificationId');
   if (!deviceId) {
@@ -11,6 +10,12 @@ function getDeviceId() {
 }
 
 function showRegister() {
+  document.getElementById("login-form").style.display = "none";
+  document.getElementById("register-form").style.display = "block";
+  document.getElementById("verification-section").style.display = "none";
+}
+
+function showForgotPassword() {
   document.getElementById("login-form").style.display = "none";
   document.getElementById("register-form").style.display = "block";
   document.getElementById("verification-section").style.display = "none";
