@@ -67,6 +67,49 @@
             <button onclick="resendVerificationCode()">Resend Code</button>
             <button onclick="showRegister()">Back to Registration</button>
         </div>
+
+                <!-- Forgot Password Section -->
+        <div id="forgot-password-section" class="form-box" style="display: none;">
+            <img src="Spot.png" alt="Logo" class="logo">
+            <h2>RESET PASSWORD</h2>
+            <div class="note">Enter your email to reset your password</div>
+            
+            <label>Email Address</label>
+            <input type="text" id="forgot-email" placeholder="Enter your registered email">
+            
+            <button onclick="sendForgotPasswordCode()">Send Reset Code</button>
+            <button onclick="showLogin()">Back to Login</button>
+        </div>
+
+        <!-- Forgot Password Verification Section -->
+        <div id="forgot-verification-section" class="form-box" style="display: none;">
+            <img src="Spot.png" alt="Logo" class="logo">
+            <h2>VERIFY RESET CODE</h2>
+            <div class="note">We sent a 6-digit code to your email</div>
+            
+            <label>Verification Code</label>
+            <input type="text" id="forgot-code-input" maxlength="6" placeholder="Enter 6-digit code">
+            
+            <button onclick="verifyForgotCode()">Verify Code</button>
+            <button onclick="showForgotPassword()">Back</button>
+        </div>
+
+        <!-- Reset Password Section -->
+        <div id="reset-password-section" class="form-box" style="display: none;">
+            <img src="Spot.png" alt="Logo" class="logo">
+            <h2>CREATE NEW PASSWORD</h2>
+            <div class="note">Enter your new password below</div>
+            
+            <label>New Password</label>
+            <input type="password" id="new-password" placeholder="Enter new password">
+            
+            <label>Confirm Password</label>
+            <input type="password" id="confirm-password" placeholder="Confirm new password">
+            
+            <button onclick="resetPassword()">Reset Password</button>
+            <button onclick="showLogin()">Back to Login</button>
+        </div>
+
     </div>
 
     <script src="login.js"></script>

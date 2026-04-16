@@ -300,7 +300,6 @@ app.post("/login", (req, res) => {
     });
   });
 });
-// ========== END LOGIN ==========
 
 app.get("/dashboard", (req, res) => {
   if (!req.session.user) {
@@ -334,7 +333,6 @@ app.get("/user-info", (req, res) => {
   });
 });
 
-// Clean up expired pending verifications every hour
 setInterval(() => {
   const now = new Date();
   for (const [tempId, data] of pendingVerifications.entries()) {
@@ -343,6 +341,155 @@ setInterval(() => {
     }
   }
 }, 60 * 60 * 1000);
+
+const forgotPasswordRequests = new Map(); 
+app.post("/forgot-password", async (req, res) => {
+    const { email } = req.body;
+    
+    if (!email) {
+        return res.status(400).json({
+            success: false,
+            message: "Email is required"
+        });
+    }
+    
+    try {
+        const [users] = await promisePool.query(
+            "SELECT id, username FROM users WHERE email = ?",
+            [email]
+        );
+        
+        if (users.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "No account found with this email"
+            });
+        }
+        
+        const user = users[0];
+        const verificationCode = generateVerificationCode();
+        const codeExpiry = new Date();
+        codeExpiry.setMinutes(codeExpiry.getMinutes() + 10);
+        
+        forgotPasswordRequests.set(email, {
+            code: verificationCode,
+            expiresAt: codeExpiry,
+            userId: user.id
+        });
+        
+        await sendVerificationCode(email, user.username, verificationCode);
+        
+        res.json({
+            success: true,
+            message: "Verification code sent to your email"
+        });
+    } catch (error) {
+        console.error("Forgot password error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Server error"
+        });
+    }
+});
+
+app.post("/verify-forgot-code", async (req, res) => {
+    const { email, code } = req.body;
+    
+    if (!email || !code) {
+        return res.status(400).json({
+            success: false,
+            message: "Email and code are required"
+        });
+    }
+    
+    const request = forgotPasswordRequests.get(email);
+    
+    if (!request) {
+        return res.status(400).json({
+            success: false,
+            message: "No reset request found. Please request a new code."
+        });
+    }
+    
+    if (new Date() > new Date(request.expiresAt)) {
+        forgotPasswordRequests.delete(email);
+        return res.status(400).json({
+            success: false,
+            message: "Code has expired. Please request a new code."
+        });
+    }
+    
+    if (request.code !== code) {
+        return res.status(400).json({
+            success: false,
+            message: "Invalid code. Please try again."
+        });
+    }
+    
+    res.json({
+        success: true,
+        message: "Code verified. You can now reset your password."
+    });
+});
+
+app.post("/reset-password", async (req, res) => {
+    const { email, newPassword } = req.body;
+    
+    if (!email || !newPassword) {
+        return res.status(400).json({
+            success: false,
+            message: "Email and new password are required"
+        });
+    }
+    
+    if (newPassword.length < 6) {
+        return res.status(400).json({
+            success: false,
+            message: "Password must be at least 6 characters"
+        });
+    }
+    
+    const request = forgotPasswordRequests.get(email);
+    
+    if (!request) {
+        return res.status(400).json({
+            success: false,
+            message: "No verified reset request found. Please start over."
+        });
+    }
+    
+    try {
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        
+        await promisePool.query(
+            "UPDATE users SET password = ? WHERE email = ?",
+            [hashedPassword, email]
+        );
+        
+        forgotPasswordRequests.delete(email);
+        
+        res.json({
+            success: true,
+            message: "Password reset successfully!"
+        });
+    } catch (error) {
+        console.error("Reset password error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Server error"
+        });
+    }
+});
+
+setInterval(() => {
+    const now = new Date();
+    for (const [email, data] of forgotPasswordRequests.entries()) {
+        if (now > new Date(data.expiresAt)) {
+            forgotPasswordRequests.delete(email);
+        }
+    }
+}, 60 * 60 * 1000);
+
 
 app.listen(3000, () => {
   console.log("Server running on http://localhost:3000");

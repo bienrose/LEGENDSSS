@@ -212,3 +212,26 @@ button:disabled {
   color: #4a9fd4;
   cursor: pointer; 
 }
+
+.Forgot-Pass {
+    text-align: center;
+    margin-top: 10px;
+}
+
+.Forgot-Pass a {
+    color: #4a9fd4;
+    cursor: pointer;
+    font-size: 12px;
+    text-decoration: none;
+}
+
+.Forgot-Pass a:hover {
+    text-decoration: underline;
+}
+
+/* Make verification input text centered */
+#forgot-code-input {
+    text-align: center;
+    font-size: 20px;
+    letter-spacing: 5px;
+}
