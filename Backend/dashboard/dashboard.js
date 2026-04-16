@@ -353,22 +353,39 @@ function toggleCollapse(key) {
 
 const profileBtn   = document.getElementById('profile-btn');
 const profilePopup = document.getElementById('profile-popup');
+const profileModal = document.getElementById('profile-modal');
+
 profileBtn.addEventListener('click', function(e) {
   e.stopPropagation();
   profilePopup.classList.toggle('open');
 });
+
 document.addEventListener('click', function(e) {
   if (!profilePopup.contains(e.target) && e.target !== profileBtn)
     profilePopup.classList.remove('open');
 });
 
-const logoutModal = document.getElementById('logout-modal');
 document.getElementById('logout-btn').addEventListener('click', () => {
   profilePopup.classList.remove('open');
-  logoutModal.classList.add('open');
+  window.location.href = '/logout';
 });
-document.getElementById('cancel-logout').addEventListener('click',  () => logoutModal.classList.remove('open'));
-document.getElementById('confirm-logout').addEventListener('click', () => {
-  logoutModal.classList.remove('open');
-  alert('You have been logged out.');
+
+document.getElementById('profile-link-btn').addEventListener('click', () => {
+  profilePopup.classList.remove('open');
+  profileModal.classList.add('open');
+});
+
+document.getElementById('cancel-profile').addEventListener('click', () => {
+  profileModal.classList.remove('open');
+});
+
+document.getElementById('confirm-profile').addEventListener('click', () => {
+  profileModal.classList.remove('open');
+  window.location.href = '/dashboard/Profile.html';
+});
+
+profileModal.addEventListener('click', (e) => {
+  if (e.target === profileModal) {
+    profileModal.classList.remove('open');
+  }
 });

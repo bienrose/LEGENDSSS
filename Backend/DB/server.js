@@ -21,9 +21,6 @@ app.use(session({
 const frontendPath = path.join(__dirname, "login");
 const dashboardPath = path.join(__dirname, "..", "dashboard");
 
-app.use(express.static(frontendPath));
-app.use("/dashboard", express.static(dashboardPath));
-
 function generateVerificationCode() {
     return Math.floor(100000 + Math.random() * 900000).toString();
 }
@@ -73,8 +70,9 @@ app.post("/register", async (req, res) => {
 
         res.json({ success: true, tempUserId: tempId });
 
-    } catch {
-        res.status(500).json({ success: false });
+    } catch (err) {
+        console.error("Register error:", err);
+        res.status(500).json({ success: false, message: err.message });
     }
 });
 
@@ -106,8 +104,9 @@ app.post("/verify-code", async (req, res) => {
 
         res.json({ success: true });
 
-    } catch {
-        res.status(500).json({ success: false });
+    } catch (err) {
+        console.error("Verify code error:", err);
+        res.status(500).json({ success: false, message: err.message });
     }
 });
 
@@ -140,14 +139,98 @@ app.post("/login", async (req, res) => {
 
         res.json({ success: true });
 
-    } catch {
-        res.status(500).json({ success: false });
+    } catch (err) {
+        console.error("Login error:", err);
+        res.status(500).json({ success: false, message: err.message });
     }
 });
 
 app.get("/dashboard", (req, res) => {
     if (!req.session.user) return res.redirect("/");
     res.sendFile(path.join(dashboardPath, "dashboard.html"));
+});
+
+app.get("/dashboard/profile", (req, res) => {
+    if (!req.session.user) return res.redirect("/");
+    res.sendFile(path.join(dashboardPath, "Profile.html"));
+});
+
+app.get("/api/user-profile", async (req, res) => {
+    try {
+        if (!req.session.user) {
+            return res.status(401).json({ success: false, message: "Not authenticated" });
+        }
+
+        const userId = req.session.user.id;
+
+        const [rows] = await legendDB.query(
+            "SELECT id, fullname, email, username, affiliation FROM users WHERE id = ?",
+            [userId]
+        );
+
+        if (rows.length === 0) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+
+        return res.status(200).json({ success: true, user: rows[0] });
+
+    } catch (err) {
+        console.error("Get profile error:", err);
+        return res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.post("/api/user-profile", async (req, res) => {
+    try {
+        if (!req.session.user) {
+            return res.status(401).json({ success: false, message: "Not authenticated" });
+        }
+
+        const { fullname, email, username, password, affiliation } = req.body;
+        const userId = req.session.user.id;
+
+        const [existing] = await legendDB.query(
+            "SELECT id FROM users WHERE (email = ? OR username = ?) AND id != ?",
+            [email, username, userId]
+        );
+
+        if (existing.length > 0) {
+            return res.status(400).json({ success: false, message: "Email or username already in use" });
+        }
+
+        let hashedPassword = req.session.user.password;
+
+        if (password && password.trim() !== "") {
+            hashedPassword = await bcrypt.hash(password, 10);
+        }
+
+        await legendDB.query(
+            "UPDATE users SET fullname = ?, email = ?, username = ?, password = ?, affiliation = ? WHERE id = ?",
+            [fullname, email, username, hashedPassword, affiliation, userId]
+        );
+
+        const [updatedRows] = await legendDB.query(
+            "SELECT id, fullname, email, username, affiliation FROM users WHERE id = ?",
+            [userId]
+        );
+
+        req.session.user = { ...req.session.user, ...updatedRows[0] };
+
+        return res.status(200).json({ success: true, message: "Profile updated successfully", user: updatedRows[0] });
+
+    } catch (err) {
+        console.error("Update profile error:", err);
+        return res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.get("/logout", (req, res) => {
+    req.session.destroy((err) => {
+        if (err) {
+            return res.status(500).json({ success: false });
+        }
+        res.redirect("/");
+    });
 });
 
 app.get("/geo-test", async (req, res) => {
@@ -158,6 +241,9 @@ app.get("/geo-test", async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+
+app.use(express.static(frontendPath));
+app.use("/dashboard", express.static(dashboardPath));
 
 app.listen(3000, () => {
     console.log("Server running on http://localhost:3000");

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>SPOT - Profile</title>
+  <link rel="stylesheet" href="/dashboard/Profile.css">
+</head>
+
+<body>
+
+  <div class="profile-container">
+    <div class="profile-header">
+      <button class="back-btn" id="back-btn">← Back to Dashboard</button>
+      <h1>My Profile</h1>
+    </div>
+
+    <div class="profile-content">
+      <div class="profile-card">
+        <div class="card-header">
+          <h2>Profile Information</h2>
+          <div class="card-actions">
+            <button class="edit-btn" id="edit-btn">✎ Edit</button>
+            <button class="save-btn" id="save-btn" style="display: none;">✓ Save</button>
+          </div>
+        </div>
+
+        <form id="profile-form" class="profile-form">
+          <div class="form-group">
+            <label for="fullname">Full Name</label>
+            <input type="text" id="fullname" name="fullname" placeholder="Enter your full name" readonly>
+          </div>
+
+          <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" placeholder="Enter your email" readonly>
+          </div>
+
+          <div class="form-group">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" placeholder="Enter your username" readonly>
+          </div>
+
+          <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" placeholder="••••••••" readonly>
+          </div>
+
+          <div class="form-group">
+            <label for="affiliation">Affiliation</label>
+            <select id="affiliation" name="affiliation" disabled>
+              <option value="" disabled selected>Select your affiliation</option>
+              <option value="aspiring">Aspiring Entrepreneur</option>
+              <option value="entrepreneur">Entrepreneur</option>
+            </select>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="cancel-btn" id="cancel-btn" style="display: none;">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="/dashboard/Profile.js"></script>
+</body>
+
+</html>
