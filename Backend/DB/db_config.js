@@ -4,14 +4,18 @@ const legendPool = mysql.createPool({
     host: "localhost",
     user: "root",
     password: "",
-    database: "legendsss_db"
+    database: "legendsss_db",
+    waitForConnections: true,
+    connectionLimit: 10
 });
 
 const geoPool = mysql.createPool({
     host: "localhost",
     user: "root",
     password: "",
-    database: "geocoding_db"
+    database: "geocoding_db",
+    waitForConnections: true,
+    connectionLimit: 10
 });
 
 const legendDB = legendPool.promise();

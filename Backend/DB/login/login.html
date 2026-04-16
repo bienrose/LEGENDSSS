@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +8,7 @@
     <link rel="stylesheet" href="login.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
+
 <body>
     <div class="left">
         <div>
@@ -24,13 +26,13 @@
             <img src="Spot.png" alt="Logo" class="logo">
             <h2>LOGIN TO YOUR ACCOUNT</h2>
             <div class="note">Don't have an account? <a onclick="showRegister()">Sign up</a></div>
-            
+
             <label>Username</label>
             <input type="text" id="login-username" placeholder="Enter your username">
-            
+
             <label>Password</label>
             <input type="password" id="login-password" placeholder="Enter your password">
-            
+
             <button onclick="login()">Login</button>
             <div class="Forgot-Pass"><a onclick="showForgotPassword()">Forgot Password?</a></div>
         </div>
@@ -39,19 +41,25 @@
             <img src="Spot.png" alt="Logo" class="logo">
             <h2>CREATE AN ACCOUNT</h2>
             <div class="note">Already have an account? <a onclick="showLogin()">Sign in</a></div>
-            
+
             <label>Full Name</label>
             <input type="text" id="reg-fullname" placeholder="Enter your full name">
-            
+
             <label>Email</label>
             <input type="text" id="reg-email" placeholder="Enter your email">
-            
+
             <label>Username</label>
             <input type="text" id="reg-username" placeholder="Choose a username">
-            
+
             <label>Password</label>
             <input type="password" id="reg-password" placeholder="Create a password">
-            
+
+            <label>Affiliation</label>
+            <select id="affiliation">
+                <option value="" disabled selected>Select your affiliation</option>
+                <option value="Entrepreneur">Entrepreneur</option>
+                <option value="Aspiring Entrepreneur">Aspiring Entrepreneur</option>
+            </select>
             <button onclick="register()">Register</button>
         </div>
 
@@ -59,53 +67,50 @@
             <img src="Spot.png" alt="Logo" class="logo">
             <h2>VERIFY YOUR EMAIL</h2>
             <div class="note">We sent a 6-digit code to your email</div>
-            
+
             <label>Verification Code</label>
             <input type="text" id="verification-code-input" maxlength="7" placeholder="Enter 6-digit code">
-            
+
             <button onclick="verifyCode()">Verify Account</button>
             <button onclick="resendVerificationCode()">Resend Code</button>
             <button onclick="showRegister()">Back to Registration</button>
         </div>
 
-                <!-- Forgot Password Section -->
         <div id="forgot-password-section" class="form-box" style="display: none;">
             <img src="Spot.png" alt="Logo" class="logo">
             <h2>RESET PASSWORD</h2>
             <div class="note">Enter your email to reset your password</div>
-            
+
             <label>Email Address</label>
             <input type="text" id="forgot-email" placeholder="Enter your registered email">
-            
+
             <button onclick="sendForgotPasswordCode()">Send Reset Code</button>
             <button onclick="showLogin()">Back to Login</button>
         </div>
 
-        <!-- Forgot Password Verification Section -->
         <div id="forgot-verification-section" class="form-box" style="display: none;">
             <img src="Spot.png" alt="Logo" class="logo">
             <h2>VERIFY RESET CODE</h2>
             <div class="note">We sent a 6-digit code to your email</div>
-            
+
             <label>Verification Code</label>
             <input type="text" id="forgot-code-input" maxlength="6" placeholder="Enter 6-digit code">
-            
+
             <button onclick="verifyForgotCode()">Verify Code</button>
             <button onclick="showForgotPassword()">Back</button>
         </div>
 
-        <!-- Reset Password Section -->
         <div id="reset-password-section" class="form-box" style="display: none;">
             <img src="Spot.png" alt="Logo" class="logo">
             <h2>CREATE NEW PASSWORD</h2>
             <div class="note">Enter your new password below</div>
-            
+
             <label>New Password</label>
             <input type="password" id="new-password" placeholder="Enter new password">
-            
+
             <label>Confirm Password</label>
             <input type="password" id="confirm-password" placeholder="Confirm new password">
-            
+
             <button onclick="resetPassword()">Reset Password</button>
             <button onclick="showLogin()">Back to Login</button>
         </div>
@@ -114,4 +119,5 @@
 
     <script src="login.js"></script>
 </body>
+
 </html>
