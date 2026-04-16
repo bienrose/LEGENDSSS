@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Your App</title>
     <link rel="stylesheet" href="login.css">
-
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
@@ -15,15 +14,14 @@
         </div>
         <div>
             <h1>Hello user, Welcome!</h1>
-            <div class="tagline">Helping you choose the perfect business location through smart data analysis.
-            </div>
+            <div class="tagline">Helping you choose the perfect business location through smart data analysis.</div>
         </div>
         <div class="footer">© 2024 Your Company. All rights reserved.</div>
     </div>
 
     <div class="right">
         <div id="login-form" class="form-box">
-            <img src="Spot.png" alt="Logo" class="logo" style="width: 80px;">
+            <img src="Spot.png" alt="Logo" class="logo">
             <h2>LOGIN TO YOUR ACCOUNT</h2>
             <div class="note">Don't have an account? <a onclick="showRegister()">Sign up</a></div>
             
@@ -38,7 +36,7 @@
         </div>
 
         <div id="register-form" class="form-box" style="display: none;">
-            <img src="Spot.png" alt="Logo" class="logo" style="width: 80px;">
+            <img src="Spot.png" alt="Logo" class="logo">
             <h2>CREATE AN ACCOUNT</h2>
             <div class="note">Already have an account? <a onclick="showLogin()">Sign in</a></div>
             
@@ -58,16 +56,16 @@
         </div>
 
         <div id="verification-section" class="form-box" style="display: none;">
-            <img src="Spot.png" alt="Logo" class="logo" style="width: 80px;">
+            <img src="Spot.png" alt="Logo" class="logo">
             <h2>VERIFY YOUR EMAIL</h2>
             <div class="note">We sent a 6-digit code to your email</div>
             
             <label>Verification Code</label>
-            <input type="text" id="verification-code-input" maxlength="6" placeholder="Enter 6-digit code">
+            <input type="text" id="verification-code-input" maxlength="7" placeholder="Enter 6-digit code">
             
             <button onclick="verifyCode()">Verify Account</button>
-            <button onclick="resendVerificationCode()" style="background-color: #4a9fd4; margin-top: 5px;">Resend Code</button>
-            <button onclick="showRegister()" style="background-color: #6e99b4; margin-top: 5px;">Back to Registration</button>
+            <button onclick="resendVerificationCode()">Resend Code</button>
+            <button onclick="showRegister()">Back to Registration</button>
         </div>
     </div>
 

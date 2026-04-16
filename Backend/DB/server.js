@@ -1,14 +1,15 @@
 const express = require("express");
-const sqlite3 = require("sqlite3").verbose();
 const bcrypt = require("bcrypt");
 const session = require("express-session");
 const path = require("path");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
+const { promisePool, testConnection } = require("./db_config");
 
 const app = express();
 
-const db = new sqlite3.Database("./database.db");
+// Test MySQL connection on startup
+testConnection();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -22,8 +23,8 @@ app.use(
 );
 
 // ========== CORRECT PATHS ==========
-const frontendPath = path.join(__dirname, "login");  // Points to DB/login/
-const dashboardPath = path.join(__dirname, "..", "dashboard");  // Points to backend/dashboard/
+const frontendPath = path.join(__dirname, "login");
+const dashboardPath = path.join(__dirname, "..", "dashboard");
 
 console.log("Frontend path:", frontendPath);
 console.log("Dashboard path:", dashboardPath);
@@ -32,8 +33,7 @@ app.use(express.static(frontendPath));
 app.use("/dashboard", express.static(dashboardPath));
 // ========== END PATHS ==========
 
-// ========== EMAIL CONFIGURATION (Using Console Log for Testing) ==========
-// This is the ONLY sendVerificationCode function - using console log for testing
+// ========== EMAIL CONFIGURATION ==========
 async function sendVerificationCode(email, username, code) {
   console.log("\n========== VERIFICATION CODE ==========");
   console.log(`To: ${email}`);
@@ -44,7 +44,6 @@ async function sendVerificationCode(email, username, code) {
   return true;
 }
 
-// Function to generate 6-digit verification code
 function generateVerificationCode() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
@@ -54,7 +53,7 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(frontendPath, "login.html"));
 });
 
-// ========== REGISTRATION WITH CODE VERIFICATION ==========
+// ========== REGISTRATION ==========
 const pendingVerifications = new Map();
 
 app.post("/register", async (req, res) => {
@@ -77,15 +76,12 @@ app.post("/register", async (req, res) => {
 
   try {
     // Check if email or username already exists
-    const existingUser = await new Promise((resolve) => {
-      db.get(
-        "SELECT id FROM users WHERE email = ? OR username = ?",
-        [email, username],
-        (err, row) => resolve(row)
-      );
-    });
+    const [existingUser] = await promisePool.query(
+      "SELECT id FROM users WHERE email = ? OR username = ?",
+      [email, username]
+    );
     
-    if (existingUser) {
+    if (existingUser.length > 0) {
       return res.status(400).json({
         success: false,
         message: "Email or username already registered"
@@ -136,7 +132,7 @@ app.post("/register", async (req, res) => {
 });
 // ========== END REGISTRATION ==========
 
-// ========== VERIFY CODE ENDPOINT ==========
+// ========== VERIFY CODE ==========
 app.post("/verify-code", async (req, res) => {
   const { tempUserId, code } = req.body;
   
@@ -172,40 +168,28 @@ app.post("/verify-code", async (req, res) => {
   }
   
   try {
-    db.run(
-      `INSERT INTO users (fullname, email, username, password, is_verified) 
-       VALUES (?, ?, ?, ?, ?)`,
-      [pending.fullname, pending.email, pending.username, pending.hashedPassword, 1],
-      function(err) {
-        if (err) {
-          console.error("Database insert error:", err);
-          return res.status(500).json({
-            success: false,
-            message: "Error creating user account"
-          });
-        }
-        
-        const userId = this.lastID;
-        
-        if (pending.deviceId) {
-          db.run(
-            `INSERT INTO registration_devices (user_id, device_id, user_agent) 
-             VALUES (?, ?, ?)`,
-            [userId, pending.deviceId, pending.userAgent || null],
-            (deviceErr) => {
-              if (deviceErr) console.error("Error saving device:", deviceErr);
-            }
-          );
-        }
-        
-        pendingVerifications.delete(tempUserId);
-        
-        res.json({
-          success: true,
-          message: "Email verified successfully! You can now login."
-        });
-      }
+    const [result] = await promisePool.query(
+      `INSERT INTO users (fullname, email, username, password, is_verified, verified_at) 
+       VALUES (?, ?, ?, ?, TRUE, NOW())`,
+      [pending.fullname, pending.email, pending.username, pending.hashedPassword]
     );
+    
+    const userId = result.insertId;
+    
+    if (pending.deviceId) {
+      await promisePool.query(
+        `INSERT INTO registration_devices (user_id, device_id, user_agent) 
+         VALUES (?, ?, ?)`,
+        [userId, pending.deviceId, pending.userAgent || null]
+      );
+    }
+    
+    pendingVerifications.delete(tempUserId);
+    
+    res.json({
+      success: true,
+      message: "Email verified successfully! You can now login."
+    });
   } catch (error) {
     console.error("Verification error:", error);
     res.status(500).json({
@@ -273,41 +257,48 @@ app.post("/resend-verification-code", async (req, res) => {
 app.post("/login", (req, res) => {
   const { username, password } = req.body;
 
-  db.get(
+  promisePool.query(
     "SELECT * FROM users WHERE username = ?",
-    [username],
-    async (err, user) => {
-      if (err || !user) {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid credentials",
-        });
-      }
-
-      if (!user.is_verified) {
-        return res.status(403).json({
-          success: false,
-          message: "Please verify your email address before logging in.",
-        });
-      }
-
-      const match = await bcrypt.compare(password, user.password);
-
-      if (!match) {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid credentials",
-        });
-      }
-
-      req.session.user = user;
-
-      res.status(200).json({
-        success: true,
-        message: `Welcome back, ${username}!`,
+    [username]
+  ).then(async ([results]) => {
+    if (results.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid credentials",
       });
     }
-  );
+
+    const user = results[0];
+
+    if (!user.is_verified) {
+      return res.status(403).json({
+        success: false,
+        message: "Please verify your email address before logging in.",
+      });
+    }
+
+    const match = await bcrypt.compare(password, user.password);
+
+    if (!match) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid credentials",
+      });
+    }
+
+    req.session.user = user;
+
+    res.status(200).json({
+      success: true,
+      message: `Welcome back, ${username}!`,
+    });
+  }).catch(err => {
+    console.error("Login error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  });
 });
 // ========== END LOGIN ==========
 
