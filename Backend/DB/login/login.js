@@ -1,15 +1,18 @@
 console.log("login.js loaded");
 
+const SwalFixed = Swal.mixin({
+  heightAuto: false,
+  scrollbarPadding: false
+});
+
 let forgotPendingEmail = null;
 
 function getDeviceId() {
   let deviceId = localStorage.getItem("deviceVerificationId");
-
   if (!deviceId) {
     deviceId = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString();
     localStorage.setItem("deviceVerificationId", deviceId);
   }
-
   return deviceId;
 }
 
@@ -44,10 +47,10 @@ async function verifyCode() {
   const code = document.getElementById("verification-code-input").value.trim();
   const tempUserId = localStorage.getItem("tempUserId");
 
-  Swal.fire({
+  SwalFixed.fire({
     title: "Verifying...",
     allowOutsideClick: false,
-    didOpen: () => Swal.showLoading()
+    didOpen: () => SwalFixed.showLoading()
   });
 
   const res = await fetch("/verify-code", {
@@ -61,7 +64,7 @@ async function verifyCode() {
   if (res.ok && data.success) {
     localStorage.removeItem("tempUserId");
 
-    Swal.fire({
+    SwalFixed.fire({
       title: "Success",
       text: "Account verified!",
       icon: "success"
@@ -70,7 +73,7 @@ async function verifyCode() {
     });
 
   } else {
-    Swal.fire({
+    SwalFixed.fire({
       title: "Error",
       text: data.message || "Invalid code",
       icon: "error"
@@ -82,10 +85,10 @@ async function login() {
   const username = document.getElementById("login-username").value.trim();
   const password = document.getElementById("login-password").value;
 
-  Swal.fire({
+  SwalFixed.fire({
     title: "Logging in...",
     allowOutsideClick: false,
-    didOpen: () => Swal.showLoading()
+    didOpen: () => SwalFixed.showLoading()
   });
 
   const res = await fetch("/login", {
@@ -97,7 +100,7 @@ async function login() {
   const data = await res.json();
 
   if (res.ok && data.success) {
-    Swal.fire({
+    SwalFixed.fire({
       title: "Success",
       text: "Login successful",
       icon: "success"
@@ -106,7 +109,7 @@ async function login() {
     });
 
   } else {
-    Swal.fire({
+    SwalFixed.fire({
       title: "Error",
       text: data.message || "Login failed",
       icon: "error"
@@ -121,10 +124,10 @@ async function register() {
   const password = document.getElementById("reg-password").value;
   const affiliation = document.getElementById("affiliation").value.trim();
 
-  Swal.fire({
+  SwalFixed.fire({
     title: "Creating account...",
     allowOutsideClick: false,
-    didOpen: () => Swal.showLoading()
+    didOpen: () => SwalFixed.showLoading()
   });
 
   const res = await fetch("/register", {
@@ -146,7 +149,7 @@ async function register() {
   if (res.ok && data.success) {
     localStorage.setItem("tempUserId", data.tempUserId);
 
-    Swal.fire({
+    SwalFixed.fire({
       title: "Success",
       text: "Verification code sent",
       icon: "success"
@@ -156,7 +159,7 @@ async function register() {
     document.getElementById("verification-section").style.display = "block";
 
   } else {
-    Swal.fire({
+    SwalFixed.fire({
       title: "Error",
       text: data.message || "Registration failed",
       icon: "error"
@@ -168,14 +171,14 @@ async function sendForgotCode() {
   const email = document.getElementById("forgot-email").value.trim();
 
   if (!email) {
-    Swal.fire({ title: "Error", text: "Please enter an email", icon: "error" });
+    SwalFixed.fire({ title: "Error", text: "Please enter an email", icon: "error" });
     return;
   }
 
-  Swal.fire({
+  SwalFixed.fire({
     title: "Sending code...",
     allowOutsideClick: false,
-    didOpen: () => Swal.showLoading()
+    didOpen: () => SwalFixed.showLoading()
   });
 
   const res = await fetch("/forgot-password", {
@@ -189,7 +192,7 @@ async function sendForgotCode() {
   if (res.ok && data.success) {
     forgotPendingEmail = email;
 
-    Swal.fire({
+    SwalFixed.fire({
       title: "Sent",
       text: data.message || "Check your email for code",
       icon: "success"
@@ -199,7 +202,7 @@ async function sendForgotCode() {
     document.getElementById("forgot-verification-section").style.display = "block";
 
   } else {
-    Swal.fire({
+    SwalFixed.fire({
       title: "Error",
       text: data.message || "Email not found",
       icon: "error"
@@ -222,7 +225,7 @@ async function verifyForgotCode() {
     document.getElementById("forgot-verification-section").style.display = "none";
     document.getElementById("reset-password-section").style.display = "block";
   } else {
-    Swal.fire({
+    SwalFixed.fire({
       title: "Error",
       text: "Invalid code",
       icon: "error"
@@ -242,7 +245,7 @@ async function resetPassword() {
   const data = await res.json();
 
   if (res.ok && data.success) {
-    Swal.fire({
+    SwalFixed.fire({
       title: "Success",
       text: "Password reset complete",
       icon: "success"
@@ -251,7 +254,7 @@ async function resetPassword() {
     });
 
   } else {
-    Swal.fire({
+    SwalFixed.fire({
       title: "Error",
       text: "Reset failed",
       icon: "error"
