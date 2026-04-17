@@ -4,6 +4,7 @@ const session = require("express-session");
 const path = require("path");
 const crypto = require("crypto");
 const { legendDB, geoDB, testConnection } = require("./db_config");
+const nodemailer = require("nodemailer");
 
 const app = express();
 
@@ -25,9 +26,27 @@ function generateVerificationCode() {
     return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: "ballesterosyther1@gmail.com",
+    pass: "fsvq erkw plhi qwez"
+  }
+});
+
 async function sendVerificationCode(email, username, code) {
-    console.log(email, username, code);
+  try {
+    await transporter.sendMail({
+      from: "ballesterosyther1@gmail.com",
+      to: email,
+      subject: "Email Verification Code",
+      html: `<p>Hello ${username},</p><p>Your verification code is: <strong>${code}</strong></p><p>This code expires in 10 minutes.</p>`
+    });
+  } catch (err) {
+    console.error("Email sending error:", err);
+  }
 }
+
 
 app.get("/", (req, res) => {
     res.sendFile(path.join(frontendPath, "login.html"));
