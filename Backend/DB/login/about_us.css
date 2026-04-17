@@ -1,7 +1,7 @@
 body{
   margin: 0;
   font-family: Arial, sans-serif;
-  background: url("about us.png") no-repeat center center fixed;
+  background-color: #1b3c53;
   background-size: cover;
 }
 .Content {
@@ -16,7 +16,7 @@ body{
 }
 .info {
   text-align: center;
-  color: rgb(0, 0, 0);
+  color: rgba(31, 61, 85, 0.9); 
   border: 2px solid #ffffff;
   border-radius: 12px;
   padding: 20px;
@@ -31,7 +31,7 @@ img {
 }
 p{
   font-size: 16px;
-  color: #333333;
+  color: rgba(31, 61, 85, 0.9); 
   text-align: left;
 }
 .login{
@@ -54,7 +54,7 @@ p{
 .header{
     align-items: center;
     text-align: center;
-    color: #c8a96e;
+    color: #ffffff;
     margin: 15px auto;
 
 
