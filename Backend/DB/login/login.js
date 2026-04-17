@@ -167,6 +167,17 @@ async function register() {
 async function sendForgotCode() {
   const email = document.getElementById("forgot-email").value.trim();
 
+  if (!email) {
+    Swal.fire({ title: "Error", text: "Please enter an email", icon: "error" });
+    return;
+  }
+
+  Swal.fire({
+    title: "Sending code...",
+    allowOutsideClick: false,
+    didOpen: () => Swal.showLoading()
+  });
+
   const res = await fetch("/forgot-password", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -180,7 +191,7 @@ async function sendForgotCode() {
 
     Swal.fire({
       title: "Sent",
-      text: "Check your email for code",
+      text: data.message || "Check your email for code",
       icon: "success"
     });
 
@@ -190,7 +201,7 @@ async function sendForgotCode() {
   } else {
     Swal.fire({
       title: "Error",
-      text: "Email not found",
+      text: data.message || "Email not found",
       icon: "error"
     });
   }

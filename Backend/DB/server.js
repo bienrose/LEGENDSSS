@@ -44,15 +44,21 @@ async function sendVerificationCode(email, username, code) {
     });
   } catch (err) {
     console.error("Email sending error:", err);
+    throw err;
   }
 }
-
 
 app.get("/", (req, res) => {
     res.sendFile(path.join(frontendPath, "login.html"));
 });
 
 const pendingVerifications = new Map();
+
+// ✅ forgot password reset storage
+const pendingPasswordResets = new Map();
+function generateResetCode() {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+}
 
 app.post("/register", async (req, res) => {
     try {
@@ -64,7 +70,7 @@ app.post("/register", async (req, res) => {
         );
 
         if (existing.length > 0) {
-            return res.status(400).json({ success: false });
+            return res.status(400).json({ success: false, message: "Email or username already exists" });
         }
 
         const hashed = await bcrypt.hash(password, 10);
@@ -101,15 +107,15 @@ app.post("/verify-code", async (req, res) => {
 
         const data = pendingVerifications.get(tempUserId);
 
-        if (!data) return res.status(400).json({ success: false });
+        if (!data) return res.status(400).json({ success: false, message: "Invalid temp ID" });
 
         if (new Date() > new Date(data.codeExpiresAt)) {
             pendingVerifications.delete(tempUserId);
-            return res.status(400).json({ success: false });
+            return res.status(400).json({ success: false, message: "Code expired" });
         }
 
         if (data.code !== code) {
-            return res.status(400).json({ success: false });
+            return res.status(400).json({ success: false, message: "Invalid code" });
         }
 
         await legendDB.query(
@@ -139,19 +145,19 @@ app.post("/login", async (req, res) => {
         );
 
         if (rows.length === 0) {
-            return res.status(400).json({ success: false });
+            return res.status(400).json({ success: false, message: "User not found" });
         }
 
         const user = rows[0];
 
         if (!user.is_verified) {
-            return res.status(403).json({ success: false });
+            return res.status(403).json({ success: false, message: "Account not verified" });
         }
 
         const match = await bcrypt.compare(password, user.password);
 
         if (!match) {
-            return res.status(400).json({ success: false });
+            return res.status(400).json({ success: false, message: "Wrong password" });
         }
 
         req.session.user = user;
@@ -161,6 +167,90 @@ app.post("/login", async (req, res) => {
     } catch (err) {
         console.error("Login error:", err);
         res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// ✅ Forgot password flow
+app.post("/forgot-password", async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        const [rows] = await legendDB.query(
+            "SELECT id, username FROM users WHERE email = ?",
+            [email]
+        );
+
+        if (rows.length === 0) {
+            return res.status(404).json({ success: false, message: "Email not found" });
+        }
+
+        const user = rows[0];
+        const code = generateResetCode();
+
+        const expiry = new Date();
+        expiry.setMinutes(expiry.getMinutes() + 10);
+
+        pendingPasswordResets.set(email, {
+            code,
+            codeExpiresAt: expiry
+        });
+
+        await sendVerificationCode(email, user.username, code);
+
+        return res.json({ success: true, message: "Reset code sent" });
+
+    } catch (err) {
+        console.error("Forgot password error:", err);
+        return res.status(500).json({ success: false, message: "Email sending failed" });
+    }
+});
+
+app.post("/verify-forgot-code", async (req, res) => {
+    try {
+        const { email, code } = req.body;
+
+        const data = pendingPasswordResets.get(email);
+
+        if (!data) return res.status(400).json({ success: false, message: "No reset request" });
+
+        if (new Date() > new Date(data.codeExpiresAt)) {
+            pendingPasswordResets.delete(email);
+            return res.status(400).json({ success: false, message: "Code expired" });
+        }
+
+        if (data.code !== code) {
+            return res.status(400).json({ success: false, message: "Invalid code" });
+        }
+
+        return res.json({ success: true });
+
+    } catch (err) {
+        console.error("Verify forgot code error:", err);
+        return res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.post("/reset-password", async (req, res) => {
+    try {
+        const { email, newPassword } = req.body;
+
+        const data = pendingPasswordResets.get(email);
+        if (!data) return res.status(400).json({ success: false, message: "No reset request" });
+
+        const hashed = await bcrypt.hash(newPassword, 10);
+
+        await legendDB.query(
+            "UPDATE users SET password = ? WHERE email = ?",
+            [hashed, email]
+        );
+
+        pendingPasswordResets.delete(email);
+
+        return res.json({ success: true });
+
+    } catch (err) {
+        console.error("Reset password error:", err);
+        return res.status(500).json({ success: false, message: err.message });
     }
 });
 
