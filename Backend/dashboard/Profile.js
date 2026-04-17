@@ -11,6 +11,7 @@ const affiliationSelect = document.getElementById('affiliation');
 
 let isEditing = false;
 let originalData = {};
+let currentUserRole = null; // Store role but don't display it
 
 async function loadUserData() {
     try {
@@ -24,7 +25,6 @@ async function loadUserData() {
         });
 
         console.log('Response status:', response.status);
-        console.log('Response headers:', response.headers.get('content-type'));
 
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
@@ -40,12 +40,16 @@ async function loadUserData() {
             usernameInput.value = user.username || '';
             affiliationSelect.value = user.affiliation || '';
             passwordInput.value = '';
+            
+            // Store role internally but don't display it
+            currentUserRole = user.role || 'user';
 
             originalData = {
                 fullname: user.fullname || '',
                 email: user.email || '',
                 username: user.username || '',
-                affiliation: user.affiliation || ''
+                affiliation: user.affiliation || '',
+                role: user.role || 'user'
             };
             console.log('Profile loaded successfully');
         } else {
@@ -103,7 +107,8 @@ async function saveUserData() {
             email: emailInput.value.trim(),
             username: usernameInput.value.trim(),
             password: passwordInput.value,
-            affiliation: affiliationSelect.value
+            affiliation: affiliationSelect.value,
+            role: currentUserRole // Include role but it won't be changed
         };
 
         if (!userData.fullname || !userData.email || !userData.username || !userData.affiliation) {

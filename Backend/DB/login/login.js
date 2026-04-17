@@ -105,7 +105,8 @@ async function login() {
       text: "Login successful",
       icon: "success"
     }).then(() => {
-      window.location.href = "/dashboard";
+      // ✅ FIXED: Use server's redirect URL instead of hardcoded /dashboard
+      window.location.href = data.redirect || "/dashboard";
     });
 
   } else {
@@ -257,6 +258,47 @@ async function resetPassword() {
     SwalFixed.fire({
       title: "Error",
       text: "Reset failed",
+      icon: "error"
+    });
+  }
+}
+
+async function resendVerificationCode() {
+  const tempUserId = localStorage.getItem("tempUserId");
+  
+  if (!tempUserId) {
+    SwalFixed.fire({
+      title: "Error",
+      text: "No pending verification found",
+      icon: "error"
+    });
+    return;
+  }
+
+  SwalFixed.fire({
+    title: "Resending code...",
+    allowOutsideClick: false,
+    didOpen: () => SwalFixed.showLoading()
+  });
+
+  const res = await fetch("/resend-code", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ tempUserId })
+  });
+
+  const data = await res.json();
+
+  if (res.ok && data.success) {
+    SwalFixed.fire({
+      title: "Success",
+      text: "Verification code resent!",
+      icon: "success"
+    });
+  } else {
+    SwalFixed.fire({
+      title: "Error",
+      text: data.message || "Failed to resend code",
       icon: "error"
     });
   }
