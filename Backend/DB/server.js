@@ -22,7 +22,7 @@ app.use(session({
 
 const frontendPath = path.join(__dirname, "login");
 const dashboardPath = path.join(__dirname, "..", "dashboard");
-const adminDashboardPath = path.join(__dirname, "..", "admindashboard");
+const adminDashboardPath = path.join(__dirname, "..", "..", "admindashboard");
 
 const PASIG_BOUNDS = {
   minLat: 14.5350,
@@ -288,8 +288,9 @@ app.get("/dashboard/profile", requireAuth, (req, res) => {
 });
 
 app.get("/admin", requireAdminPage, (req, res) => {
-  return res.redirect("/admindashboard/admindb.html");
+  res.sendFile(path.join(adminDashboardPath, "admindb.html"));
 });
+
 
 app.get("/api/user-profile", requireAuth, async (req, res) => {
   try {
