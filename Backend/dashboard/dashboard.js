@@ -38,33 +38,101 @@ function clearBusinessMarkers() {
   businessMarkers = [];
 }
 
-async function fetchAndPlotBusinesses(filters = {}) {
+function plotLocations(recs, centerIndex = null) {
+  clearBusinessMarkers();
+
+  const bounds = L.latLngBounds();
+
+  recs.forEach((rec, i) => {
+    if (!rec.lat || !rec.lon) return;
+
+    const marker = L.marker([parseFloat(rec.lat), parseFloat(rec.lon)])
+      .addTo(map)
+      .bindPopup(`
+        <b>Rank #${i+1} — ${rec.barangay_name || ''}</b><br>
+        Score: ${rec.score?.toFixed(2) ?? ''}
+      `);
+
+    businessMarkers.push(marker);
+    bounds.extend(marker.getLatLng());
+
+    if (centerIndex === i) {
+      marker.openPopup();
+    }
+  });
+
+  if (bounds.isValid()) {
+    map.fitBounds(bounds.pad(0.2));
+  }
+}
+
+function getPrefs() {
+  const prefs = [];
+  if (document.getElementById('p-totalpop')?.checked) prefs.push('totalpop');
+  if (document.getElementById('p-popdensity')?.checked) prefs.push('popdensity');
+  if (document.getElementById('p-agedist')?.checked) prefs.push('agedist');
+  if (document.getElementById('p-gender')?.checked) prefs.push('gender');
+  if (document.getElementById('p-income')?.checked) prefs.push('income');
+  if (document.getElementById('p-bizcount')?.checked) prefs.push('bizcount');
+  if (document.getElementById('p-competitors')?.checked) prefs.push('competitors');
+  if (document.getElementById('p-bizdensity')?.checked) prefs.push('bizdensity');
+  return prefs;
+}
+
+async function fetchIdeas(filters = {}) {
   const params = new URLSearchParams();
   if (filters.barangay) params.append('barangay', filters.barangay);
-  if (filters.type)     params.append('type', filters.type);
+  if (filters.type)     params.append('category', filters.type);
+  if (filters.prefs?.length) params.append('prefs', filters.prefs.join(','));
 
-  try {
-    const res  = await fetch(`/api/businesses?${params.toString()}`);
-    const data = await res.json();
+  const res  = await fetch(`/api/ideas?${params.toString()}`);
+  const data = await res.json();
+  return data.success ? data.data : [];
+}
 
-    if (!data.success || !data.data.length) return;
+async function fetchIdeaLocations(filters = {}) {
+  const params = new URLSearchParams();
+  if (filters.idea)     params.append('idea', filters.idea);
+  if (filters.barangay) params.append('barangay', filters.barangay);
+  if (filters.top)      params.append('top', filters.top);
+  if (filters.prefs?.length) params.append('prefs', filters.prefs.join(','));
 
-    data.data.forEach(biz => {
-      if (!biz.lat || !biz.lon) return;
+  const res  = await fetch(`/api/idea-locations?${params.toString()}`);
+  const data = await res.json();
+  return data.success ? data.data : [];
+}
 
-      const marker = L.marker([parseFloat(biz.lat), parseFloat(biz.lon)])
-        .addTo(map)
-        .bindPopup(`
-          <b>${biz.business_trade_name}</b><br>
-          ${biz.line_of_business}<br>
-          <small>${biz.business_address}</small>
-        `);
+async function renderIdeasAndPins({ type, barangay, prefs }) {
+  const ideas = await fetchIdeas({ type, barangay, prefs });
+  const listEl = document.getElementById('rec-list');
 
-      businessMarkers.push(marker);
-    });
-  } catch (err) {
-    console.error('Failed to fetch businesses:', err);
+  if (!ideas.length) {
+    listEl.innerHTML = '';
+    return;
   }
+
+  listEl.innerHTML = ideas.map((name, i) => `
+    <div class="rec-item" data-idx="${i}" data-idea="${escapeHtml(name)}">
+      <span class="rec-item-num">${i+1}.</span>
+      <span class="rec-item-name">${escapeHtml(name)}</span>
+      <div class="save-row" data-id="loc-${i}" data-name="${escapeHtml(name)}" onclick="toggleLocSave(this)">
+        <img src="save.png" alt="bookmark"><span>Save</span>
+      </div>
+    </div>
+  `).join('');
+
+  const items = listEl.querySelectorAll('.rec-item');
+  items.forEach((el) => {
+    el.addEventListener('click', async () => {
+      const idea = el.dataset.idea;
+      const recs = await fetchIdeaLocations({ idea, barangay, top: 5, prefs });
+      plotLocations(recs, 0);
+    });
+  });
+
+  const firstIdea = ideas[0];
+  const firstRecs = await fetchIdeaLocations({ idea: firstIdea, barangay, top: 5, prefs });
+  plotLocations(firstRecs, 0);
 }
 
 const barangayMap = {
@@ -107,7 +175,7 @@ const typeMap = {
   'f-tech':     'TECH'
 };
 
-document.getElementById('done-btn').addEventListener('click', () => {
+document.getElementById('done-btn').addEventListener('click', async () => {
   filterPanel.classList.remove('open');
 
   const barangayCheckboxes = document.querySelectorAll('[id^="b-"]:checked');
@@ -118,23 +186,21 @@ document.getElementById('done-btn').addEventListener('click', () => {
 
   clearBusinessMarkers();
 
-  if (!selectedBarangays.length && !selectedTypes.length) return;
+  const barangay = selectedBarangays[0] || null;
+  const type = selectedTypes[0] || null;
+  const prefs = getPrefs();
 
-  const fetches = [];
+  if (!barangay && !type && !prefs.length) return;
 
-  if (selectedBarangays.length && selectedTypes.length) {
-    selectedBarangays.forEach(b => {
-      selectedTypes.forEach(t => {
-        fetches.push(fetchAndPlotBusinesses({ barangay: b, type: t }));
-      });
-    });
-  } else if (selectedBarangays.length) {
-    selectedBarangays.forEach(b => fetches.push(fetchAndPlotBusinesses({ barangay: b })));
-  } else {
-    selectedTypes.forEach(t => fetches.push(fetchAndPlotBusinesses({ type: t })));
-  }
+  document.getElementById('loc-panel-title').textContent = barangay
+    ? `Recommended Businesses in ${barangay}`
+    : `Recommended Businesses`;
 
-  Promise.all(fetches);
+  document.getElementById('loc-badge').textContent = barangay ? `📍 ${barangay}` : `📍 All Barangays`;
+
+  locPanel.classList.add('open');
+
+  await renderIdeasAndPins({ type, barangay, prefs });
 });
 
 let currentLocShortName = '';

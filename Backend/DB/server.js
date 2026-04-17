@@ -48,13 +48,60 @@ async function sendVerificationCode(email, username, code) {
   }
 }
 
+function haversineMeters(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const toRad = (v) => (v * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function zscores(arr) {
+  const mean = arr.reduce((a, b) => a + b, 0) / (arr.length || 1);
+  const variance = arr.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / (arr.length || 1);
+  const std = Math.sqrt(variance) || 1;
+  return arr.map(v => (v - mean) / std);
+}
+
+function prefWeights() {
+  return {
+    totalpop: 1,
+    popdensity: 1,
+    agedist: 1,
+    gender: 1,
+    income: 1,
+    bizcount: -1,
+    competitors: -1,
+    bizdensity: 1
+  };
+}
+
+function ageScore(ageGroup) {
+  const good = ["15-24", "25-54", "18-35", "15–24", "25–54", "18–35"];
+  return good.includes(ageGroup) ? 1 : 0;
+}
+
+function normalizeBarangay(v) {
+  return (v || "").toString().trim().toLowerCase();
+}
+
+const PASIG_BARANGAYS = new Set([
+  "bagong ilog","bagong katipunan","bambang","buting","caniogan","dela paz","kalawaan","kapasigan",
+  "kapitolyo","malinao","manggahan","maybunga","oranbo","palatiw","pinagbuhatan","pineda","rosario",
+  "sagad","san antonio","san joaquin","san jose","san miguel","san nicolas","santa lucia","santa rosa",
+  "santolan","sumilang","ugong","f. vargas","vargas","wack-wack","wack-wack greenhills"
+]);
+
 app.get("/", (req, res) => {
     res.sendFile(path.join(frontendPath, "login.html"));
 });
 
 const pendingVerifications = new Map();
 
-// ✅ forgot password reset storage
 const pendingPasswordResets = new Map();
 function generateResetCode() {
     return Math.floor(100000 + Math.random() * 900000).toString();
@@ -170,7 +217,6 @@ app.post("/login", async (req, res) => {
     }
 });
 
-// ✅ Forgot password flow
 app.post("/forgot-password", async (req, res) => {
     try {
         const { email } = req.body;
@@ -264,72 +310,277 @@ app.get("/dashboard/profile", (req, res) => {
     res.sendFile(path.join(dashboardPath, "Profile.html"));
 });
 
-app.get("/api/user-profile", async (req, res) => {
+app.get("/api/ideas", async (req, res) => {
     try {
-        if (!req.session.user) {
-            return res.status(401).json({ success: false, message: "Not authenticated" });
+        const { category, barangay, top = 3, prefs = "" } = req.query;
+        const prefList = prefs ? prefs.split(",").filter(Boolean) : [];
+        const weights = prefWeights();
+
+        let sql = `SELECT line_of_business AS name, COUNT(*) AS cnt
+                   FROM businesses
+                   WHERE line_of_business IS NOT NULL AND line_of_business <> ''`;
+        const params = [];
+
+        if (category) {
+            const typeToCategory = {
+                FOOD: "Food & Beverage",
+                RETAIL: "Retail & Trading",
+                PERSONAL: "Beauty & Wellness",
+                TECH: "IT & Software"
+            };
+            const dbCategory = typeToCategory[category] || category;
+            sql += ` AND category = ?`;
+            params.push(dbCategory);
         }
 
-        const userId = req.session.user.id;
+        if (barangay) {
+            sql += ` AND barangay = ?`;
+            params.push(barangay);
+        }
 
-        const [rows] = await legendDB.query(
-            "SELECT id, fullname, email, username, affiliation FROM users WHERE id = ?",
-            [userId]
+        sql += ` GROUP BY line_of_business
+                 ORDER BY cnt DESC`;
+
+        const [ideaRows] = await geoDB.query(sql, params);
+        if (!ideaRows.length) return res.json({ success: true, data: [] });
+
+        if (!prefList.length) {
+            return res.json({ success: true, data: ideaRows.slice(0, parseInt(top)).map(r => r.name) });
+        }
+
+        const ideas = ideaRows.map(r => r.name);
+
+        const [allBiz] = await geoDB.query(
+            `SELECT barangay, line_of_business, lat, lon
+             FROM businesses
+             WHERE lat IS NOT NULL AND lon IS NOT NULL
+               AND lat <> 'null' AND lon <> 'null'`
         );
 
-        if (rows.length === 0) {
-            return res.status(404).json({ success: false, message: "User not found" });
+        const [demoRows] = await geoDB.query(
+            `SELECT barangay_name, population, population_density, avg_income_max, gender_distribution, highest_age_group
+             FROM demographic_pasig`
+        );
+        const demoMap = {};
+        demoRows.forEach(d => demoMap[normalizeBarangay(d.barangay_name)] = d);
+
+        const [totBizRows] = await geoDB.query(
+            `SELECT barangay, COUNT(*) AS cnt FROM businesses GROUP BY barangay`
+        );
+        const totalBizMap = {};
+        totBizRows.forEach(r => totalBizMap[normalizeBarangay(r.barangay)] = r.cnt);
+
+        const centroidMap = {};
+        allBiz.forEach(b => {
+            const key = normalizeBarangay(b.barangay);
+            if (!centroidMap[key]) centroidMap[key] = { lat: 0, lon: 0, n: 0 };
+            centroidMap[key].lat += parseFloat(b.lat);
+            centroidMap[key].lon += parseFloat(b.lon);
+            centroidMap[key].n += 1;
+        });
+        Object.keys(centroidMap).forEach(k => {
+            centroidMap[k].lat /= centroidMap[k].n;
+            centroidMap[k].lon /= centroidMap[k].n;
+        });
+
+        const radius = 500;
+        const ideaScores = [];
+
+        if (barangay) {
+            const bKey = normalizeBarangay(barangay);
+            const c = centroidMap[bKey];
+            const demo = demoMap[bKey] || {};
+            const totalBiz = totalBizMap[bKey] || 0;
+            const bizDensity = demo.population ? totalBiz / (demo.population / 1000) : 0;
+
+            ideas.forEach(name => {
+                const ideaBiz = allBiz.filter(b => b.line_of_business === name && normalizeBarangay(b.barangay) === bKey);
+                const bizcount = ideaBiz.length;
+
+                let competitors = 0;
+                if (c) {
+                    ideaBiz.forEach(b => {
+                        const d = haversineMeters(c.lat, c.lon, parseFloat(b.lat), parseFloat(b.lon));
+                        if (d <= radius) competitors += 1;
+                    });
+                }
+
+                ideaScores.push({
+                    name,
+                    population: demo.population || 0,
+                    population_density: demo.population_density || 0,
+                    income: demo.avg_income_max || 0,
+                    gender: demo.gender_distribution === "Female" ? 1 : 0,
+                    agedist: ageScore(demo.highest_age_group),
+                    bizdensity: bizDensity,
+                    bizcount,
+                    competitors
+                });
+            });
+        } else {
+            ideas.forEach(name => {
+                let bestScoreObj = null;
+
+                Object.keys(centroidMap).forEach(bgy => {
+                    const c = centroidMap[bgy];
+                    const demo = demoMap[bgy] || {};
+                    const totalBiz = totalBizMap[bgy] || 0;
+                    const bizDensity = demo.population ? totalBiz / (demo.population / 1000) : 0;
+
+                    const ideaBiz = allBiz.filter(b => b.line_of_business === name && normalizeBarangay(b.barangay) === bgy);
+                    const bizcount = ideaBiz.length;
+
+                    let competitors = 0;
+                    ideaBiz.forEach(b => {
+                        const d = haversineMeters(c.lat, c.lon, parseFloat(b.lat), parseFloat(b.lon));
+                        if (d <= radius) competitors += 1;
+                    });
+
+                    const obj = {
+                        name,
+                        population: demo.population || 0,
+                        population_density: demo.population_density || 0,
+                        income: demo.avg_income_max || 0,
+                        gender: demo.gender_distribution === "Female" ? 1 : 0,
+                        agedist: ageScore(demo.highest_age_group),
+                        bizdensity: bizDensity,
+                        bizcount,
+                        competitors
+                    };
+
+                    if (!bestScoreObj) bestScoreObj = obj;
+                    else bestScoreObj = obj;
+                });
+
+                ideaScores.push(bestScoreObj);
+            });
         }
 
-        return res.status(200).json({ success: true, user: rows[0] });
+        const scoreItems = ideaScores;
 
+        let finalScores = scoreItems.map(i => ({ name: i.name, score: 0 }));
+
+        prefList.forEach(pref => {
+            const values = scoreItems.map(i => i[pref] || 0);
+            const z = zscores(values);
+            z.forEach((val, idx) => {
+                finalScores[idx].score += (weights[pref] || 0) * val;
+            });
+        });
+
+        finalScores.sort((a, b) => b.score - a.score);
+
+        res.json({ success: true, data: finalScores.slice(0, parseInt(top)).map(r => r.name) });
     } catch (err) {
-        console.error("Get profile error:", err);
-        return res.status(500).json({ success: false, message: err.message });
+        console.error("Ideas API error:", err);
+        res.status(500).json({ success: false, message: err.message });
     }
 });
 
-app.post("/api/user-profile", async (req, res) => {
+app.get("/api/idea-locations", async (req, res) => {
     try {
-        if (!req.session.user) {
-            return res.status(401).json({ success: false, message: "Not authenticated" });
-        }
+        const { idea, barangay, top = 5, prefs = "" } = req.query;
+        if (!idea) return res.status(400).json({ success: false, message: "idea required" });
 
-        const { fullname, email, username, password, affiliation } = req.body;
-        const userId = req.session.user.id;
+        const prefList = prefs ? prefs.split(",").filter(Boolean) : [];
+        const weights = prefWeights();
 
-        const [existing] = await legendDB.query(
-            "SELECT id FROM users WHERE (email = ? OR username = ?) AND id != ?",
-            [email, username, userId]
+        const [ideaRows] = await geoDB.query(
+            `SELECT barangay, lat, lon
+             FROM businesses
+             WHERE line_of_business = ?
+               AND lat IS NOT NULL AND lon IS NOT NULL
+               AND lat <> 'null' AND lon <> 'null'`,
+            [idea]
         );
 
-        if (existing.length > 0) {
-            return res.status(400).json({ success: false, message: "Email or username already in use" });
-        }
-
-        let hashedPassword = req.session.user.password;
-
-        if (password && password.trim() !== "") {
-            hashedPassword = await bcrypt.hash(password, 10);
-        }
-
-        await legendDB.query(
-            "UPDATE users SET fullname = ?, email = ?, username = ?, password = ?, affiliation = ? WHERE id = ?",
-            [fullname, email, username, hashedPassword, affiliation, userId]
+        const [allRows] = await geoDB.query(
+            `SELECT barangay, lat, lon
+             FROM businesses
+             WHERE lat IS NOT NULL AND lon IS NOT NULL
+               AND lat <> 'null' AND lon <> 'null'`
         );
 
-        const [updatedRows] = await legendDB.query(
-            "SELECT id, fullname, email, username, affiliation FROM users WHERE id = ?",
-            [userId]
+        const [demoRows] = await geoDB.query(
+            `SELECT barangay_name, population, population_density, avg_income_max, gender_distribution, highest_age_group
+             FROM demographic_pasig`
         );
+        const demoMap = {};
+        demoRows.forEach(d => demoMap[normalizeBarangay(d.barangay_name)] = d);
 
-        req.session.user = { ...req.session.user, ...updatedRows[0] };
+        const [totBizRows] = await geoDB.query(
+            `SELECT barangay, COUNT(*) AS cnt FROM businesses GROUP BY barangay`
+        );
+        const totalBizMap = {};
+        totBizRows.forEach(r => totalBizMap[normalizeBarangay(r.barangay)] = r.cnt);
 
-        return res.status(200).json({ success: true, message: "Profile updated successfully", user: updatedRows[0] });
+        let candidates = [];
 
+        if (barangay) {
+            const bKey = normalizeBarangay(barangay);
+            candidates = allRows
+              .filter(r => normalizeBarangay(r.barangay) === bKey)
+              .map(r => ({
+                barangay_name: r.barangay,
+                lat: parseFloat(r.lat),
+                lon: parseFloat(r.lon)
+              }))
+              .filter(r => !isNaN(r.lat) && !isNaN(r.lon));
+        } else {
+            candidates = allRows.map(r => ({
+                barangay_name: r.barangay,
+                lat: parseFloat(r.lat),
+                lon: parseFloat(r.lon)
+            })).filter(r => !isNaN(r.lat) && !isNaN(r.lon));
+        }
+
+        candidates = candidates.filter(c => PASIG_BARANGAYS.has(normalizeBarangay(c.barangay_name)));
+
+        if (!candidates.length) return res.json({ success: true, data: [] });
+
+        const r = 500;
+
+        candidates.forEach(c => {
+            let cnt = 0;
+            ideaRows.forEach(b => {
+                const d = haversineMeters(c.lat, c.lon, parseFloat(b.lat), parseFloat(b.lon));
+                if (d <= r) cnt += 1;
+            });
+            c.competitors = cnt;
+
+            const d = demoMap[normalizeBarangay(c.barangay_name)] || {};
+            c.totalpop = d.population || 0;
+            c.popdensity = d.population_density || 0;
+            c.income = d.avg_income_max || 0;
+            c.gender = d.gender_distribution === "Female" ? 1 : 0;
+            c.agedist = ageScore(d.highest_age_group);
+
+            const totalBiz = totalBizMap[normalizeBarangay(c.barangay_name)] || 0;
+            c.bizdensity = d.population ? totalBiz / (d.population / 1000) : 0;
+            c.bizcount = ideaRows.filter(b => normalizeBarangay(b.barangay) === normalizeBarangay(c.barangay_name)).length;
+        });
+
+        if (!prefList.length) {
+            candidates.sort((a, b) => a.competitors - b.competitors);
+            return res.json({ success: true, data: candidates.slice(0, parseInt(top)) });
+        }
+
+        const scoreArr = candidates.map(c => ({ ...c, score: 0 }));
+
+        prefList.forEach(pref => {
+            const values = scoreArr.map(i => i[pref] || 0);
+            const z = zscores(values);
+            z.forEach((val, idx) => {
+                scoreArr[idx].score += (weights[pref] || 0) * val;
+            });
+        });
+
+        scoreArr.sort((a, b) => b.score - a.score);
+
+        res.json({ success: true, data: scoreArr.slice(0, parseInt(top)) });
     } catch (err) {
-        console.error("Update profile error:", err);
-        return res.status(500).json({ success: false, message: err.message });
+        console.error("Idea locations error:", err);
+        res.status(500).json({ success: false, message: err.message });
     }
 });
 
