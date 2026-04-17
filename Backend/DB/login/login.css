@@ -7,7 +7,6 @@ body {
   background-size: cover;
 }
 
-/* Fix SweetAlert2 causing background to scroll up */
 html.swal2-shown,
 body.swal2-shown {
   overflow-y: scroll !important;

@@ -8,7 +8,6 @@
 </head>
 <body>
 
-<!-- ==================== SIDEBAR ==================== -->
 <aside class="sidebar">
   <div class="sidebar-avatar">
     <img src="/admin/whiteprofile.png" alt="Admin">
@@ -30,12 +29,10 @@
   </div>
 </aside>
 
-<!-- ==================== MAIN CONTENT ==================== -->
 <main class="main">
 
   <h1 class="welcome-title">Welcome, Admin!</h1>
 
-  <!-- Top Row: Users + Saved Stats + Actions -->
   <div class="top-row">
     <div class="users-card">
       <div class="users-count" id="total-users">--</div>
@@ -56,7 +53,6 @@
     </div>
   </div>
 
-  <!-- User Profiling Chart -->
   <div>
     <div class="section-title">User Profiling</div>
     <div class="chart-card">
@@ -92,7 +88,6 @@
   </div>
 </main>
 
-<!-- ==================== LOGOUT MODAL ==================== -->
 <div class="modal-overlay" id="logout-modal">
   <div class="modal-box">
     <h3>Log Out</h3>
@@ -104,18 +99,15 @@
   </div>
 </div>
 
-<!-- ==================== CRUD MODAL ==================== -->
 <div class="modal-overlay" id="crud-modal">
   <div class="modal-box modal-box-large">
     <h3 id="crud-modal-title">Add Data</h3>
     
-    <!-- Tabs -->
     <div class="modal-tabs">
       <button class="modal-tab active" data-tab="businesses">Businesses</button>
       <button class="modal-tab" data-tab="demographics">Demographics</button>
     </div>
     
-    <!-- Search for Edit/Delete -->
     <div class="modal-search" id="crud-search-section" style="display:none;">
       <input type="text" id="crud-search-input" placeholder="Search by name...">
       <select id="crud-filter-barangay" style="display:none;">
@@ -124,7 +116,6 @@
       <button class="modal-search-btn" id="crud-search-btn">Search</button>
     </div>
     
-    <!-- Results Table for Edit/Delete -->
     <div class="modal-results" id="crud-results" style="display:none;">
       <table class="data-table" id="crud-results-table">
         <thead>
@@ -134,7 +125,6 @@
       </table>
     </div>
     
-    <!-- Form for Add/Edit -->
     <form id="crud-form" style="display:none;">
       <div id="crud-form-fields"></div>
       <div class="modal-actions">
@@ -143,14 +133,12 @@
       </div>
     </form>
     
-    <!-- Initial Action Buttons -->
     <div class="modal-actions" id="crud-initial-actions">
       <button class="modal-cancel" id="crud-close">Cancel</button>
     </div>
   </div>
 </div>
 
-<!-- ==================== DELETE CONFIRMATION MODAL ==================== -->
 <div class="modal-overlay" id="delete-confirm-modal">
   <div class="modal-box">
     <h3>Confirm Delete</h3>
