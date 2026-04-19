@@ -32,13 +32,22 @@ document.getElementById('saved-btn').addEventListener('click', function(e) {
 });
 
 let businessMarkers = [];
+let clickedMarker = null;
+let allowIdeaPins = true;
 
 function clearBusinessMarkers() {
   businessMarkers.forEach(m => map.removeLayer(m));
   businessMarkers = [];
 }
 
-function plotLocations(recs, centerIndex = null) {
+function clearClickedMarker() {
+  if (clickedMarker) {
+    map.removeLayer(clickedMarker);
+    clickedMarker = null;
+  }
+}
+
+function plotLocations(recs) {
   clearBusinessMarkers();
 
   const bounds = L.latLngBounds();
@@ -53,12 +62,13 @@ function plotLocations(recs, centerIndex = null) {
         Score: ${rec.score?.toFixed(2) ?? ''}
       `);
 
+    marker.on('click', () => {
+      map.closePopup();
+      marker.openPopup();
+    });
+
     businessMarkers.push(marker);
     bounds.extend(marker.getLatLng());
-
-    if (centerIndex === i) {
-      marker.openPopup();
-    }
   });
 
   if (bounds.isValid()) {
@@ -102,7 +112,7 @@ async function fetchIdeaLocations(filters = {}) {
   return data.success ? data.data : [];
 }
 
-async function renderIdeasAndPins({ type, barangay, prefs }) {
+async function renderIdeasAndPins({ type, barangay, prefs, allowPins }) {
   const ideas = await fetchIdeas({ type, barangay, prefs });
   const listEl = document.getElementById('rec-list');
 
@@ -124,15 +134,12 @@ async function renderIdeasAndPins({ type, barangay, prefs }) {
   const items = listEl.querySelectorAll('.rec-item');
   items.forEach((el) => {
     el.addEventListener('click', async () => {
+      if (!allowPins) return;
       const idea = el.dataset.idea;
       const recs = await fetchIdeaLocations({ idea, barangay, top: 5, prefs });
-      plotLocations(recs, 0);
+      plotLocations(recs);
     });
   });
-
-  const firstIdea = ideas[0];
-  const firstRecs = await fetchIdeaLocations({ idea: firstIdea, barangay, top: 5, prefs });
-  plotLocations(firstRecs, 0);
 }
 
 const barangayMap = {
@@ -175,8 +182,22 @@ const typeMap = {
   'f-tech':     'TECH'
 };
 
+function normalizeStr(s) {
+  return (s || '').toString().trim().toLowerCase();
+}
+
+function matchBarangayName(name) {
+  const n = normalizeStr(name);
+  const values = Object.values(barangayMap);
+  for (const v of values) {
+    if (normalizeStr(v) === n) return v;
+  }
+  return name || null;
+}
+
 document.getElementById('done-btn').addEventListener('click', async () => {
   filterPanel.classList.remove('open');
+  allowIdeaPins = true;
 
   const barangayCheckboxes = document.querySelectorAll('[id^="b-"]:checked');
   const typeCheckboxes     = document.querySelectorAll('[id^="f-"]:checked');
@@ -200,7 +221,7 @@ document.getElementById('done-btn').addEventListener('click', async () => {
 
   locPanel.classList.add('open');
 
-  await renderIdeasAndPins({ type, barangay, prefs });
+  await renderIdeasAndPins({ type, barangay, prefs, allowPins: true });
 });
 
 let currentLocShortName = '';
@@ -210,6 +231,15 @@ let currentClickLng = null;
 map.on('click', async function(e) {
   currentClickLat = e.latlng.lat.toFixed(6);
   currentClickLng = e.latlng.lng.toFixed(6);
+
+  allowIdeaPins = false;
+  clearBusinessMarkers();
+
+  clearClickedMarker();
+  clickedMarker = L.marker([parseFloat(currentClickLat), parseFloat(currentClickLng)])
+    .addTo(map)
+    .bindPopup(`Selected location<br>${currentClickLat}, ${currentClickLng}`)
+    .openPopup();
 
   const svDiv = document.getElementById('street-view');
   svDiv.innerHTML = `<iframe src="https://www.mapillary.com/embed?map_style=Mapillary%20light&lat=${currentClickLat}&lng=${currentClickLng}&z=17" style="width:100%;height:100%;border:none;"></iframe>`;
@@ -235,15 +265,38 @@ map.on('click', async function(e) {
     const res  = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${currentClickLat}&lon=${currentClickLng}&format=json`);
     const data = await res.json();
     const addr = data.address || {};
-    const area = addr.suburb || addr.neighbourhood || addr.village || addr.town || addr.county || '';
+    const area = addr.barangay || addr.suburb || addr.neighbourhood || addr.city_district || addr.village || addr.town || addr.county || '';
     const city = addr.city || addr.municipality || '';
     currentLocShortName = area ? (city ? `${area}, ${city}` : area) : (city || currentLocShortName);
     badge.textContent   = `📍 ${currentLocShortName}`;
     titleEl.textContent = `Recommended Businesses in ${area || city || 'this Area'}`;
   } catch(err) {
     badge.textContent = `📍 ${currentClickLat}, ${currentClickLng}`;
-    console.error('Reverse geocode failed:', err);
   }
+
+  const typeCheckboxes = document.querySelectorAll('[id^="f-"]:checked');
+  const selectedTypes  = [...typeCheckboxes].map(cb => typeMap[cb.id]).filter(Boolean);
+  const type = selectedTypes[0] || null;
+  const prefs = getPrefs();
+
+  const ideasRes = await fetch(`/api/ideas-by-point?lat=${currentClickLat}&lon=${currentClickLng}&category=${type || ''}&prefs=${prefs.join(',')}`);
+  const ideasData = await ideasRes.json();
+  const listEl = document.getElementById('rec-list');
+
+  if (!ideasData.success || !ideasData.data.length) {
+    listEl.innerHTML = '';
+    return;
+  }
+
+  listEl.innerHTML = ideasData.data.map((name, i) => `
+    <div class="rec-item" data-idx="${i}" data-idea="${escapeHtml(name)}">
+      <span class="rec-item-num">${i+1}.</span>
+      <span class="rec-item-name">${escapeHtml(name)}</span>
+      <div class="save-row" data-id="loc-${i}" data-name="${escapeHtml(name)}" onclick="toggleLocSave(this)">
+        <img src="save.png" alt="bookmark"><span>Save</span>
+      </div>
+    </div>
+  `).join('');
 });
 
 document.getElementById('closeSV').onclick = () => {
@@ -308,7 +361,8 @@ async function doSearch(query) {
     if (!data.length) { alert('Location not found.'); return; }
     const { lat, lon, display_name } = data[0];
     map.setView([parseFloat(lat), parseFloat(lon)], 16);
-    L.marker([parseFloat(lat), parseFloat(lon)]).addTo(map).bindPopup(display_name).openPopup();
+    clearClickedMarker();
+    clickedMarker = L.marker([parseFloat(lat), parseFloat(lon)]).addTo(map).bindPopup(display_name).openPopup();
   } catch(err) { console.error(err); alert('Something went wrong.'); }
 }
 
