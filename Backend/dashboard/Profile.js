@@ -11,7 +11,7 @@ const affiliationSelect = document.getElementById('affiliation');
 
 let isEditing = false;
 let originalData = {};
-let currentUserRole = null; // Store role but don't display it
+let currentUserRole = null; 
 
 async function loadUserData() {
     try {
@@ -41,7 +41,6 @@ async function loadUserData() {
             affiliationSelect.value = user.affiliation || '';
             passwordInput.value = '';
             
-            // Store role internally but don't display it
             currentUserRole = user.role || 'user';
 
             originalData = {

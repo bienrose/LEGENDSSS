@@ -3,7 +3,6 @@
  * Handles all dynamic data fetching and CRUD operations
  */
 
-// ==================== CONFIGURATION ====================
 const API_BASE = '/api/admin';
 
 // Current state
@@ -13,7 +12,6 @@ let selectedRecord = null;
 let pendingDelete = null;
 let barangayList = [];
 
-// ==================== INITIALIZATION ====================
 document.addEventListener('DOMContentLoaded', () => {
     checkAuth();
     loadDashboardStats();
@@ -22,7 +20,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initEventListeners();
 });
 
-// ==================== AUTH CHECK ====================
 async function checkAuth() {
     try {
         const response = await fetch('/api/check-auth');
@@ -33,7 +30,6 @@ async function checkAuth() {
             return;
         }
         
-        // Update UI with admin name
         if (data.user) {
             document.querySelector('.sidebar-name').textContent = data.user.fullname || 'Admin';
         }
@@ -43,7 +39,6 @@ async function checkAuth() {
     }
 }
 
-// ==================== DASHBOARD DATA ====================
 async function loadDashboardStats() {
     console.log("📊 Loading dashboard stats...");
     try {
@@ -124,7 +119,6 @@ function updateChart(entrepreneurPct, aspiringPct) {
     });
 }
 
-// ==================== EVENT LISTENERS ====================
 function initEventListeners() {
     document.getElementById('add-data-btn').addEventListener('click', () => openModal('add'));
     document.getElementById('edit-data-btn').addEventListener('click', () => openModal('edit'));
@@ -172,7 +166,6 @@ function initEventListeners() {
     });
 }
 
-// ==================== MODAL MANAGEMENT ====================
 function openModal(mode) {
     currentMode = mode;
     const modal = document.getElementById('crud-modal');
@@ -251,7 +244,6 @@ function populateBarangayFilter() {
     });
 }
 
-// ==================== SEARCH & RESULTS ====================
 async function performSearch() {
     const searchTerm = document.getElementById('crud-search-input').value.trim();
     const barangayFilter = document.getElementById('crud-filter-barangay')?.value || '';
@@ -369,7 +361,6 @@ function displaySearchResults(results) {
     resultsSection.style.display = 'block';
 }
 
-// ==================== CRUD OPERATIONS ====================
 async function editRecord(id) {
     try {
         const response = await fetch(`${API_BASE}/${currentTable}/${id}`);
@@ -427,7 +418,6 @@ async function confirmDelete() {
     pendingDelete = null;
 }
 
-// ==================== FORM HANDLING ====================
 function renderForm(data = null) {
     const fieldsContainer = document.getElementById('crud-form-fields');
     
@@ -572,7 +562,6 @@ async function handleFormSubmit(e) {
     }
 }
 
-// ==================== UTILITY FUNCTIONS ====================
 function escapeHtml(text) {
     if (!text) return '';
     const div = document.createElement('div');
@@ -580,6 +569,5 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// Make functions available globally for onclick handlers
 window.editRecord = editRecord;
 window.deleteRecord = deleteRecord;

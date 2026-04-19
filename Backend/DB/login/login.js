@@ -105,7 +105,6 @@ async function login() {
       text: "Login successful",
       icon: "success"
     }).then(() => {
-      // ✅ FIXED: Use server's redirect URL instead of hardcoded /dashboard
       window.location.href = data.redirect || "/dashboard";
     });
 
