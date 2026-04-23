@@ -228,9 +228,9 @@ let currentLocShortName = '';
 let currentClickLat = null;
 let currentClickLng = null;
 
-map.on('click', async function(e) {
-  currentClickLat = e.latlng.lat.toFixed(6);
-  currentClickLng = e.latlng.lng.toFixed(6);
+async function handleLocationSelect(lat, lon) {
+  currentClickLat = Number(lat).toFixed(6);
+  currentClickLng = Number(lon).toFixed(6);
 
   allowIdeaPins = false;
   clearBusinessMarkers();
@@ -240,6 +240,10 @@ map.on('click', async function(e) {
     .addTo(map)
     .bindPopup(`Selected location<br>${currentClickLat}, ${currentClickLng}`)
     .openPopup();
+
+  clickedMarker.on('popupclose', () => {
+    clearClickedMarker();
+  });
 
   const svDiv = document.getElementById('street-view');
   svDiv.innerHTML = `<iframe src="https://www.mapillary.com/embed?map_style=Mapillary%20light&lat=${currentClickLat}&lng=${currentClickLng}&z=17" style="width:100%;height:100%;border:none;"></iframe>`;
@@ -284,7 +288,7 @@ map.on('click', async function(e) {
   const listEl = document.getElementById('rec-list');
 
   if (!ideasData.success || !ideasData.data.length) {
-    listEl.innerHTML = '';
+    listEl.innerHTML = '<div class="rec-item">No recommendations found.</div>';
     return;
   }
 
@@ -297,6 +301,10 @@ map.on('click', async function(e) {
       </div>
     </div>
   `).join('');
+}
+
+map.on('click', async function(e) {
+  await handleLocationSelect(e.latlng.lat, e.latlng.lng);
 });
 
 document.getElementById('closeSV').onclick = () => {
@@ -356,14 +364,19 @@ document.addEventListener('click', function(e) {
 
 async function doSearch(query) {
   try {
-    const res  = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`);
+    const viewbox = "121.0600,14.6200,121.1100,14.5350";
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&bounded=1&viewbox=${viewbox}`
+    );
     const data = await res.json();
-    if (!data.length) { alert('Location not found.'); return; }
-    const { lat, lon, display_name } = data[0];
+    if (!data.length) { alert('Location not found in Pasig.'); return; }
+    const { lat, lon } = data[0];
     map.setView([parseFloat(lat), parseFloat(lon)], 16);
-    clearClickedMarker();
-    clickedMarker = L.marker([parseFloat(lat), parseFloat(lon)]).addTo(map).bindPopup(display_name).openPopup();
-  } catch(err) { console.error(err); alert('Something went wrong.'); }
+    await handleLocationSelect(lat, lon);
+  } catch(err) {
+    console.error(err);
+    alert('Something went wrong.');
+  }
 }
 
 searchInput.addEventListener('keydown', async function(e) {
@@ -387,7 +400,7 @@ function renderSavedPanel() {
   body.innerHTML = savedLocations.map(loc => `
     <div class="saved-location-card" id="saved-card-${loc.id}">
       <div class="saved-card-header">
-        <div class="saved-card-title">Recommended Businesses in ${escapeHtml(loc.locationName)}</div>
+        <div class="saved-card-title" onclick="focusSavedLocation('${loc.id}')">Recommended Businesses in ${escapeHtml(loc.locationName)}</div>
         <div class="saved-card-actions">
           <button class="card-icon-btn" title="Unsave" onclick="promptUnsaveLocation('${loc.id}')">
             <img src="save.png" alt="unsave">
@@ -404,6 +417,23 @@ function renderSavedPanel() {
       </div>
     </div>
   `).join('');
+}
+
+function focusSavedLocation(id) {
+  const loc = savedLocations.find(l => l.id === id);
+  if (!loc || !loc.lat || !loc.lon) return;
+
+  clearClickedMarker();
+  clickedMarker = L.marker([parseFloat(loc.lat), parseFloat(loc.lon)])
+    .addTo(map)
+    .bindPopup(`${escapeHtml(loc.locationName)}<br>${loc.lat}, ${loc.lon}`)
+    .openPopup();
+
+  clickedMarker.on('popupclose', () => {
+    clearClickedMarker();
+  });
+
+  map.setView([parseFloat(loc.lat), parseFloat(loc.lon)], 16);
 }
 
 function toggleSavedCard(id, btn) {
@@ -447,8 +477,10 @@ function toggleLocSave(row) {
     row.classList.add('saved');
     label.textContent = 'Saved';
     const locName = currentLocShortName || 'Unknown Area';
+    const lat = currentClickLat;
+    const lon = currentClickLng;
     if (!savedLocations.find(l => l.id === id)) {
-      savedLocations.push({ id, locationName: locName, businesses: [bizName] });
+      savedLocations.push({ id, locationName: locName, businesses: [bizName], lat, lon });
     }
     renderSavedPanel();
   }
