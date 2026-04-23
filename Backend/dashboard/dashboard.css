@@ -241,3 +241,24 @@ body { font-family: Arial, sans-serif; overflow: hidden; }
   cursor: pointer; transition: background 0.15s;
 }
 .modal-confirm:hover { background: #c53030; }
+.pasig-toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #d32f2f;
+  color: #fff;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.2);
+  z-index: 9999;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: all 0.2s ease;
+  pointer-events: none;
+}
+.pasig-toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
