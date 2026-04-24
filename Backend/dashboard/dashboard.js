@@ -68,25 +68,25 @@ async function replotFilteredPins() {
 if (pinCountInput && pinCountLabel) {
   setPinDefault();
 
-pinCountInput.addEventListener('input', () => {
-  if (!isFilterMode) return;
-  pinCountLabel.textContent = String(getFilteredPinCount());
-});
+  pinCountInput.addEventListener('input', () => {
+    if (!isFilterMode) return;
+    pinCountLabel.textContent = String(getFilteredPinCount());
+  });
 
-pinCountInput.addEventListener('change', async () => {
-  if (!isFilterMode) return;
-  await replotFilteredPins();
-});
+  pinCountInput.addEventListener('change', async () => {
+    if (!isFilterMode) return;
+    await replotFilteredPins();
+  });
 
-pinCountInput.addEventListener('mouseup', async () => {
-  if (!isFilterMode) return;
-  await replotFilteredPins();
-});
+  pinCountInput.addEventListener('mouseup', async () => {
+    if (!isFilterMode) return;
+    await replotFilteredPins();
+  });
 
-pinCountInput.addEventListener('touchend', async () => {
-  if (!isFilterMode) return;
-  await replotFilteredPins();
-});
+  pinCountInput.addEventListener('touchend', async () => {
+    if (!isFilterMode) return;
+    await replotFilteredPins();
+  });
 }
 
 hidePinRange();
@@ -160,17 +160,144 @@ function clearClickedMarker() {
   }
 }
 
+const CODE_LABELS = {
+  'RES': 'Restaurant',
+  'RET': 'Retail',
+  'SER': 'Services',
+  'WSR': 'Wholesale',
+  'WSE': 'Wholesale',
+  'BSM': 'Manufacturing',
+  'SSM': 'Manufacturing',
+  'EX1': 'Export',
+  'EX2': 'Export',
+  'EX3': 'Export',
+  'FRX': 'Foreign Exchange',
+  'SBR': 'Stockbroker',
+  'PWN': 'Pawnshop',
+  'BNK': 'Bank',
+  'IN6': 'Insurance',
+  'PRT': 'Retail',
+  'APT': 'Apartment Rental',
+  'EDU': 'Educational Institution',
+  'HOS': 'Hospital',
+  'DEN': 'Dental Clinic',
+  'DRG': 'Drug Store',
+  'MED': 'Medical Clinic',
+  'MOT': 'Motel',
+  'SCA': 'Security Agency',
+  'AMD': 'Amusement',
+  'AMN': 'Amusement',
+  'TA':  'Travel Agency',
+  'PRN': 'Printing Services',
+  'FTX': 'Franchise',
+  'CAT': 'Catering',
+  'ADM': 'Admin',
+  'LAB': 'Laboratory',
+};
+
+const KEYWORD_LABELS = [
+  ['SARI SARI',       'Sari-Sari Store'],
+  ['GROCERY',         'Grocery'],
+  ['BAKERY',          'Bakery'],
+  ['BAKESHOP',        'Bakeshop'],
+  ['RESTAURANT',      'Restaurant'],
+  ['FAST FOOD',       'Fast Food'],
+  ['COFFEE SHOP',     'Coffee Shop'],
+  ['CANTEEN',         'Canteen'],
+  ['EATERY',          'Eatery'],
+  ['PANCITERIA',      'Panciteria'],
+  ['CATERING',        'Catering'],
+  ['PHARMACY',        'Pharmacy'],
+  ['DRUG STORE',      'Drug Store'],
+  ['CLINIC',          'Clinic'],
+  ['DENTAL',          'Dental Clinic'],
+  ['HOSPITAL',        'Hospital'],
+  ['LABORATORY',      'Laboratory'],
+  ['PAWNSHOP',        'Pawnshop'],
+  ['BANK',            'Bank'],
+  ['INSURANCE',       'Insurance'],
+  ['LENDING',         'Lending'],
+  ['HARDWARE',        'Hardware Store'],
+  ['CELLPHONE',       'Cellphone Store'],
+  ['APPLIANCES',      'Appliance Store'],
+  ['OPTICAL',         'Optical Shop'],
+  ['SALON',           'Salon'],
+  ['BARBER',          'Barbershop'],
+  ['SPA',             'Spa'],
+  ['MASSAGE',         'Massage'],
+  ['LAUNDRY',         'Laundry Shop'],
+  ['CAR WASH',        'Car Wash'],
+  ['GYM',             'Gym'],
+  ['SCHOOL',          'School'],
+  ['TUTORIAL',        'Tutorial Center'],
+  ['TRAINING',        'Training Center'],
+  ['TRAVEL',          'Travel Agency'],
+  ['HOTEL',           'Hotel'],
+  ['MOTEL',           'Motel'],
+  ['FUNERAL',         'Funeral Services'],
+  ['PRINTING',        'Printing Services'],
+  ['ADVERTISING',     'Advertising'],
+  ['CONSTRUCTION',    'Construction'],
+  ['TRUCKING',        'Trucking'],
+  ['LOGISTICS',       'Logistics'],
+  ['SECURITY',        'Security Agency'],
+  ['CONSULTANCY',     'Consultancy'],
+  ['CONSULTING',      'Consulting'],
+  ['ACCOUNTING',      'Accounting'],
+  ['LAW',             'Law Firm'],
+  ['REAL ESTATE',     'Real Estate'],
+  ['TRADING',         'Trading'],
+  ['RETAILER',        'Retail'],
+  ['WHOLESALER',      'Wholesale'],
+  ['MANUFACTURER',    'Manufacturing'],
+  ['WAREHOUSE',       'Warehouse'],
+  ['WATER REFILLING', 'Water Refilling Station'],
+  ['GAS STATION',     'Gas Station'],
+  ['LPG',             'LPG Dealer'],
+  ['INTERNET',        'Internet Services'],
+  ['SOFTWARE',        'Software Company'],
+  ['BPO',             'BPO'],
+  ['CALL CENTER',     'Call Center'],
+  ['REMITTANCE',      'Money Remittance'],
+  ['COOPERATIVE',     'Cooperative'],
+  ['FOUNDATION',      'Foundation'],
+];
+
 function formatBizName(s) {
   const raw = (s || '').toString().trim();
   if (!raw) return '';
-  const withoutPrefix = raw.replace(/^(RES|RET|SER)\s+/i, '');
-  const words = withoutPrefix
+
+  const upper = raw.toUpperCase();
+
+  for (const [code, label] of Object.entries(CODE_LABELS)) {
+    const pattern = new RegExp(`^${code}[\\s\\-\\.]+`, 'i');
+    if (pattern.test(raw)) {
+      const remainder = raw.replace(pattern, '').trim();
+      const remainderUpper = remainder.toUpperCase();
+
+      for (const [kw, kwLabel] of KEYWORD_LABELS) {
+        if (remainderUpper.includes(kw)) return kwLabel;
+      }
+
+      if (!remainder) return label;
+      const titled = remainder
+        .toLowerCase()
+        .split(/\s+/)
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ');
+      return `${label} - ${titled}`;
+    }
+  }
+
+  for (const [kw, kwLabel] of KEYWORD_LABELS) {
+    if (upper.includes(kw)) return kwLabel;
+  }
+
+  return raw
     .toLowerCase()
     .split(/\s+/)
-    .map(w => w.replace(/[^a-z0-9\-]/gi, ''))
-    .filter(Boolean)
-    .map(w => w.charAt(0).toUpperCase() + w.slice(1));
-  return words.join(' ');
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
 }
 
 function escapeHtml(str) {
@@ -201,6 +328,7 @@ function plotLocations(recs) {
 
   if (bounds.isValid()) map.fitBounds(bounds.pad(0.2));
 }
+
 function getPrefs() {
   const prefs = [];
   if (document.getElementById('p-totalpop')?.checked) prefs.push('totalpop');
