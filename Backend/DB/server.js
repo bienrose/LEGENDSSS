@@ -355,6 +355,45 @@ app.get("/api/check-auth", (req, res) => {
   });
 });
 
+// ========== FIND NEAREST BARANGAY ENDPOINT ==========
+
+app.get("/api/nearest-barangay", requireAuth, async (req, res) => {
+  try {
+    const { lat, lon } = req.query;
+    if (!lat || !lon) return res.status(400).json({ success: false, message: "lat/lon required" });
+
+    const clickLat = Number(lat);
+    const clickLon = Number(lon);
+
+    const [barangays] = await geoDB.query(
+      `SELECT barangay_name, center_lat, center_lon 
+       FROM demographic_pasig 
+       WHERE center_lat IS NOT NULL AND center_lon IS NOT NULL`
+    );
+
+    if (barangays.length === 0) {
+      return res.json({ success: false, message: "No barangay centers found. Run /api/admin/populate-centers first." });
+    }
+
+    let nearestBarangay = null;
+    let minDist = Infinity;
+
+    barangays.forEach(row => {
+      const dist = haversineMeters(clickLat, clickLon, Number(row.center_lat), Number(row.center_lon));
+      if (dist < minDist) {
+        minDist = dist;
+        nearestBarangay = row.barangay_name;
+      }
+    });
+
+    res.json({ success: true, barangay: nearestBarangay, distanceMeters: Math.round(minDist) });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ========== END FIND NEAREST BARANGAY ==========
+
 // ========== AREA DEMOGRAPHICS ENDPOINT ==========
 
 app.get("/api/area-demographics", requireAuth, async (req, res) => {

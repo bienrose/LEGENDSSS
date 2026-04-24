@@ -118,7 +118,7 @@ body { font-family: Arial, sans-serif; overflow: hidden; }
   overflow: hidden; max-height: 0;
   transition: max-height 0.3s ease;
 }
-.saved-card-body.open { max-height: 300px; }
+.saved-card-body.open { max-height: none; overflow: visible; }
 .saved-biz-list { padding: 6px 0 2px; list-style: none; }
 .saved-biz-list li { font-size: 13px; color: #4a5568; padding: 3px 0; }
 

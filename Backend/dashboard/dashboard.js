@@ -611,6 +611,17 @@ document.getElementById('done-btn')?.addEventListener('click', async () => {
   await renderIdeasAndPins({ type, barangay, prefs, allowPins: true });
 });
 
+async function getNearestBarangay(lat, lon) {
+  try {
+    const res = await fetch(`/api/nearest-barangay?lat=${lat}&lon=${lon}`);
+    const data = await res.json();
+    return data.success ? data.barangay : '';
+  } catch (err) {
+    console.error('Error finding nearest barangay:', err);
+    return '';
+  }
+}
+
 function showPasigToast(msg) {
   const el = document.getElementById('pasig-toast');
   if (!el) return;
@@ -678,18 +689,32 @@ async function handleLocationSelect(lat, lon) {
   currentLocShortName = `${currentClickLat}, ${currentClickLng}`;
   currentBarangayName = '';
 
+  // Find nearest barangay from database centroids
+  currentBarangayName = await getNearestBarangay(currentClickLat, currentClickLng);
+
+  // Get display name from Nominatim
   try {
     const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${currentClickLat}&lon=${currentClickLng}&format=json`);
     const data = await res.json();
     const addr = data.address || {};
-    const area = addr.barangay || addr.suburb || addr.neighbourhood || addr.city_district || addr.village || addr.town || addr.county || '';
+    const road = addr.road || addr.pedestrian || addr.path || '';
     const city = addr.city || addr.municipality || addr.town || addr.county || '';
-    currentLocShortName = area ? (city ? `${area}, ${city}` : area) : (city || currentLocShortName);
-    currentBarangayName = area || '';
+    
+    if (road && currentBarangayName) {
+      currentLocShortName = `${road}, ${currentBarangayName}, ${city || 'Pasig'}`;
+    } else if (currentBarangayName) {
+      currentLocShortName = `${currentBarangayName}, ${city || 'Pasig'}`;
+    }
+    
     if (badge) badge.textContent = `📍 ${currentLocShortName}`;
-    if (titleEl) titleEl.textContent = `Recommended Businesses in ${area || city || 'this Area'}`;
+    if (titleEl) titleEl.textContent = `Recommended Businesses in ${currentBarangayName || 'this Area'}`;
   } catch (err) {
     if (badge) badge.textContent = `📍 ${currentClickLat}, ${currentClickLng}`;
+  }
+
+  // Load demographics for the matched barangay
+  if (currentBarangayName) {
+    loadAreaDemographics(currentBarangayName);
   }
 
   const typeCheckboxes = document.querySelectorAll('[id^="f-"]:checked');
@@ -885,9 +910,33 @@ function renderSavedPanel() {
         <ul class="saved-biz-list">
           ${loc.businesses.map((b, i) => `<li>${i + 1}. ${escapeHtml(formatBizName(b))}</li>`).join('')}
         </ul>
+        
+        <div class="collapsible-section">
+          <div class="collapsible-header" onclick="toggleCollapse('saved-demo-${loc.id}')">
+            <h3>Demographic Data</h3>
+            <img src="/dashboard/down.png" alt="expand" id="saved-demo-${loc.id}-arrow" class="collapsible-arrow">
+          </div>
+          <div class="collapsible-body" id="saved-demo-${loc.id}-body">
+            <ul><li>Loading...</li></ul>
+          </div>
+        </div>
+
+        <div class="collapsible-section">
+          <div class="collapsible-header" onclick="toggleCollapse('saved-summary-${loc.id}')">
+            <h3>Area Summary</h3>
+            <img src="/dashboard/down.png" alt="expand" id="saved-summary-${loc.id}-arrow" class="collapsible-arrow">
+          </div>
+          <div class="collapsible-body" id="saved-summary-${loc.id}-body">
+            <p>Loading...</p>
+          </div>
+        </div>
       </div>
     </div>
   `).join('');
+
+  savedLocations.forEach(loc => {
+    loadSavedAreaDemographics(loc);
+  });
 }
 
 function focusSavedLocation(id) {
@@ -905,6 +954,24 @@ function focusSavedLocation(id) {
   clickedMarker = L.marker([lat, lon]).addTo(map).bindPopup(`${escapeHtml(loc.locationName)}<br>${loc.lat}, ${loc.lon}`).openPopup();
   clickedMarker.on('popupclose', () => clearClickedMarker());
   map.setView([lat, lon], 16);
+
+  // Also load demographics in the loc-panel for this barangay
+  locPanel.classList.add('open');
+  currentBarangayName = loc.locationName;
+  currentClickLat = loc.lat;
+  currentClickLng = loc.lon;
+  currentLocShortName = loc.locationName;
+  
+  const badge = document.getElementById('loc-badge');
+  const titleEl = document.getElementById('loc-panel-title');
+  if (badge) badge.textContent = `📍 ${escapeHtml(loc.locationName)}`;
+  if (titleEl) titleEl.textContent = `Recommended Businesses in ${escapeHtml(loc.locationName)}`;
+  
+  if (loc.businesses && loc.businesses.length > 0) {
+    loadAreaDemographics(loc.locationName, loc.businesses[0]);
+  } else {
+    loadAreaDemographics(loc.locationName);
+  }
 }
 
 function toggleSavedCard(id, btn) {
@@ -1063,6 +1130,97 @@ async function loadAreaDemographics(barangay, businessLine) {
     }
   } catch (err) {
     console.error('Error loading area demographics:', err);
+  }
+}
+
+async function loadSavedAreaDemographics(loc) {
+  if (!loc || !loc.locationName || loc.locationName === 'Unknown Area') return;
+
+  try {
+    const params = new URLSearchParams();
+    params.append('barangay', loc.locationName);
+    if (loc.businesses && loc.businesses.length > 0) {
+      params.append('line_of_business', loc.businesses[0]);
+    }
+    
+    const res = await fetch(`/api/area-demographics?${params.toString()}`);
+    const data = await res.json();
+    
+    if (!data.success) return;
+
+    const demo = data.data.demographic;
+    const totalBiz = data.data.totalBusinesses;
+    const sameLineCount = data.data.sameLineCount;
+    const businessLine = loc.businesses && loc.businesses.length > 0 ? loc.businesses[0] : null;
+
+    // --- Populate Demographic Data for this saved card ---
+    const demoBody = document.getElementById(`saved-demo-${loc.id}-body`);
+    if (demoBody) {
+      let demoHTML = '<ul>';
+      
+      if (demo) {
+        demoHTML += `<li><strong>Population:</strong> ${demo.population ? demo.population.toLocaleString() : 'N/A'}</li>`;
+        demoHTML += `<li><strong>Population Density:</strong> ${demo.population_density ? demo.population_density.toLocaleString() + ' per km²' : 'N/A'}</li>`;
+        demoHTML += `<li><strong>Dominant Age Group:</strong> ${demo.highest_age_group || 'N/A'}</li>`;
+        
+        const incomeMin = demo.avg_income_min ? '₱' + demo.avg_income_min.toLocaleString() : 'N/A';
+        const incomeMax = demo.avg_income_max ? '₱' + demo.avg_income_max.toLocaleString() : 'N/A';
+        const incomeRange = (demo.avg_income_min || demo.avg_income_max) ? `${incomeMin} – ${incomeMax}` : 'N/A';
+        demoHTML += `<li><strong>Average Income Range:</strong> ${incomeRange}</li>`;
+        demoHTML += `<li><strong>Gender Distribution:</strong> ${demo.gender_distribution || 'N/A'}</li>`;
+        demoHTML += `<li><strong>Total Businesses in Area:</strong> ${totalBiz.toLocaleString()}</li>`;
+        
+        if (businessLine) {
+          demoHTML += `<li><strong>Same Line of Business Count:</strong> ${sameLineCount.toLocaleString()}</li>`;
+        }
+      } else {
+        demoHTML += '<li>No demographic data available for this area.</li>';
+      }
+      
+      demoHTML += '</ul>';
+      demoBody.innerHTML = demoHTML;
+    }
+
+    // --- Populate Area Summary for this saved card ---
+    const summaryBody = document.getElementById(`saved-summary-${loc.id}-body`);
+    if (summaryBody) {
+      let summary = '';
+      
+      if (!demo) {
+        summary = `<p>No demographic data available for <strong>${escapeHtml(loc.locationName)}</strong>.</p>`;
+      } else {
+        const densityLabel = demo.population && demo.population_density
+          ? (demo.population_density > 30000 ? 'densely populated' : demo.population_density > 15000 ? 'moderately populated' : 'sparsely populated')
+          : 'populated';
+
+        const ageLabel = demo.highest_age_group || 'all ages';
+
+        let incomeLabel = 'with varied income levels';
+        if (demo.avg_income_max) {
+          if (demo.avg_income_max > 50000) incomeLabel = 'with high purchasing power';
+          else if (demo.avg_income_max > 25000) incomeLabel = 'with moderate-to-high purchasing power';
+          else incomeLabel = 'with modest income levels';
+        }
+
+        const genderLabel = demo.gender_distribution ? `a predominantly ${demo.gender_distribution.toLowerCase()} population` : 'a balanced gender distribution';
+
+        summary = `<p>
+          <strong>${escapeHtml(demo.barangay_name || loc.locationName)}</strong> is a ${densityLabel} barangay in Pasig 
+          with a total population of <strong>${demo.population ? demo.population.toLocaleString() : 'N/A'}</strong> 
+          and a population density of <strong>${demo.population_density ? demo.population_density.toLocaleString() : 'N/A'} per km²</strong>.
+          The dominant age group is <strong>${ageLabel}</strong>, and the area has ${genderLabel}.
+          Households in this barangay have an average income range of 
+          <strong>${demo.avg_income_min ? '₱' + demo.avg_income_min.toLocaleString() : 'N/A'} – ${demo.avg_income_max ? '₱' + demo.avg_income_max.toLocaleString() : 'N/A'}</strong>,
+          making it an area ${incomeLabel}.
+          There are <strong>${totalBiz.toLocaleString()}</strong> registered businesses operating in the area${businessLine ? `, <strong>${sameLineCount.toLocaleString()}</strong> of which are in the same line of business` : ''}.
+          This barangay is well-suited for businesses targeting the <strong>${ageLabel}</strong> age group with offerings that match the local income profile.
+        </p>`;
+      }
+
+      summaryBody.innerHTML = summary;
+    }
+  } catch (err) {
+    console.error('Error loading saved area demographics:', err);
   }
 }
 
