@@ -130,6 +130,29 @@ function requireAdminPage(req, res, next) {
 const pendingVerifications = new Map();
 const pendingPasswordResets = new Map();
 
+const TYPE_TO_CATEGORY = {
+  FOOD: "Food & Beverage",
+  RETAIL: "Retail & Trading",
+  PERSONAL: "Beauty & Wellness",
+  TECH: "IT & Software",
+  WHOLESALE: "Wholesale & Import",
+  MANUFACTURING: "Manufacturing",
+  IT: "IT & Software",
+  BPO: "BPO & Call Center",
+  CONSTRUCTION: "Construction",
+  FINANCE: "Finance & Banking",
+  EDUCATION: "Education",
+  HEALTHCARE: "Healthcare",
+  ENERGY: "Energy & Fuel",
+  LOGISTICS: "Logistics & Transport",
+  HOSPITALITY: "Hospitality",
+  SECURITY: "Security",
+  LEGAL: "Legal & Consulting",
+  MARKETING: "Marketing & Advertising",
+  ADMIN: "HR & Manpower",
+  GENERAL: "General Services"
+};
+
 app.get("/", (req, res) => {
   res.sendFile(path.join(frontendPath, "login.html"));
 });
@@ -291,6 +314,13 @@ app.get("/admin", requireAdminPage, (req, res) => {
   res.sendFile(path.join(adminDashboardPath, "admindb.html"));
 });
 
+app.get("/api/me", requireAuth, (req, res) => {
+  res.json({
+    success: true,
+    affiliation: req.session.user.affiliation || ''
+  });
+});
+
 app.get("/api/user-profile", requireAuth, async (req, res) => {
   try {
     const [rows] = await legendDB.query(
@@ -355,8 +385,6 @@ app.get("/api/check-auth", (req, res) => {
   });
 });
 
-// ========== FIND NEAREST BARANGAY ENDPOINT ==========
-
 app.get("/api/nearest-barangay", requireAuth, async (req, res) => {
   try {
     const { lat, lon } = req.query;
@@ -372,7 +400,7 @@ app.get("/api/nearest-barangay", requireAuth, async (req, res) => {
     );
 
     if (barangays.length === 0) {
-      return res.json({ success: false, message: "No barangay centers found. Run /api/admin/populate-centers first." });
+      return res.json({ success: false, message: "No barangay centers found." });
     }
 
     let nearestBarangay = null;
@@ -392,16 +420,11 @@ app.get("/api/nearest-barangay", requireAuth, async (req, res) => {
   }
 });
 
-// ========== END FIND NEAREST BARANGAY ==========
-
-// ========== AREA DEMOGRAPHICS ENDPOINT ==========
-
 app.get("/api/area-demographics", requireAuth, async (req, res) => {
   try {
     const { barangay, line_of_business } = req.query;
     if (!barangay) return res.status(400).json({ success: false, message: "barangay required" });
 
-    // Get demographic data for the barangay
     const [demoRows] = await geoDB.query(
       `SELECT barangay_name, population, population_density, highest_age_group, 
               avg_income_min, avg_income_max, gender_distribution
@@ -412,14 +435,12 @@ app.get("/api/area-demographics", requireAuth, async (req, res) => {
 
     const demo = demoRows.length > 0 ? demoRows[0] : null;
 
-    // Get total business count in the barangay
     const [bizCountRows] = await geoDB.query(
       `SELECT COUNT(*) AS total FROM businesses WHERE LOWER(TRIM(barangay)) = LOWER(TRIM(?))`,
       [barangay]
     );
     const totalBusinesses = bizCountRows[0]?.total || 0;
 
-    // Get count of businesses in same line of business
     let sameLineCount = 0;
     if (line_of_business) {
       const [sameLineRows] = await geoDB.query(
@@ -433,23 +454,13 @@ app.get("/api/area-demographics", requireAuth, async (req, res) => {
 
     res.json({
       success: true,
-      data: {
-        demographic: demo,
-        totalBusinesses,
-        sameLineCount,
-        lineOfBusiness: line_of_business || null
-      }
+      data: { demographic: demo, totalBusinesses, sameLineCount, lineOfBusiness: line_of_business || null }
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 });
 
-// ========== END AREA DEMOGRAPHICS ==========
-
-// ========== SAVED RECOMMENDATIONS ENDPOINTS ==========
-
-// GET all saved recommendations for the logged-in user
 app.get("/api/saved-recommendations", requireAuth, async (req, res) => {
   try {
     const userId = req.session.user.id;
@@ -466,7 +477,6 @@ app.get("/api/saved-recommendations", requireAuth, async (req, res) => {
   }
 });
 
-// POST save a recommendation
 app.post("/api/saved-recommendations", requireAuth, async (req, res) => {
   try {
     const userId = req.session.user.id;
@@ -476,7 +486,6 @@ app.post("/api/saved-recommendations", requireAuth, async (req, res) => {
       return res.status(400).json({ success: false, message: "business_type is required" });
     }
 
-    // Prevent duplicate saves (same user, same business_type, same lat/lon)
     const [existing] = await geoDB.query(
       `SELECT id FROM saved_recommendations 
        WHERE user_id = ? AND business_type = ? 
@@ -500,7 +509,6 @@ app.post("/api/saved-recommendations", requireAuth, async (req, res) => {
   }
 });
 
-// DELETE a saved recommendation
 app.delete("/api/saved-recommendations/:id", requireAuth, async (req, res) => {
   try {
     const userId = req.session.user.id;
@@ -516,8 +524,6 @@ app.delete("/api/saved-recommendations/:id", requireAuth, async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 });
-
-// ========== END SAVED RECOMMENDATIONS ==========
 
 app.get("/api/admin/stats", requireAdmin, async (req, res) => {
   try {
@@ -797,14 +803,9 @@ app.get("/api/ideas", requireAuth, async (req, res) => {
     const params = [];
 
     if (category) {
-      const typeToCategory = {
-        FOOD: "Food & Beverage",
-        RETAIL: "Retail & Trading",
-        PERSONAL: "Beauty & Wellness",
-        TECH: "IT & Software"
-      };
+      const mappedCategory = TYPE_TO_CATEGORY[category] || category;
       sql += " AND category = ?";
-      params.push(typeToCategory[category] || category);
+      params.push(mappedCategory);
     }
 
     if (barangay) {
@@ -977,14 +978,9 @@ app.get("/api/ideas-by-point", requireAuth, async (req, res) => {
     const params = [];
 
     if (category) {
-      const typeToCategory = {
-        FOOD: "Food & Beverage",
-        RETAIL: "Retail & Trading",
-        PERSONAL: "Beauty & Wellness",
-        TECH: "IT & Software"
-      };
+      const mappedCategory = TYPE_TO_CATEGORY[category] || category;
       sql += " AND category = ?";
-      params.push(typeToCategory[category] || category);
+      params.push(mappedCategory);
     }
 
     sql += " GROUP BY line_of_business ORDER BY cnt DESC";
@@ -1241,7 +1237,7 @@ app.get("/api/idea-locations", requireAuth, async (req, res) => {
       if (inPasig(lat, lon)) chosen.push({ ...base, lat, lon });
     }
 
-    return res.json({ success: true, data: chosen.slice(0, topN) });  
+    return res.json({ success: true, data: chosen.slice(0, topN) });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
@@ -1256,11 +1252,6 @@ app.get("/geo-test", async (req, res) => {
   }
 });
 
-app.use(express.static(frontendPath));
-app.use("/dashboard", express.static(dashboardPath));
-app.use("/admin", express.static(adminDashboardPath));
-app.use("/admindashboard", express.static(adminDashboardPath));
-
 app.get("/api/debug-session", (req, res) => {
   res.json({
     authenticated: !!req.session.user,
@@ -1269,6 +1260,11 @@ app.get("/api/debug-session", (req, res) => {
     adminDashboardPath
   });
 });
+
+app.use(express.static(frontendPath));
+app.use("/dashboard", express.static(dashboardPath));
+app.use("/admin", express.static(adminDashboardPath));
+app.use("/admindashboard", express.static(adminDashboardPath));
 
 app.listen(3000, () => {
   console.log("Server running on http://localhost:3000");

@@ -1,4 +1,20 @@
 let activeRequestId = 0;
+let isFilterMode = false;
+let allowIdeaPins = true;
+let businessMarkers = [];
+let clickedMarker = null;
+let savedLocations = [];
+let unsavePendingCallback = null;
+let currentLocShortName = '';
+let currentClickLat = null;
+let currentClickLng = null;
+let currentBarangayName = '';
+let lastFilteredIdea = null;
+let lastFilteredBarangay = null;
+let lastFilteredPrefs = null;
+let searchHistory = [];
+const locSavedItems = new Set();
+
 const map = L.map('map').setView([14.5764, 121.0851], 15);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '© OpenStreetMap contributors', maxZoom: 19
@@ -24,10 +40,6 @@ const pinRangeEl = document.getElementById('pin-range');
 const pinCountInput = document.getElementById('pin-count');
 const pinCountLabel = document.getElementById('pin-count-label');
 
-let lastFilteredIdea = null;
-let lastFilteredBarangay = null;
-let lastFilteredPrefs = null;
-
 function showPinRange() {
   pinRangeEl?.classList.add('show');
 }
@@ -47,11 +59,20 @@ function getFilteredPinCount() {
   return Math.min(50, Math.max(1, n));
 }
 
+async function fetchIdeaLocations(filters = {}) {
+  const params = new URLSearchParams();
+  if (filters.idea) params.append('idea', filters.idea);
+  if (filters.barangay) params.append('barangay', filters.barangay);
+  if (filters.top) params.append('top', filters.top);
+  if (filters.prefs?.length) params.append('prefs', filters.prefs.join(','));
+  const res = await fetch(`/api/idea-locations?${params.toString()}`);
+  const data = await res.json();
+  return data.success ? data.data : [];
+}
+
 async function replotFilteredPins() {
   if (!isFilterMode || !lastFilteredIdea) return;
-
   const requestId = ++activeRequestId;
-
   const top = getFilteredPinCount();
   const recs = await fetchIdeaLocations({
     idea: lastFilteredIdea,
@@ -59,9 +80,7 @@ async function replotFilteredPins() {
     top,
     prefs: lastFilteredPrefs
   });
-
   if (!isFilterMode || requestId !== activeRequestId) return;
-
   plotLocations(recs);
 }
 
@@ -73,20 +92,16 @@ if (pinCountInput && pinCountLabel) {
     pinCountLabel.textContent = String(getFilteredPinCount());
   });
 
-  pinCountInput.addEventListener('change', async () => {
+  const fireSlider = async () => {
     if (!isFilterMode) return;
+    pinCountLabel.textContent = String(getFilteredPinCount());
     await replotFilteredPins();
-  });
+  };
 
-  pinCountInput.addEventListener('mouseup', async () => {
-    if (!isFilterMode) return;
-    await replotFilteredPins();
-  });
-
-  pinCountInput.addEventListener('touchend', async () => {
-    if (!isFilterMode) return;
-    await replotFilteredPins();
-  });
+  pinCountInput.addEventListener('change', fireSlider);
+  pinCountInput.addEventListener('pointerup', fireSlider);
+  pinCountInput.addEventListener('mouseup', fireSlider);
+  pinCountInput.addEventListener('touchend', fireSlider);
 }
 
 hidePinRange();
@@ -96,31 +111,39 @@ const savedPanel = document.getElementById('saved-panel');
 const locPanel = document.getElementById('loc-panel');
 
 function closeAllPanels() {
-  filterPanel.classList.remove('open');
-  savedPanel.classList.remove('open');
-  locPanel.classList.remove('open');
+  filterPanel?.classList.remove('open');
+  savedPanel?.classList.remove('open');
+  locPanel?.classList.remove('open');
+}
+
+function clearBusinessMarkers() {
+  businessMarkers.forEach(m => map.removeLayer(m));
+  businessMarkers = [];
+}
+
+function clearClickedMarker() {
+  if (clickedMarker) {
+    clickedMarker.off();
+    map.removeLayer(clickedMarker);
+    clickedMarker = null;
+  }
 }
 
 document.getElementById('close-saved-panel')?.addEventListener('click', () => savedPanel.classList.remove('open'));
 document.getElementById('close-loc-panel')?.addEventListener('click', () => locPanel.classList.remove('open'));
+
 document.getElementById('close-filter-panel')?.addEventListener('click', () => {
   filterPanel.classList.remove('open');
-
   activeRequestId++;
-
   isFilterMode = false;
   allowIdeaPins = false;
-
   lastFilteredIdea = null;
   lastFilteredBarangay = null;
   lastFilteredPrefs = null;
-
   clearBusinessMarkers();
   clearClickedMarker();
-
   hidePinRange();
   setPinDefault();
-
   const listEl = document.getElementById('rec-list');
   if (listEl) listEl.innerHTML = '';
 });
@@ -141,24 +164,6 @@ document.getElementById('saved-btn')?.addEventListener('click', function (e) {
     fetchSavedRecommendations();
   }
 });
-
-let businessMarkers = [];
-let clickedMarker = null;
-let allowIdeaPins = true;
-let isFilterMode = false;
-
-function clearBusinessMarkers() {
-  businessMarkers.forEach(m => map.removeLayer(m));
-  businessMarkers = [];
-}
-
-function clearClickedMarker() {
-  if (clickedMarker) {
-    clickedMarker.off();
-    map.removeLayer(clickedMarker);
-    clickedMarker = null;
-  }
-}
 
 const CODE_LABELS = {
   'RES': 'Restaurant',
@@ -187,86 +192,85 @@ const CODE_LABELS = {
   'SCA': 'Security Agency',
   'AMD': 'Amusement',
   'AMN': 'Amusement',
-  'TA':  'Travel Agency',
+  'TA': 'Travel Agency',
   'PRN': 'Printing Services',
   'FTX': 'Franchise',
   'CAT': 'Catering',
   'ADM': 'Admin',
-  'LAB': 'Laboratory',
+  'LAB': 'Laboratory'
 };
 
 const KEYWORD_LABELS = [
-  ['SARI SARI',       'Sari-Sari Store'],
-  ['GROCERY',         'Grocery'],
-  ['BAKERY',          'Bakery'],
-  ['BAKESHOP',        'Bakeshop'],
-  ['RESTAURANT',      'Restaurant'],
-  ['FAST FOOD',       'Fast Food'],
-  ['COFFEE SHOP',     'Coffee Shop'],
-  ['CANTEEN',         'Canteen'],
-  ['EATERY',          'Eatery'],
-  ['PANCITERIA',      'Panciteria'],
-  ['CATERING',        'Catering'],
-  ['PHARMACY',        'Pharmacy'],
-  ['DRUG STORE',      'Drug Store'],
-  ['CLINIC',          'Clinic'],
-  ['DENTAL',          'Dental Clinic'],
-  ['HOSPITAL',        'Hospital'],
-  ['LABORATORY',      'Laboratory'],
-  ['PAWNSHOP',        'Pawnshop'],
-  ['BANK',            'Bank'],
-  ['INSURANCE',       'Insurance'],
-  ['LENDING',         'Lending'],
-  ['HARDWARE',        'Hardware Store'],
-  ['CELLPHONE',       'Cellphone Store'],
-  ['APPLIANCES',      'Appliance Store'],
-  ['OPTICAL',         'Optical Shop'],
-  ['SALON',           'Salon'],
-  ['BARBER',          'Barbershop'],
-  ['SPA',             'Spa'],
-  ['MASSAGE',         'Massage'],
-  ['LAUNDRY',         'Laundry Shop'],
-  ['CAR WASH',        'Car Wash'],
-  ['GYM',             'Gym'],
-  ['SCHOOL',          'School'],
-  ['TUTORIAL',        'Tutorial Center'],
-  ['TRAINING',        'Training Center'],
-  ['TRAVEL',          'Travel Agency'],
-  ['HOTEL',           'Hotel'],
-  ['MOTEL',           'Motel'],
-  ['FUNERAL',         'Funeral Services'],
-  ['PRINTING',        'Printing Services'],
-  ['ADVERTISING',     'Advertising'],
-  ['CONSTRUCTION',    'Construction'],
-  ['TRUCKING',        'Trucking'],
-  ['LOGISTICS',       'Logistics'],
-  ['SECURITY',        'Security Agency'],
-  ['CONSULTANCY',     'Consultancy'],
-  ['CONSULTING',      'Consulting'],
-  ['ACCOUNTING',      'Accounting'],
-  ['LAW',             'Law Firm'],
-  ['REAL ESTATE',     'Real Estate'],
-  ['TRADING',         'Trading'],
-  ['RETAILER',        'Retail'],
-  ['WHOLESALER',      'Wholesale'],
-  ['MANUFACTURER',    'Manufacturing'],
-  ['WAREHOUSE',       'Warehouse'],
+  ['SARI SARI', 'Sari-Sari Store'],
+  ['GROCERY', 'Grocery'],
+  ['BAKERY', 'Bakery'],
+  ['BAKESHOP', 'Bakeshop'],
+  ['RESTAURANT', 'Restaurant'],
+  ['FAST FOOD', 'Fast Food'],
+  ['COFFEE SHOP', 'Coffee Shop'],
+  ['CANTEEN', 'Canteen'],
+  ['EATERY', 'Eatery'],
+  ['PANCITERIA', 'Panciteria'],
+  ['CATERING', 'Catering'],
+  ['PHARMACY', 'Pharmacy'],
+  ['DRUG STORE', 'Drug Store'],
+  ['CLINIC', 'Clinic'],
+  ['DENTAL', 'Dental Clinic'],
+  ['HOSPITAL', 'Hospital'],
+  ['LABORATORY', 'Laboratory'],
+  ['PAWNSHOP', 'Pawnshop'],
+  ['BANK', 'Bank'],
+  ['INSURANCE', 'Insurance'],
+  ['LENDING', 'Lending'],
+  ['HARDWARE', 'Hardware Store'],
+  ['CELLPHONE', 'Cellphone Store'],
+  ['APPLIANCES', 'Appliance Store'],
+  ['OPTICAL', 'Optical Shop'],
+  ['SALON', 'Salon'],
+  ['BARBER', 'Barbershop'],
+  ['SPA', 'Spa'],
+  ['MASSAGE', 'Massage'],
+  ['LAUNDRY', 'Laundry Shop'],
+  ['CAR WASH', 'Car Wash'],
+  ['GYM', 'Gym'],
+  ['SCHOOL', 'School'],
+  ['TUTORIAL', 'Tutorial Center'],
+  ['TRAINING', 'Training Center'],
+  ['TRAVEL', 'Travel Agency'],
+  ['HOTEL', 'Hotel'],
+  ['MOTEL', 'Motel'],
+  ['FUNERAL', 'Funeral Services'],
+  ['PRINTING', 'Printing Services'],
+  ['ADVERTISING', 'Advertising'],
+  ['CONSTRUCTION', 'Construction'],
+  ['TRUCKING', 'Trucking'],
+  ['LOGISTICS', 'Logistics'],
+  ['SECURITY', 'Security Agency'],
+  ['CONSULTANCY', 'Consultancy'],
+  ['CONSULTING', 'Consulting'],
+  ['ACCOUNTING', 'Accounting'],
+  ['LAW', 'Law Firm'],
+  ['REAL ESTATE', 'Real Estate'],
+  ['TRADING', 'Trading'],
+  ['RETAILER', 'Retail'],
+  ['WHOLESALER', 'Wholesale'],
+  ['MANUFACTURER', 'Manufacturing'],
+  ['WAREHOUSE', 'Warehouse'],
   ['WATER REFILLING', 'Water Refilling Station'],
-  ['GAS STATION',     'Gas Station'],
-  ['LPG',             'LPG Dealer'],
-  ['INTERNET',        'Internet Services'],
-  ['SOFTWARE',        'Software Company'],
-  ['BPO',             'BPO'],
-  ['CALL CENTER',     'Call Center'],
-  ['REMITTANCE',      'Money Remittance'],
-  ['COOPERATIVE',     'Cooperative'],
-  ['FOUNDATION',      'Foundation'],
+  ['GAS STATION', 'Gas Station'],
+  ['LPG', 'LPG Dealer'],
+  ['INTERNET', 'Internet Services'],
+  ['SOFTWARE', 'Software Company'],
+  ['BPO', 'BPO'],
+  ['CALL CENTER', 'Call Center'],
+  ['REMITTANCE', 'Money Remittance'],
+  ['COOPERATIVE', 'Cooperative'],
+  ['FOUNDATION', 'Foundation']
 ];
 
 function formatBizName(s) {
   const raw = (s || '').toString().trim();
   if (!raw) return '';
-
   const upper = raw.toUpperCase();
 
   for (const [code, label] of Object.entries(CODE_LABELS)) {
@@ -280,11 +284,13 @@ function formatBizName(s) {
       }
 
       if (!remainder) return label;
+
       const titled = remainder
         .toLowerCase()
         .split(/\s+/)
         .map(w => w.charAt(0).toUpperCase() + w.slice(1))
         .join(' ');
+
       return `${label} - ${titled}`;
     }
   }
@@ -351,20 +357,6 @@ async function fetchIdeas(filters = {}) {
   const data = await res.json();
   return data.success ? data.data : [];
 }
-
-async function fetchIdeaLocations(filters = {}) {
-  const params = new URLSearchParams();
-  if (filters.idea) params.append('idea', filters.idea);
-  if (filters.barangay) params.append('barangay', filters.barangay);
-  if (filters.top) params.append('top', filters.top);
-  if (filters.prefs?.length) params.append('prefs', filters.prefs.join(','));
-  const res = await fetch(`/api/idea-locations?${params.toString()}`);
-  const data = await res.json();
-  return data.success ? data.data : [];
-}
-
-let savedLocations = [];
-let unsavePendingCallback = null;
 
 async function fetchSavedRecommendations() {
   try {
@@ -441,12 +433,6 @@ function attachSaveRowListeners() {
     row.addEventListener('click', saveRowClickHandler);
   });
 }
-
-let currentLocShortName = '';
-let currentClickLat = null;
-let currentClickLng = null;
-let currentBarangayName = '';
-const locSavedItems = new Set();
 
 async function saveRowClickHandler(e) {
   e.stopPropagation();
@@ -571,7 +557,23 @@ const typeMap = {
   'f-food': 'FOOD',
   'f-retail': 'RETAIL',
   'f-personal': 'PERSONAL',
-  'f-tech': 'TECH'
+  'f-tech': 'TECH',
+  'f-wholesale': 'WHOLESALE',
+  'f-manufacturing': 'MANUFACTURING',
+  'f-it': 'IT',
+  'f-bpo': 'BPO',
+  'f-construction': 'CONSTRUCTION',
+  'f-finance': 'FINANCE',
+  'f-education': 'EDUCATION',
+  'f-healthcare': 'HEALTHCARE',
+  'f-energy': 'ENERGY',
+  'f-logistics': 'LOGISTICS',
+  'f-hospitality': 'HOSPITALITY',
+  'f-security': 'SECURITY',
+  'f-legal': 'LEGAL',
+  'f-marketing': 'MARKETING',
+  'f-admin': 'ADMIN',
+  'f-general': 'GENERAL'
 };
 
 document.getElementById('done-btn')?.addEventListener('click', async () => {
@@ -598,9 +600,7 @@ document.getElementById('done-btn')?.addEventListener('click', async () => {
 
   if (!barangay && !type && !prefs.length) return;
 
-  if (barangay) {
-    loadAreaDemographics(barangay);
-  }
+  if (barangay) loadAreaDemographics(barangay);
 
   const titleEl = document.getElementById('loc-panel-title');
   const badgeEl = document.getElementById('loc-badge');
@@ -610,17 +610,6 @@ document.getElementById('done-btn')?.addEventListener('click', async () => {
   locPanel.classList.add('open');
   await renderIdeasAndPins({ type, barangay, prefs, allowPins: true });
 });
-
-async function getNearestBarangay(lat, lon) {
-  try {
-    const res = await fetch(`/api/nearest-barangay?lat=${lat}&lon=${lon}`);
-    const data = await res.json();
-    return data.success ? data.barangay : '';
-  } catch (err) {
-    console.error('Error finding nearest barangay:', err);
-    return '';
-  }
-}
 
 function showPasigToast(msg) {
   const el = document.getElementById('pasig-toast');
@@ -674,8 +663,6 @@ async function handleLocationSelect(lat, lon) {
     svDiv.innerHTML = `<iframe src="https://www.mapillary.com/embed?map_style=Mapillary%20light&lat=${currentClickLat}&lng=${currentClickLng}&z=17" style="width:100%;height:100%;border:none;"></iframe>`;
     svDiv.style.display = 'block';
   }
-  const closeSV = document.getElementById('closeSV');
-  if (closeSV) closeSV.style.display = 'block';
 
   filterPanel.classList.remove('open');
   savedPanel.classList.remove('open');
@@ -689,32 +676,18 @@ async function handleLocationSelect(lat, lon) {
   currentLocShortName = `${currentClickLat}, ${currentClickLng}`;
   currentBarangayName = '';
 
-  // Find nearest barangay from database centroids
-  currentBarangayName = await getNearestBarangay(currentClickLat, currentClickLng);
-
-  // Get display name from Nominatim
   try {
     const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${currentClickLat}&lon=${currentClickLng}&format=json`);
     const data = await res.json();
     const addr = data.address || {};
-    const road = addr.road || addr.pedestrian || addr.path || '';
+    const area = addr.barangay || addr.suburb || addr.neighbourhood || addr.city_district || addr.village || addr.town || addr.county || '';
     const city = addr.city || addr.municipality || addr.town || addr.county || '';
-    
-    if (road && currentBarangayName) {
-      currentLocShortName = `${road}, ${currentBarangayName}, ${city || 'Pasig'}`;
-    } else if (currentBarangayName) {
-      currentLocShortName = `${currentBarangayName}, ${city || 'Pasig'}`;
-    }
-    
+    currentLocShortName = area ? (city ? `${area}, ${city}` : area) : (city || currentLocShortName);
+    currentBarangayName = area || '';
     if (badge) badge.textContent = `📍 ${currentLocShortName}`;
-    if (titleEl) titleEl.textContent = `Recommended Businesses in ${currentBarangayName || 'this Area'}`;
-  } catch (err) {
+    if (titleEl) titleEl.textContent = `Recommended Businesses in ${area || city || 'this Area'}`;
+  } catch {
     if (badge) badge.textContent = `📍 ${currentClickLat}, ${currentClickLng}`;
-  }
-
-  // Load demographics for the matched barangay
-  if (currentBarangayName) {
-    loadAreaDemographics(currentBarangayName);
   }
 
   const typeCheckboxes = document.querySelectorAll('[id^="f-"]:checked');
@@ -762,26 +735,6 @@ map.on('click', async function (e) {
   await handleLocationSelect(lat, lon);
 });
 
-document.getElementById('closeSV')?.addEventListener('click', () => {
-  const svDiv = document.getElementById('street-view');
-  if (svDiv) {
-    svDiv.style.display = 'none';
-    svDiv.innerHTML = '';
-  }
-  const closeSV = document.getElementById('closeSV');
-  if (closeSV) closeSV.style.display = 'none';
-  hidePinRange();
-  clearBusinessMarkers();
-  clearClickedMarker();
-  lastFilteredIdea = null;
-  lastFilteredBarangay = null;
-  lastFilteredPrefs = null;
-  isFilterMode = false;
-  setPinDefault();
-});
-
-let searchHistory = [];
-
 function renderHistory() {
   const container = document.getElementById('search-history');
   if (!container) return;
@@ -821,6 +774,7 @@ function renderHistory() {
 const searchInput = document.getElementById('search-input');
 
 searchInput?.addEventListener('focus', () => { if (searchHistory.length) renderHistory(); });
+
 searchInput?.addEventListener('input', function () {
   if (!this.value.trim() && searchHistory.length) renderHistory();
   else document.getElementById('search-history')?.classList.remove('open');
@@ -840,9 +794,7 @@ async function doSearch(query) {
     lastFilteredPrefs = null;
 
     const viewbox = `${PASIG_BOUNDS.minLon},${PASIG_BOUNDS.maxLat},${PASIG_BOUNDS.maxLon},${PASIG_BOUNDS.minLat}`;
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&bounded=1&viewbox=${viewbox}`
-    );
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&bounded=1&viewbox=${viewbox}`);
     const data = await res.json();
     if (!data.length) {
       showPasigToast('Location not found in Pasig.');
@@ -910,33 +862,9 @@ function renderSavedPanel() {
         <ul class="saved-biz-list">
           ${loc.businesses.map((b, i) => `<li>${i + 1}. ${escapeHtml(formatBizName(b))}</li>`).join('')}
         </ul>
-        
-        <div class="collapsible-section">
-          <div class="collapsible-header" onclick="toggleCollapse('saved-demo-${loc.id}')">
-            <h3>Demographic Data</h3>
-            <img src="/dashboard/down.png" alt="expand" id="saved-demo-${loc.id}-arrow" class="collapsible-arrow">
-          </div>
-          <div class="collapsible-body" id="saved-demo-${loc.id}-body">
-            <ul><li>Loading...</li></ul>
-          </div>
-        </div>
-
-        <div class="collapsible-section">
-          <div class="collapsible-header" onclick="toggleCollapse('saved-summary-${loc.id}')">
-            <h3>Area Summary</h3>
-            <img src="/dashboard/down.png" alt="expand" id="saved-summary-${loc.id}-arrow" class="collapsible-arrow">
-          </div>
-          <div class="collapsible-body" id="saved-summary-${loc.id}-body">
-            <p>Loading...</p>
-          </div>
-        </div>
       </div>
     </div>
   `).join('');
-
-  savedLocations.forEach(loc => {
-    loadSavedAreaDemographics(loc);
-  });
 }
 
 function focusSavedLocation(id) {
@@ -954,24 +882,6 @@ function focusSavedLocation(id) {
   clickedMarker = L.marker([lat, lon]).addTo(map).bindPopup(`${escapeHtml(loc.locationName)}<br>${loc.lat}, ${loc.lon}`).openPopup();
   clickedMarker.on('popupclose', () => clearClickedMarker());
   map.setView([lat, lon], 16);
-
-  // Also load demographics in the loc-panel for this barangay
-  locPanel.classList.add('open');
-  currentBarangayName = loc.locationName;
-  currentClickLat = loc.lat;
-  currentClickLng = loc.lon;
-  currentLocShortName = loc.locationName;
-  
-  const badge = document.getElementById('loc-badge');
-  const titleEl = document.getElementById('loc-panel-title');
-  if (badge) badge.textContent = `📍 ${escapeHtml(loc.locationName)}`;
-  if (titleEl) titleEl.textContent = `Recommended Businesses in ${escapeHtml(loc.locationName)}`;
-  
-  if (loc.businesses && loc.businesses.length > 0) {
-    loadAreaDemographics(loc.locationName, loc.businesses[0]);
-  } else {
-    loadAreaDemographics(loc.locationName);
-  }
 }
 
 function toggleSavedCard(id, btn) {
@@ -1052,49 +962,46 @@ async function loadAreaDemographics(barangay, businessLine) {
     const params = new URLSearchParams();
     params.append('barangay', barangay);
     if (businessLine) params.append('line_of_business', businessLine);
-    
+
     const res = await fetch(`/api/area-demographics?${params.toString()}`);
     const data = await res.json();
-    
     if (!data.success) return;
 
     const demo = data.data.demographic;
     const totalBiz = data.data.totalBusinesses;
     const sameLineCount = data.data.sameLineCount;
 
-    // --- Populate Demographic Data ---
     const demoBody = document.getElementById('demo-body');
     if (demoBody) {
       let demoHTML = '<ul>';
-      
+
       if (demo) {
         demoHTML += `<li><strong>Population:</strong> ${demo.population ? demo.population.toLocaleString() : 'N/A'}</li>`;
         demoHTML += `<li><strong>Population Density:</strong> ${demo.population_density ? demo.population_density.toLocaleString() + ' per km²' : 'N/A'}</li>`;
         demoHTML += `<li><strong>Dominant Age Group:</strong> ${demo.highest_age_group || 'N/A'}</li>`;
-        
+
         const incomeMin = demo.avg_income_min ? '₱' + demo.avg_income_min.toLocaleString() : 'N/A';
         const incomeMax = demo.avg_income_max ? '₱' + demo.avg_income_max.toLocaleString() : 'N/A';
         const incomeRange = (demo.avg_income_min || demo.avg_income_max) ? `${incomeMin} – ${incomeMax}` : 'N/A';
         demoHTML += `<li><strong>Average Income Range:</strong> ${incomeRange}</li>`;
         demoHTML += `<li><strong>Gender Distribution:</strong> ${demo.gender_distribution || 'N/A'}</li>`;
         demoHTML += `<li><strong>Total Businesses in Area:</strong> ${totalBiz.toLocaleString()}</li>`;
-        
+
         if (businessLine) {
           demoHTML += `<li><strong>Same Line of Business Count:</strong> ${sameLineCount.toLocaleString()}</li>`;
         }
       } else {
         demoHTML += '<li>No demographic data available for this area.</li>';
       }
-      
+
       demoHTML += '</ul>';
       demoBody.innerHTML = demoHTML;
     }
 
-    // --- Populate Area Summary ---
     const summaryBody = document.getElementById('summary-body');
     if (summaryBody) {
       let summary = '';
-      
+
       if (!demo) {
         summary = `<p>No demographic data available for <strong>${escapeHtml(barangay)}</strong>. A detailed area summary cannot be generated at this time.</p>`;
       } else {
@@ -1114,11 +1021,11 @@ async function loadAreaDemographics(barangay, businessLine) {
         const genderLabel = demo.gender_distribution ? `a predominantly ${demo.gender_distribution.toLowerCase()} population` : 'a balanced gender distribution';
 
         summary = `<p>
-          <strong>${escapeHtml(demo.barangay_name || barangay)}</strong> is a ${densityLabel} barangay in Pasig 
-          with a total population of <strong>${demo.population ? demo.population.toLocaleString() : 'N/A'}</strong> 
+          <strong>${escapeHtml(demo.barangay_name || barangay)}</strong> is a ${densityLabel} barangay in Pasig
+          with a total population of <strong>${demo.population ? demo.population.toLocaleString() : 'N/A'}</strong>
           and a population density of <strong>${demo.population_density ? demo.population_density.toLocaleString() : 'N/A'} per km²</strong>.
           The dominant age group is <strong>${ageLabel}</strong>, and the area has ${genderLabel}.
-          Households in this barangay have an average income range of 
+          Households in this barangay have an average income range of
           <strong>${demo.avg_income_min ? '₱' + demo.avg_income_min.toLocaleString() : 'N/A'} – ${demo.avg_income_max ? '₱' + demo.avg_income_max.toLocaleString() : 'N/A'}</strong>,
           making it an area ${incomeLabel}.
           There are <strong>${totalBiz.toLocaleString()}</strong> registered businesses operating in the area${businessLine ? `, <strong>${sameLineCount.toLocaleString()}</strong> of which are in the same line of business` : ''}.
@@ -1133,99 +1040,8 @@ async function loadAreaDemographics(barangay, businessLine) {
   }
 }
 
-async function loadSavedAreaDemographics(loc) {
-  if (!loc || !loc.locationName || loc.locationName === 'Unknown Area') return;
-
-  try {
-    const params = new URLSearchParams();
-    params.append('barangay', loc.locationName);
-    if (loc.businesses && loc.businesses.length > 0) {
-      params.append('line_of_business', loc.businesses[0]);
-    }
-    
-    const res = await fetch(`/api/area-demographics?${params.toString()}`);
-    const data = await res.json();
-    
-    if (!data.success) return;
-
-    const demo = data.data.demographic;
-    const totalBiz = data.data.totalBusinesses;
-    const sameLineCount = data.data.sameLineCount;
-    const businessLine = loc.businesses && loc.businesses.length > 0 ? loc.businesses[0] : null;
-
-    // --- Populate Demographic Data for this saved card ---
-    const demoBody = document.getElementById(`saved-demo-${loc.id}-body`);
-    if (demoBody) {
-      let demoHTML = '<ul>';
-      
-      if (demo) {
-        demoHTML += `<li><strong>Population:</strong> ${demo.population ? demo.population.toLocaleString() : 'N/A'}</li>`;
-        demoHTML += `<li><strong>Population Density:</strong> ${demo.population_density ? demo.population_density.toLocaleString() + ' per km²' : 'N/A'}</li>`;
-        demoHTML += `<li><strong>Dominant Age Group:</strong> ${demo.highest_age_group || 'N/A'}</li>`;
-        
-        const incomeMin = demo.avg_income_min ? '₱' + demo.avg_income_min.toLocaleString() : 'N/A';
-        const incomeMax = demo.avg_income_max ? '₱' + demo.avg_income_max.toLocaleString() : 'N/A';
-        const incomeRange = (demo.avg_income_min || demo.avg_income_max) ? `${incomeMin} – ${incomeMax}` : 'N/A';
-        demoHTML += `<li><strong>Average Income Range:</strong> ${incomeRange}</li>`;
-        demoHTML += `<li><strong>Gender Distribution:</strong> ${demo.gender_distribution || 'N/A'}</li>`;
-        demoHTML += `<li><strong>Total Businesses in Area:</strong> ${totalBiz.toLocaleString()}</li>`;
-        
-        if (businessLine) {
-          demoHTML += `<li><strong>Same Line of Business Count:</strong> ${sameLineCount.toLocaleString()}</li>`;
-        }
-      } else {
-        demoHTML += '<li>No demographic data available for this area.</li>';
-      }
-      
-      demoHTML += '</ul>';
-      demoBody.innerHTML = demoHTML;
-    }
-
-    // --- Populate Area Summary for this saved card ---
-    const summaryBody = document.getElementById(`saved-summary-${loc.id}-body`);
-    if (summaryBody) {
-      let summary = '';
-      
-      if (!demo) {
-        summary = `<p>No demographic data available for <strong>${escapeHtml(loc.locationName)}</strong>.</p>`;
-      } else {
-        const densityLabel = demo.population && demo.population_density
-          ? (demo.population_density > 30000 ? 'densely populated' : demo.population_density > 15000 ? 'moderately populated' : 'sparsely populated')
-          : 'populated';
-
-        const ageLabel = demo.highest_age_group || 'all ages';
-
-        let incomeLabel = 'with varied income levels';
-        if (demo.avg_income_max) {
-          if (demo.avg_income_max > 50000) incomeLabel = 'with high purchasing power';
-          else if (demo.avg_income_max > 25000) incomeLabel = 'with moderate-to-high purchasing power';
-          else incomeLabel = 'with modest income levels';
-        }
-
-        const genderLabel = demo.gender_distribution ? `a predominantly ${demo.gender_distribution.toLowerCase()} population` : 'a balanced gender distribution';
-
-        summary = `<p>
-          <strong>${escapeHtml(demo.barangay_name || loc.locationName)}</strong> is a ${densityLabel} barangay in Pasig 
-          with a total population of <strong>${demo.population ? demo.population.toLocaleString() : 'N/A'}</strong> 
-          and a population density of <strong>${demo.population_density ? demo.population_density.toLocaleString() : 'N/A'} per km²</strong>.
-          The dominant age group is <strong>${ageLabel}</strong>, and the area has ${genderLabel}.
-          Households in this barangay have an average income range of 
-          <strong>${demo.avg_income_min ? '₱' + demo.avg_income_min.toLocaleString() : 'N/A'} – ${demo.avg_income_max ? '₱' + demo.avg_income_max.toLocaleString() : 'N/A'}</strong>,
-          making it an area ${incomeLabel}.
-          There are <strong>${totalBiz.toLocaleString()}</strong> registered businesses operating in the area${businessLine ? `, <strong>${sameLineCount.toLocaleString()}</strong> of which are in the same line of business` : ''}.
-          This barangay is well-suited for businesses targeting the <strong>${ageLabel}</strong> age group with offerings that match the local income profile.
-        </p>`;
-      }
-
-      summaryBody.innerHTML = summary;
-    }
-  } catch (err) {
-    console.error('Error loading saved area demographics:', err);
-  }
-}
-
 function toggleCollapse(key) {
-  const body  = document.getElementById(key + '-body');
+  const body = document.getElementById(key + '-body');
   const arrow = document.getElementById(key + '-arrow');
   if (!body || !arrow) return;
   const isOpen = body.classList.contains('open');
@@ -1233,7 +1049,27 @@ function toggleCollapse(key) {
   arrow.classList.toggle('rotated', !isOpen);
 }
 
-
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   fetchSavedRecommendations();
+
+  try {
+    const res = await fetch('/api/me');
+    const data = await res.json();
+    const affiliation = (data.affiliation || '').toLowerCase().trim();
+
+    if (affiliation === 'entrepreneur') {
+      document.querySelectorAll('.entrepreneur-only').forEach(el => {
+        el.style.display = '';
+      });
+    } else {
+      document.querySelectorAll('.entrepreneur-only').forEach(el => {
+        el.style.display = 'none';
+      });
+    }
+  } catch (err) {
+    console.error('Failed to fetch user info:', err);
+    document.querySelectorAll('.entrepreneur-only').forEach(el => {
+      el.style.display = 'none';
+    });
+  }
 });

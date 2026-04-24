@@ -336,3 +336,6 @@ body { font-family: Arial, sans-serif; overflow: hidden; }
 .collapsible-header * {
   cursor: pointer !important;
 }
+.hidden {
+  display: none !important;
+}
