@@ -4,10 +4,10 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(map);
 
 const PASIG_BOUNDS = {
-  minLat: 14.5400,
-  maxLat: 14.6200,
-  minLon: 121.0600,
-  maxLon: 121.1050
+  minLat: 14.5200,
+  maxLat: 14.6400,
+  minLon: 121.0400,
+  maxLon: 121.1300
 };
 
 function isInPasig(lat, lon) {
@@ -20,8 +20,8 @@ function isInPasig(lat, lon) {
 }
 
 const filterPanel = document.getElementById('filter-panel');
-const savedPanel  = document.getElementById('saved-panel');
-const locPanel    = document.getElementById('loc-panel');
+const savedPanel = document.getElementById('saved-panel');
+const locPanel = document.getElementById('loc-panel');
 
 function closeAllPanels() {
   filterPanel.classList.remove('open');
@@ -29,18 +29,18 @@ function closeAllPanels() {
   locPanel.classList.remove('open');
 }
 
-document.getElementById('close-saved-panel').addEventListener('click', () => savedPanel.classList.remove('open'));
-document.getElementById('close-loc-panel').addEventListener('click',   () => locPanel.classList.remove('open'));
-document.getElementById('close-filter-panel').addEventListener('click',() => filterPanel.classList.remove('open'));
+document.getElementById('close-saved-panel')?.addEventListener('click', () => savedPanel.classList.remove('open'));
+document.getElementById('close-loc-panel')?.addEventListener('click', () => locPanel.classList.remove('open'));
+document.getElementById('close-filter-panel')?.addEventListener('click', () => filterPanel.classList.remove('open'));
 
-document.getElementById('filter-btn').addEventListener('click', function(e) {
+document.getElementById('filter-btn')?.addEventListener('click', function (e) {
   e.stopPropagation();
   const isOpen = filterPanel.classList.contains('open');
   closeAllPanels();
   if (!isOpen) filterPanel.classList.add('open');
 });
 
-document.getElementById('saved-btn').addEventListener('click', function(e) {
+document.getElementById('saved-btn')?.addEventListener('click', function (e) {
   e.stopPropagation();
   const isOpen = savedPanel.classList.contains('open');
   closeAllPanels();
@@ -66,24 +66,24 @@ function clearClickedMarker() {
 function plotLocations(recs) {
   clearBusinessMarkers();
   const bounds = L.latLngBounds();
+
   recs.forEach((rec, i) => {
     if (!rec.lat || !rec.lon) return;
+
     const marker = L.marker([parseFloat(rec.lat), parseFloat(rec.lon)])
       .addTo(map)
-      .bindPopup(`
-        <b>Rank #${i+1} — ${rec.barangay_name || ''}</b><br>
-        Score: ${rec.score?.toFixed(2) ?? ''}
-      `);
+      .bindPopup(`<b>Rank #${i + 1} — ${rec.barangay_name || ''}</b><br>Score: ${rec.score?.toFixed(2) ?? ''}`);
+
     marker.on('click', () => {
       map.closePopup();
       marker.openPopup();
     });
+
     businessMarkers.push(marker);
     bounds.extend(marker.getLatLng());
   });
-  if (bounds.isValid()) {
-    map.fitBounds(bounds.pad(0.2));
-  }
+
+  if (bounds.isValid()) map.fitBounds(bounds.pad(0.2));
 }
 
 function getPrefs() {
@@ -102,42 +102,49 @@ function getPrefs() {
 async function fetchIdeas(filters = {}) {
   const params = new URLSearchParams();
   if (filters.barangay) params.append('barangay', filters.barangay);
-  if (filters.type)     params.append('category', filters.type);
+  if (filters.type) params.append('category', filters.type);
   if (filters.prefs?.length) params.append('prefs', filters.prefs.join(','));
-  const res  = await fetch(`/api/ideas?${params.toString()}`);
+  const res = await fetch(`/api/ideas?${params.toString()}`);
   const data = await res.json();
   return data.success ? data.data : [];
 }
 
 async function fetchIdeaLocations(filters = {}) {
   const params = new URLSearchParams();
-  if (filters.idea)     params.append('idea', filters.idea);
+  if (filters.idea) params.append('idea', filters.idea);
   if (filters.barangay) params.append('barangay', filters.barangay);
-  if (filters.top)      params.append('top', filters.top);
+  if (filters.top) params.append('top', filters.top);
   if (filters.prefs?.length) params.append('prefs', filters.prefs.join(','));
-  const res  = await fetch(`/api/idea-locations?${params.toString()}`);
+  const res = await fetch(`/api/idea-locations?${params.toString()}`);
   const data = await res.json();
   return data.success ? data.data : [];
+}
+
+function escapeHtml(str) {
+  return (str || '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 async function renderIdeasAndPins({ type, barangay, prefs, allowPins }) {
   const ideas = await fetchIdeas({ type, barangay, prefs });
   const listEl = document.getElementById('rec-list');
+  if (!listEl) return;
+
   if (!ideas.length) {
     listEl.innerHTML = '';
     return;
   }
+
   listEl.innerHTML = ideas.map((name, i) => `
     <div class="rec-item" data-idx="${i}" data-idea="${escapeHtml(name)}">
-      <span class="rec-item-num">${i+1}.</span>
+      <span class="rec-item-num">${i + 1}.</span>
       <span class="rec-item-name">${escapeHtml(name)}</span>
       <div class="save-row" data-id="loc-${i}" data-name="${escapeHtml(name)}" onclick="toggleLocSave(this)">
         <img src="save.png" alt="bookmark"><span>Save</span>
       </div>
     </div>
   `).join('');
-  const items = listEl.querySelectorAll('.rec-item');
-  items.forEach((el) => {
+
+  listEl.querySelectorAll('.rec-item').forEach(el => {
     el.addEventListener('click', async () => {
       if (!allowPins) return;
       const idea = el.dataset.idea;
@@ -148,84 +155,54 @@ async function renderIdeasAndPins({ type, barangay, prefs, allowPins }) {
 }
 
 const barangayMap = {
-  'b-bagong-ilog':       'Bagong Ilog',
-  'b-bagong-katipunan':  'Bagong Katipunan',
-  'b-bambang':           'Bambang',
-  'b-buting':            'Buting',
-  'b-caniogan':          'Caniogan',
-  'b-dela-paz':          'Dela Paz',
-  'b-kalawaan':          'Kalawaan',
-  'b-kapasigan':         'Kapasigan',
-  'b-kapitolyo':         'Kapitolyo',
-  'b-malinao':           'Malinao',
-  'b-manggahan':         'Manggahan',
-  'b-maybunga':          'Maybunga',
-  'b-oranbo':            'Oranbo',
-  'b-palatiw':           'Palatiw',
-  'b-pinagbuhatan':      'Pinagbuhatan',
-  'b-pineda':            'Pineda',
-  'b-rosario':           'Rosario',
-  'b-sagad':             'Sagad',
-  'b-san-antonio':       'San Antonio',
-  'b-san-joaquin':       'San Joaquin',
-  'b-san-jose':          'San Jose',
-  'b-san-miguel':        'San Miguel',
-  'b-san-nicolas':       'San Nicolas',
-  'b-santa-lucia':       'Santa Lucia',
-  'b-santa-rosa':        'Santa Rosa',
-  'b-santolan':          'Santolan',
-  'b-sumilang':          'Sumilang',
-  'b-ugong':             'Ugong',
-  'b-vargas':            'F. Vargas',
-  'b-wack-wack':         'Wack-Wack'
+  'b-bagong-ilog': 'Bagong Ilog',
+  'b-bagong-katipunan': 'Bagong Katipunan',
+  'b-bambang': 'Bambang',
+  'b-buting': 'Buting',
+  'b-caniogan': 'Caniogan',
+  'b-dela-paz': 'Dela Paz',
+  'b-kalawaan': 'Kalawaan',
+  'b-kapasigan': 'Kapasigan',
+  'b-kapitolyo': 'Kapitolyo',
+  'b-malinao': 'Malinao',
+  'b-manggahan': 'Manggahan',
+  'b-maybunga': 'Maybunga',
+  'b-oranbo': 'Oranbo',
+  'b-palatiw': 'Palatiw',
+  'b-pinagbuhatan': 'Pinagbuhatan',
+  'b-pineda': 'Pineda',
+  'b-rosario': 'Rosario',
+  'b-sagad': 'Sagad',
+  'b-san-antonio': 'San Antonio',
+  'b-san-joaquin': 'San Joaquin',
+  'b-san-jose': 'San Jose',
+  'b-san-miguel': 'San Miguel',
+  'b-san-nicolas': 'San Nicolas',
+  'b-santa-lucia': 'Santa Lucia',
+  'b-santa-rosa': 'Santa Rosa',
+  'b-santolan': 'Santolan',
+  'b-sumilang': 'Sumilang',
+  'b-ugong': 'Ugong',
+  'b-vargas': 'F. Vargas',
+  'b-wack-wack': 'Wack-Wack'
 };
 
 const typeMap = {
-  'f-food':     'FOOD',
-  'f-retail':   'RETAIL',
+  'f-food': 'FOOD',
+  'f-retail': 'RETAIL',
   'f-personal': 'PERSONAL',
-  'f-tech':     'TECH'
+  'f-tech': 'TECH'
 };
 
-function normalizeStr(s) {
-  return (s || '').toString().trim().toLowerCase();
-}
-
-function matchBarangayName(name) {
-  const n = normalizeStr(name);
-  const values = Object.values(barangayMap);
-  for (const v of values) {
-    if (normalizeStr(v) === n) return v;
-  }
-  return name || null;
-}
-
-function isKnownPasigBarangay(addr) {
-  const knownBarangays = Object.values(barangayMap).map(b => b.toLowerCase());
-  const candidates = [
-    addr.barangay,
-    addr.suburb,
-    addr.neighbourhood,
-    addr.city_district,
-    addr.village
-  ].filter(Boolean).map(s => s.toLowerCase());
-
-  return candidates.some(candidate =>
-    knownBarangays.some(known =>
-      candidate.includes(known) || known.includes(candidate)
-    )
-  );
-}
-
-document.getElementById('done-btn').addEventListener('click', async () => {
+document.getElementById('done-btn')?.addEventListener('click', async () => {
   filterPanel.classList.remove('open');
   allowIdeaPins = true;
 
   const barangayCheckboxes = document.querySelectorAll('[id^="b-"]:checked');
-  const typeCheckboxes     = document.querySelectorAll('[id^="f-"]:checked');
+  const typeCheckboxes = document.querySelectorAll('[id^="f-"]:checked');
 
   const selectedBarangays = [...barangayCheckboxes].map(cb => barangayMap[cb.id]).filter(Boolean);
-  const selectedTypes     = [...typeCheckboxes].map(cb => typeMap[cb.id]).filter(Boolean);
+  const selectedTypes = [...typeCheckboxes].map(cb => typeMap[cb.id]).filter(Boolean);
 
   clearBusinessMarkers();
 
@@ -235,14 +212,12 @@ document.getElementById('done-btn').addEventListener('click', async () => {
 
   if (!barangay && !type && !prefs.length) return;
 
-  document.getElementById('loc-panel-title').textContent = barangay
-    ? `Recommended Businesses in ${barangay}`
-    : `Recommended Businesses`;
-
-  document.getElementById('loc-badge').textContent = barangay ? `📍 ${barangay}` : `📍 All Barangays`;
+  const titleEl = document.getElementById('loc-panel-title');
+  const badgeEl = document.getElementById('loc-badge');
+  if (titleEl) titleEl.textContent = barangay ? `Recommended Businesses in ${barangay}` : `Recommended Businesses`;
+  if (badgeEl) badgeEl.textContent = barangay ? `📍 ${barangay}` : `📍 All Barangays`;
 
   locPanel.classList.add('open');
-
   await renderIdeasAndPins({ type, barangay, prefs, allowPins: true });
 });
 
@@ -258,47 +233,34 @@ function showPasigToast(msg) {
   setTimeout(() => el.classList.remove('show'), 2500);
 }
 
+const locSavedItems = new Set();
+
 async function handleLocationSelect(lat, lon) {
-  if (!isInPasig(Number(lat), Number(lon))) {
+  const latN = Number(lat);
+  const lonN = Number(lon);
+
+  if (!Number.isFinite(latN) || !Number.isFinite(lonN) || !isInPasig(latN, lonN)) {
     showPasigToast('Location not found in Pasig.');
     return;
   }
 
-  try {
-    const revRes  = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
-    const revData = await revRes.json();
-    const addr    = revData.address || {};
-    const city    = (addr.city || addr.municipality || addr.town || '').toLowerCase().trim();
-
-    if (city !== 'pasig' || !isKnownPasigBarangay(addr)) {
-      showPasigToast('Location not found in Pasig.');
-      return;
-    }
-  } catch(err) {
-    showPasigToast('Location not found in Pasig.');
-    return;
-  }
-
-  currentClickLat = Number(lat).toFixed(6);
-  currentClickLng = Number(lon).toFixed(6);
+  currentClickLat = latN.toFixed(6);
+  currentClickLng = lonN.toFixed(6);
 
   allowIdeaPins = false;
   clearBusinessMarkers();
 
   clearClickedMarker();
-  clickedMarker = L.marker([parseFloat(currentClickLat), parseFloat(currentClickLng)])
-    .addTo(map)
-    .bindPopup(`Selected location<br>${currentClickLat}, ${currentClickLng}`)
-    .openPopup();
-
-  clickedMarker.on('popupclose', () => {
-    clearClickedMarker();
-  });
+  clickedMarker = L.marker([latN, lonN]).addTo(map).bindPopup(`Selected location<br>${currentClickLat}, ${currentClickLng}`).openPopup();
+  clickedMarker.on('popupclose', () => clearClickedMarker());
 
   const svDiv = document.getElementById('street-view');
-  svDiv.innerHTML = `<iframe src="https://www.mapillary.com/embed?map_style=Mapillary%20light&lat=${currentClickLat}&lng=${currentClickLng}&z=17" style="width:100%;height:100%;border:none;"></iframe>`;
-  svDiv.style.display = 'block';
-  document.getElementById('closeSV').style.display = 'block';
+  if (svDiv) {
+    svDiv.innerHTML = `<iframe src="https://www.mapillary.com/embed?map_style=Mapillary%20light&lat=${currentClickLat}&lng=${currentClickLng}&z=17" style="width:100%;height:100%;border:none;"></iframe>`;
+    svDiv.style.display = 'block';
+  }
+  const closeSV = document.getElementById('closeSV');
+  if (closeSV) closeSV.style.display = 'block';
 
   filterPanel.classList.remove('open');
   savedPanel.classList.remove('open');
@@ -306,36 +268,39 @@ async function handleLocationSelect(lat, lon) {
 
   document.querySelectorAll('#loc-panel .save-row').forEach(row => {
     row.classList.remove('saved');
-    row.querySelector('span').textContent = 'Save';
+    const s = row.querySelector('span');
+    if (s) s.textContent = 'Save';
   });
   locSavedItems.clear();
 
-  const badge   = document.getElementById('loc-badge');
+  const badge = document.getElementById('loc-badge');
   const titleEl = document.getElementById('loc-panel-title');
-  badge.textContent = '📍 Locating…';
+  if (badge) badge.textContent = '📍 Locating…';
   currentLocShortName = `${currentClickLat}, ${currentClickLng}`;
 
   try {
-    const res  = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${currentClickLat}&lon=${currentClickLng}&format=json`);
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${currentClickLat}&lon=${currentClickLng}&format=json`);
     const data = await res.json();
     const addr = data.address || {};
     const area = addr.barangay || addr.suburb || addr.neighbourhood || addr.city_district || addr.village || addr.town || addr.county || '';
     const city = addr.city || addr.municipality || addr.town || addr.county || '';
     currentLocShortName = area ? (city ? `${area}, ${city}` : area) : (city || currentLocShortName);
-    badge.textContent   = `📍 ${currentLocShortName}`;
-    titleEl.textContent = `Recommended Businesses in ${area || city || 'this Area'}`;
-  } catch(err) {
-    badge.textContent = `📍 ${currentClickLat}, ${currentClickLng}`;
+    if (badge) badge.textContent = `📍 ${currentLocShortName}`;
+    if (titleEl) titleEl.textContent = `Recommended Businesses in ${area || city || 'this Area'}`;
+  } catch (err) {
+    if (badge) badge.textContent = `📍 ${currentClickLat}, ${currentClickLng}`;
   }
 
   const typeCheckboxes = document.querySelectorAll('[id^="f-"]:checked');
-  const selectedTypes  = [...typeCheckboxes].map(cb => typeMap[cb.id]).filter(Boolean);
+  const selectedTypes = [...typeCheckboxes].map(cb => typeMap[cb.id]).filter(Boolean);
   const type = selectedTypes[0] || null;
   const prefs = getPrefs();
 
   const ideasRes = await fetch(`/api/ideas-by-point?lat=${currentClickLat}&lon=${currentClickLng}&category=${type || ''}&prefs=${prefs.join(',')}`);
   const ideasData = await ideasRes.json();
   const listEl = document.getElementById('rec-list');
+
+  if (!listEl) return;
 
   if (!ideasData.success || !ideasData.data.length) {
     listEl.innerHTML = '<div class="rec-item">No recommendations found.</div>';
@@ -344,7 +309,7 @@ async function handleLocationSelect(lat, lon) {
 
   listEl.innerHTML = ideasData.data.map((name, i) => `
     <div class="rec-item" data-idx="${i}" data-idea="${escapeHtml(name)}">
-      <span class="rec-item-num">${i+1}.</span>
+      <span class="rec-item-num">${i + 1}.</span>
       <span class="rec-item-name">${escapeHtml(name)}</span>
       <div class="save-row" data-id="loc-${i}" data-name="${escapeHtml(name)}" onclick="toggleLocSave(this)">
         <img src="save.png" alt="bookmark"><span>Save</span>
@@ -353,28 +318,37 @@ async function handleLocationSelect(lat, lon) {
   `).join('');
 }
 
-map.on('click', async function(e) {
-  const lat = e.latlng.lat;
-  const lon = e.latlng.lng;
-  if (!isInPasig(lat, lon)) {
+map.on('click', async function (e) {
+  const lat = Number(e.latlng.lat);
+  const lon = Number(e.latlng.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || !isInPasig(lat, lon)) {
     showPasigToast('Location not found in Pasig.');
     return;
   }
   await handleLocationSelect(lat, lon);
 });
 
-document.getElementById('closeSV').onclick = () => {
+document.getElementById('closeSV')?.addEventListener('click', () => {
   const svDiv = document.getElementById('street-view');
-  svDiv.style.display = 'none';
-  svDiv.innerHTML = '';
-  document.getElementById('closeSV').style.display = 'none';
-};
+  if (svDiv) {
+    svDiv.style.display = 'none';
+    svDiv.innerHTML = '';
+  }
+  const closeSV = document.getElementById('closeSV');
+  if (closeSV) closeSV.style.display = 'none';
+});
 
 let searchHistory = [];
 
 function renderHistory() {
   const container = document.getElementById('search-history');
-  if (!searchHistory.length) { container.classList.remove('open'); return; }
+  if (!container) return;
+
+  if (!searchHistory.length) {
+    container.classList.remove('open');
+    return;
+  }
+
   container.innerHTML = searchHistory.map((item, i) => `
     <div class="history-item" data-idx="${i}">
       <img src="history.png" alt="history" class="history-icon">
@@ -385,7 +359,7 @@ function renderHistory() {
   container.classList.add('open');
 
   container.querySelectorAll('.history-item').forEach(el => {
-    el.addEventListener('click', function(e) {
+    el.addEventListener('click', function (e) {
       const removeBtn = e.target.closest('[data-remove]');
       if (removeBtn) {
         const idx = parseInt(removeBtn.dataset.remove);
@@ -393,74 +367,71 @@ function renderHistory() {
         renderHistory();
         return;
       }
-      const label = this.querySelector('.history-label').textContent;
-      document.getElementById('search-input').value = label;
+      const label = this.querySelector('.history-label')?.textContent || '';
+      const input = document.getElementById('search-input');
+      if (input) input.value = label;
       container.classList.remove('open');
       doSearch(label);
     });
   });
 }
 
-function escapeHtml(str) {
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
 const searchInput = document.getElementById('search-input');
 
-searchInput.addEventListener('focus', () => { if (searchHistory.length) renderHistory(); });
-searchInput.addEventListener('input', function() {
+searchInput?.addEventListener('focus', () => { if (searchHistory.length) renderHistory(); });
+searchInput?.addEventListener('input', function () {
   if (!this.value.trim() && searchHistory.length) renderHistory();
-  else document.getElementById('search-history').classList.remove('open');
+  else document.getElementById('search-history')?.classList.remove('open');
 });
 
-document.addEventListener('click', function(e) {
-  if (!document.getElementById('search-wrapper').contains(e.target))
-    document.getElementById('search-history').classList.remove('open');
+document.addEventListener('click', function (e) {
+  const wrapper = document.getElementById('search-wrapper');
+  if (wrapper && !wrapper.contains(e.target)) document.getElementById('search-history')?.classList.remove('open');
 });
 
 async function doSearch(query) {
   try {
+    const viewbox = `${PASIG_BOUNDS.minLon},${PASIG_BOUNDS.maxLat},${PASIG_BOUNDS.maxLon},${PASIG_BOUNDS.minLat}`;
     const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query + ', Pasig, Philippines')}&format=json&limit=5&addressdetails=1`
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&bounded=1&viewbox=${viewbox}`
     );
     const data = await res.json();
-
     if (!data.length) {
       showPasigToast('Location not found in Pasig.');
       return;
     }
 
-    const pasigResult = data.find(item => {
-      const addr    = item.address || {};
-      const city    = (addr.city || addr.municipality || addr.town || '').toLowerCase().trim();
-      const latNum  = parseFloat(item.lat);
-      const lonNum  = parseFloat(item.lon);
-      if (city !== 'pasig') return false;
-      if (!isInPasig(latNum, lonNum)) return false;
-      return isKnownPasigBarangay(addr);
-    });
+    const latNum = Number(data[0].lat);
+    const lonNum = Number(data[0].lon);
 
-    if (!pasigResult) {
+    if (!Number.isFinite(latNum) || !Number.isFinite(lonNum) || !isInPasig(latNum, lonNum)) {
       showPasigToast('Location not found in Pasig.');
       return;
     }
 
-    const latNum = parseFloat(pasigResult.lat);
-    const lonNum = parseFloat(pasigResult.lon);
+    const rev = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latNum}&lon=${lonNum}&format=json`);
+    const revData = await rev.json();
+    const addr = revData.address || {};
+    const city = (addr.city || addr.municipality || addr.town || addr.county || '').toLowerCase();
+
+    if (!city.includes('pasig')) {
+      showPasigToast('Location not found in Pasig.');
+      return;
+    }
 
     map.setView([latNum, lonNum], 16);
     await handleLocationSelect(latNum, lonNum);
-  } catch(err) {
+  } catch (err) {
     console.error(err);
     showPasigToast('Something went wrong.');
   }
 }
 
-searchInput.addEventListener('keydown', async function(e) {
+searchInput?.addEventListener('keydown', async function (e) {
   if (e.key !== 'Enter') return;
   const query = searchInput.value.trim();
   if (!query) return;
-  document.getElementById('search-history').classList.remove('open');
+  document.getElementById('search-history')?.classList.remove('open');
   searchHistory = [query, ...searchHistory.filter(h => h !== query)].slice(0, 5);
   await doSearch(query);
 });
@@ -470,10 +441,13 @@ let unsavePendingCallback = null;
 
 function renderSavedPanel() {
   const body = document.getElementById('saved-panel-body');
+  if (!body) return;
+
   if (!savedLocations.length) {
     body.innerHTML = '<p style="font-size:13px;color:#aaa;margin-top:10px;">No saved locations yet.</p>';
     return;
   }
+
   body.innerHTML = savedLocations.map(loc => `
     <div class="saved-location-card" id="saved-card-${loc.id}">
       <div class="saved-card-header">
@@ -489,7 +463,7 @@ function renderSavedPanel() {
       </div>
       <div class="saved-card-body" id="saved-body-${loc.id}">
         <ul class="saved-biz-list">
-          ${loc.businesses.map((b, i) => `<li>${i+1}. ${escapeHtml(b)}</li>`).join('')}
+          ${loc.businesses.map((b, i) => `<li>${i + 1}. ${escapeHtml(b)}</li>`).join('')}
         </ul>
       </div>
     </div>
@@ -500,22 +474,20 @@ function focusSavedLocation(id) {
   const loc = savedLocations.find(l => l.id === id);
   if (!loc || !loc.lat || !loc.lon) return;
 
+  const lat = Number(loc.lat);
+  const lon = Number(loc.lon);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+
   clearClickedMarker();
-  clickedMarker = L.marker([parseFloat(loc.lat), parseFloat(loc.lon)])
-    .addTo(map)
-    .bindPopup(`${escapeHtml(loc.locationName)}<br>${loc.lat}, ${loc.lon}`)
-    .openPopup();
-
-  clickedMarker.on('popupclose', () => {
-    clearClickedMarker();
-  });
-
-  map.setView([parseFloat(loc.lat), parseFloat(loc.lon)], 16);
+  clickedMarker = L.marker([lat, lon]).addTo(map).bindPopup(`${escapeHtml(loc.locationName)}<br>${loc.lat}, ${loc.lon}`).openPopup();
+  clickedMarker.on('popupclose', () => clearClickedMarker());
+  map.setView([lat, lon], 16);
 }
 
 function toggleSavedCard(id, btn) {
-  const body  = document.getElementById('saved-body-' + id);
+  const body = document.getElementById('saved-body-' + id);
   const arrow = btn.querySelector('.collapsible-arrow');
+  if (!body || !arrow) return;
   const isOpen = body.classList.contains('open');
   body.classList.toggle('open', !isOpen);
   arrow.classList.toggle('rotated', !isOpen);
@@ -524,35 +496,35 @@ function toggleSavedCard(id, btn) {
 function promptUnsaveLocation(id) {
   const loc = savedLocations.find(l => l.id === id);
   if (!loc) return;
-  document.getElementById('unsave-msg').textContent = `Remove "${loc.locationName}" from saved?`;
+  const msg = document.getElementById('unsave-msg');
+  if (msg) msg.textContent = `Remove "${loc.locationName}" from saved?`;
   unsavePendingCallback = () => {
     savedLocations = savedLocations.filter(l => l.id !== id);
     renderSavedPanel();
   };
-  document.getElementById('unsave-modal').classList.add('open');
+  document.getElementById('unsave-modal')?.classList.add('open');
 }
 
-const locSavedItems = new Set();
-
-function toggleLocSave(row) {
-  const id      = row.dataset.id;
+window.toggleLocSave = function toggleLocSave(row) {
+  const id = row.dataset.id;
   const bizName = row.dataset.name;
-  const label   = row.querySelector('span');
+  const label = row.querySelector('span');
 
   if (locSavedItems.has(id)) {
-    document.getElementById('unsave-msg').textContent = `Remove "${bizName}" from saved?`;
+    const msg = document.getElementById('unsave-msg');
+    if (msg) msg.textContent = `Remove "${bizName}" from saved?`;
     unsavePendingCallback = () => {
       locSavedItems.delete(id);
       row.classList.remove('saved');
-      label.textContent = 'Save';
+      if (label) label.textContent = 'Save';
       savedLocations = savedLocations.filter(l => l.id !== id);
       renderSavedPanel();
     };
-    document.getElementById('unsave-modal').classList.add('open');
+    document.getElementById('unsave-modal')?.classList.add('open');
   } else {
     locSavedItems.add(id);
     row.classList.add('saved');
-    label.textContent = 'Saved';
+    if (label) label.textContent = 'Saved';
     const locName = currentLocShortName || 'Unknown Area';
     const lat = currentClickLat;
     const lon = currentClickLng;
@@ -561,60 +533,53 @@ function toggleLocSave(row) {
     }
     renderSavedPanel();
   }
-}
+};
 
-document.getElementById('cancel-unsave').addEventListener('click', () => {
+document.getElementById('cancel-unsave')?.addEventListener('click', () => {
   unsavePendingCallback = null;
-  document.getElementById('unsave-modal').classList.remove('open');
-});
-document.getElementById('confirm-unsave').addEventListener('click', () => {
-  if (unsavePendingCallback) { unsavePendingCallback(); unsavePendingCallback = null; }
-  document.getElementById('unsave-modal').classList.remove('open');
+  document.getElementById('unsave-modal')?.classList.remove('open');
 });
 
-function toggleCollapse(key) {
-  const body  = document.getElementById(key + '-body');
-  const arrow = document.getElementById(key + '-arrow');
-  const isOpen = body.classList.contains('open');
-  body.classList.toggle('open', !isOpen);
-  arrow.classList.toggle('rotated', !isOpen);
-}
+document.getElementById('confirm-unsave')?.addEventListener('click', () => {
+  if (unsavePendingCallback) {
+    unsavePendingCallback();
+    unsavePendingCallback = null;
+  }
+  document.getElementById('unsave-modal')?.classList.remove('open');
+});
 
-const profileBtn   = document.getElementById('profile-btn');
+const profileBtn = document.getElementById('profile-btn');
 const profilePopup = document.getElementById('profile-popup');
 const profileModal = document.getElementById('profile-modal');
 
-profileBtn.addEventListener('click', function(e) {
+profileBtn?.addEventListener('click', function (e) {
   e.stopPropagation();
-  profilePopup.classList.toggle('open');
+  profilePopup?.classList.toggle('open');
 });
 
-document.addEventListener('click', function(e) {
-  if (!profilePopup.contains(e.target) && e.target !== profileBtn)
-    profilePopup.classList.remove('open');
+document.addEventListener('click', function (e) {
+  if (profilePopup && profileBtn && !profilePopup.contains(e.target) && e.target !== profileBtn) profilePopup.classList.remove('open');
 });
 
-document.getElementById('logout-btn').addEventListener('click', () => {
-  profilePopup.classList.remove('open');
+document.getElementById('logout-btn')?.addEventListener('click', () => {
+  profilePopup?.classList.remove('open');
   window.location.href = '/logout';
 });
 
-document.getElementById('profile-link-btn').addEventListener('click', () => {
-  profilePopup.classList.remove('open');
-  profileModal.classList.add('open');
+document.getElementById('profile-link-btn')?.addEventListener('click', () => {
+  profilePopup?.classList.remove('open');
+  profileModal?.classList.add('open');
 });
 
-document.getElementById('cancel-profile').addEventListener('click', () => {
-  profileModal.classList.remove('open');
+document.getElementById('cancel-profile')?.addEventListener('click', () => {
+  profileModal?.classList.remove('open');
 });
 
-document.getElementById('confirm-profile').addEventListener('click', () => {
-  profileModal.classList.remove('open');
+document.getElementById('confirm-profile')?.addEventListener('click', () => {
+  profileModal?.classList.remove('open');
   window.location.href = '/dashboard/Profile.html';
 });
 
-profileModal.addEventListener('click', (e) => {
-  if (e.target === profileModal) {
-    profileModal.classList.remove('open');
-  }
+profileModal?.addEventListener('click', (e) => {
+  if (e.target === profileModal) profileModal.classList.remove('open');
 });
