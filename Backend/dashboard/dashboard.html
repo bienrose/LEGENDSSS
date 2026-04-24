@@ -4,7 +4,7 @@
 <head>
   <title>SPOT</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="dashboard.css">
+  <link rel="stylesheet" href="/dashboard/dashboard.css">
 </head>
 
 <body>
@@ -12,13 +12,13 @@
   <div class="sidebar">
     <div class="sidebar-top">
       <button class="icon-btn" id="saved-btn">
-        <img src="save.png" alt="Saved">
+        <img src="/dashboard/save.png" alt="Saved">
       </button>
       <span class="icon-label">Saved</span>
     </div>
     <div class="sidebar-bottom">
       <button class="icon-btn" id="profile-btn" title="Profile">
-        <img src="profile.png" alt="Profile">
+        <img src="/dashboard/profile.png" alt="Profile">
       </button>
       <div class="profile-popup" id="profile-popup">
         <button id="profile-link-btn">👤 View Profile</button>
@@ -32,7 +32,7 @@
       <span class="search-icon">🔍</span>
       <input id="search-input" placeholder="Search location..." autocomplete="off">
       <button class="filter-btn" id="filter-btn">
-        <img src="filter.png" alt="Filter">
+        <img src="/dashboard/filter.png" alt="Filter">
       </button>
     </div>
     <div class="search-history" id="search-history"></div>
@@ -67,7 +67,7 @@
       <div class="collapsible-section">
         <div class="collapsible-header" onclick="toggleCollapse('demo')">
           <h3>Demographic Data</h3>
-          <img src="down.png" alt="expand" id="demo-arrow" class="collapsible-arrow">
+          <img src="/dashboard/down.png" alt="expand" id="demo-arrow" class="collapsible-arrow">
         </div>
         <div class="collapsible-body" id="demo-body">
           <ul>
@@ -82,7 +82,7 @@
       <div class="collapsible-section">
         <div class="collapsible-header" onclick="toggleCollapse('summary')">
           <h3>Area Summary</h3>
-          <img src="down.png" alt="expand" id="summary-arrow" class="collapsible-arrow">
+          <img src="/dashboard/down.png" alt="expand" id="summary-arrow" class="collapsible-arrow">
         </div>
         <div class="collapsible-body" id="summary-body">
           <p>
@@ -202,7 +202,7 @@
   <div id="pasig-toast" class="pasig-toast">Location not found in Pasig.</div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="dashboard.js"></script>
+  <script src="/dashboard/dashboard.js"></script>
 </body>
 
 </html>

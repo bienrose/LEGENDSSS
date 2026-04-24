@@ -44,7 +44,10 @@ document.getElementById('saved-btn')?.addEventListener('click', function (e) {
   e.stopPropagation();
   const isOpen = savedPanel.classList.contains('open');
   closeAllPanels();
-  if (!isOpen) savedPanel.classList.add('open');
+  if (!isOpen) {
+    savedPanel.classList.add('open');
+    fetchSavedRecommendations();
+  }
 });
 
 let businessMarkers = [];
@@ -120,8 +123,137 @@ async function fetchIdeaLocations(filters = {}) {
   return data.success ? data.data : [];
 }
 
+async function fetchSavedRecommendations() {
+  try {
+    const res = await fetch('/api/saved-recommendations');
+    const data = await res.json();
+    if (data.success) {
+      savedLocations = data.data.map((item, i) => ({
+        dbId: item.id,
+        id: `saved-${item.id}`,
+        locationName: item.barangay || 'Unknown Area',
+        businesses: [item.business_type],
+        lat: item.lat,
+        lon: item.lon
+      }));
+      renderSavedPanel();
+      markSavedInCurrentList();
+    }
+  } catch (err) {
+    console.error('Error fetching saved recommendations:', err);
+  }
+}
+
+async function saveRecommendationToDB(business_type, barangay, lat, lon) {
+  try {
+    const res = await fetch('/api/saved-recommendations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        business_type,
+        barangay: barangay || null,
+        suitability_score: null,
+        lat: lat ? parseFloat(lat) : null,
+        lon: lon ? parseFloat(lon) : null
+      })
+    });
+    const data = await res.json();
+    return data;
+  } catch (err) {
+    console.error('Error saving recommendation:', err);
+    return { success: false, message: err.message };
+  }
+}
+
+async function deleteSavedRecommendationFromDB(dbId) {
+  try {
+    const res = await fetch(`/api/saved-recommendations/${dbId}`, {
+      method: 'DELETE'
+    });
+    const data = await res.json();
+    return data;
+  } catch (err) {
+    console.error('Error deleting recommendation:', err);
+    return { success: false };
+  }
+}
+
 function escapeHtml(str) {
   return (str || '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function markSavedInCurrentList() {
+  document.querySelectorAll('#rec-list .save-row').forEach(row => {
+    const name = row.dataset.name;
+    const barangay = row.dataset.barangay || '';
+    const isSaved = savedLocations.some(l => l.businesses[0] === name && l.locationName === barangay);
+    if (isSaved) {
+      row.classList.add('saved');
+      const span = row.querySelector('span');
+      if (span) span.textContent = 'Saved';
+    } else {
+      row.classList.remove('saved');
+      const span = row.querySelector('span');
+      if (span) span.textContent = 'Save';
+    }
+  });
+}
+
+function attachSaveRowListeners() {
+  document.querySelectorAll('#rec-list .save-row').forEach(row => {
+    // Remove any existing listener to prevent duplicates
+    row.removeEventListener('click', saveRowClickHandler);
+    row.addEventListener('click', saveRowClickHandler);
+  });
+}
+
+async function saveRowClickHandler(e) {
+  e.stopPropagation();
+  e.preventDefault();
+  const row = e.currentTarget;
+
+  const bizName = row.dataset.name;
+  const barangay = row.dataset.barangay || currentBarangayName || '';
+  const label = row.querySelector('span');
+  const saveKey = `${bizName}:${barangay}`;
+
+  const isCurrentlySaved = row.classList.contains('saved');
+
+  if (isCurrentlySaved) {
+    // Unsave flow
+    const msg = document.getElementById('unsave-msg');
+    if (msg) msg.textContent = `Remove "${bizName}" from saved?`;
+
+    unsavePendingCallback = async () => {
+      const savedLoc = savedLocations.find(l => l.businesses[0] === bizName && l.locationName === barangay);
+      if (savedLoc && savedLoc.dbId) {
+        await deleteSavedRecommendationFromDB(savedLoc.dbId);
+      }
+      row.classList.remove('saved');
+      if (label) label.textContent = 'Save';
+      await fetchSavedRecommendations();
+      locSavedItems.delete(saveKey);
+    };
+    document.getElementById('unsave-modal')?.classList.add('open');
+    return;
+  }
+
+  // Save flow
+  const lat = currentClickLat;
+  const lon = currentClickLng;
+  const result = await saveRecommendationToDB(bizName, barangay, lat, lon);
+
+  if (result.success) {
+    row.classList.add('saved');
+    if (label) label.textContent = 'Saved';
+    locSavedItems.add(saveKey);
+    await fetchSavedRecommendations();
+  } else if (result.message === 'Already saved') {
+    row.classList.add('saved');
+    if (label) label.textContent = 'Saved';
+    locSavedItems.add(saveKey);
+    await fetchSavedRecommendations();
+  }
 }
 
 async function renderIdeasAndPins({ type, barangay, prefs, allowPins }) {
@@ -138,11 +270,13 @@ async function renderIdeasAndPins({ type, barangay, prefs, allowPins }) {
     <div class="rec-item" data-idx="${i}" data-idea="${escapeHtml(name)}">
       <span class="rec-item-num">${i + 1}.</span>
       <span class="rec-item-name">${escapeHtml(name)}</span>
-      <div class="save-row" data-id="loc-${i}" data-name="${escapeHtml(name)}" onclick="toggleLocSave(this)">
-        <img src="save.png" alt="bookmark"><span>Save</span>
+      <div class="save-row" data-name="${escapeHtml(name)}" data-barangay="${escapeHtml(barangay || '')}">
+        <img src="/dashboard/save.png" alt="bookmark"><span>Save</span>
       </div>
     </div>
   `).join('');
+
+  attachSaveRowListeners();
 
   listEl.querySelectorAll('.rec-item').forEach(el => {
     el.addEventListener('click', async () => {
@@ -152,6 +286,8 @@ async function renderIdeasAndPins({ type, barangay, prefs, allowPins }) {
       plotLocations(recs);
     });
   });
+
+  markSavedInCurrentList();
 }
 
 const barangayMap = {
@@ -224,6 +360,7 @@ document.getElementById('done-btn')?.addEventListener('click', async () => {
 let currentLocShortName = '';
 let currentClickLat = null;
 let currentClickLng = null;
+let currentBarangayName = '';
 
 function showPasigToast(msg) {
   const el = document.getElementById('pasig-toast');
@@ -266,17 +403,13 @@ async function handleLocationSelect(lat, lon) {
   savedPanel.classList.remove('open');
   locPanel.classList.add('open');
 
-  document.querySelectorAll('#loc-panel .save-row').forEach(row => {
-    row.classList.remove('saved');
-    const s = row.querySelector('span');
-    if (s) s.textContent = 'Save';
-  });
   locSavedItems.clear();
 
   const badge = document.getElementById('loc-badge');
   const titleEl = document.getElementById('loc-panel-title');
   if (badge) badge.textContent = '📍 Locating…';
   currentLocShortName = `${currentClickLat}, ${currentClickLng}`;
+  currentBarangayName = '';
 
   try {
     const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${currentClickLat}&lon=${currentClickLng}&format=json`);
@@ -285,6 +418,7 @@ async function handleLocationSelect(lat, lon) {
     const area = addr.barangay || addr.suburb || addr.neighbourhood || addr.city_district || addr.village || addr.town || addr.county || '';
     const city = addr.city || addr.municipality || addr.town || addr.county || '';
     currentLocShortName = area ? (city ? `${area}, ${city}` : area) : (city || currentLocShortName);
+    currentBarangayName = area || '';
     if (badge) badge.textContent = `📍 ${currentLocShortName}`;
     if (titleEl) titleEl.textContent = `Recommended Businesses in ${area || city || 'this Area'}`;
   } catch (err) {
@@ -311,11 +445,14 @@ async function handleLocationSelect(lat, lon) {
     <div class="rec-item" data-idx="${i}" data-idea="${escapeHtml(name)}">
       <span class="rec-item-num">${i + 1}.</span>
       <span class="rec-item-name">${escapeHtml(name)}</span>
-      <div class="save-row" data-id="loc-${i}" data-name="${escapeHtml(name)}" onclick="toggleLocSave(this)">
-        <img src="save.png" alt="bookmark"><span>Save</span>
+      <div class="save-row" data-name="${escapeHtml(name)}" data-barangay="${escapeHtml(currentBarangayName)}">
+        <img src="/dashboard/save.png" alt="bookmark"><span>Save</span>
       </div>
     </div>
   `).join('');
+
+  attachSaveRowListeners();
+  markSavedInCurrentList();
 }
 
 map.on('click', async function (e) {
@@ -451,13 +588,13 @@ function renderSavedPanel() {
   body.innerHTML = savedLocations.map(loc => `
     <div class="saved-location-card" id="saved-card-${loc.id}">
       <div class="saved-card-header">
-        <div class="saved-card-title" onclick="focusSavedLocation('${loc.id}')">Recommended Businesses in ${escapeHtml(loc.locationName)}</div>
+        <div class="saved-card-title" onclick="focusSavedLocation('${loc.id}')">${escapeHtml(loc.locationName)}</div>
         <div class="saved-card-actions">
           <button class="card-icon-btn" title="Unsave" onclick="promptUnsaveLocation('${loc.id}')">
-            <img src="save.png" alt="unsave">
+            <img src="/dashboard/save.png" alt="unsave">
           </button>
           <button class="card-icon-btn" title="Toggle details" onclick="toggleSavedCard('${loc.id}', this)">
-            <img src="down.png" alt="expand" class="collapsible-arrow">
+            <img src="/dashboard/down.png" alt="expand" class="collapsible-arrow">
           </button>
         </div>
       </div>
@@ -498,51 +635,24 @@ function promptUnsaveLocation(id) {
   if (!loc) return;
   const msg = document.getElementById('unsave-msg');
   if (msg) msg.textContent = `Remove "${loc.locationName}" from saved?`;
-  unsavePendingCallback = () => {
+  unsavePendingCallback = async () => {
+    if (loc.dbId) {
+      await deleteSavedRecommendationFromDB(loc.dbId);
+    }
     savedLocations = savedLocations.filter(l => l.id !== id);
     renderSavedPanel();
   };
   document.getElementById('unsave-modal')?.classList.add('open');
 }
 
-window.toggleLocSave = function toggleLocSave(row) {
-  const id = row.dataset.id;
-  const bizName = row.dataset.name;
-  const label = row.querySelector('span');
-
-  if (locSavedItems.has(id)) {
-    const msg = document.getElementById('unsave-msg');
-    if (msg) msg.textContent = `Remove "${bizName}" from saved?`;
-    unsavePendingCallback = () => {
-      locSavedItems.delete(id);
-      row.classList.remove('saved');
-      if (label) label.textContent = 'Save';
-      savedLocations = savedLocations.filter(l => l.id !== id);
-      renderSavedPanel();
-    };
-    document.getElementById('unsave-modal')?.classList.add('open');
-  } else {
-    locSavedItems.add(id);
-    row.classList.add('saved');
-    if (label) label.textContent = 'Saved';
-    const locName = currentLocShortName || 'Unknown Area';
-    const lat = currentClickLat;
-    const lon = currentClickLng;
-    if (!savedLocations.find(l => l.id === id)) {
-      savedLocations.push({ id, locationName: locName, businesses: [bizName], lat, lon });
-    }
-    renderSavedPanel();
-  }
-};
-
 document.getElementById('cancel-unsave')?.addEventListener('click', () => {
   unsavePendingCallback = null;
   document.getElementById('unsave-modal')?.classList.remove('open');
 });
 
-document.getElementById('confirm-unsave')?.addEventListener('click', () => {
+document.getElementById('confirm-unsave')?.addEventListener('click', async () => {
   if (unsavePendingCallback) {
-    unsavePendingCallback();
+    await unsavePendingCallback();
     unsavePendingCallback = null;
   }
   document.getElementById('unsave-modal')?.classList.remove('open');
@@ -582,4 +692,9 @@ document.getElementById('confirm-profile')?.addEventListener('click', () => {
 
 profileModal?.addEventListener('click', (e) => {
   if (e.target === profileModal) profileModal.classList.remove('open');
+});
+
+// Load saved recommendations on page load
+document.addEventListener('DOMContentLoaded', () => {
+  fetchSavedRecommendations();
 });

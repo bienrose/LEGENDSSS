@@ -355,6 +355,78 @@ app.get("/api/check-auth", (req, res) => {
   });
 });
 
+// ========== SAVED RECOMMENDATIONS ENDPOINTS ==========
+
+// GET all saved recommendations for the logged-in user
+app.get("/api/saved-recommendations", requireAuth, async (req, res) => {
+  try {
+    const userId = req.session.user.id;
+    const [rows] = await geoDB.query(
+      `SELECT id, business_type, barangay, suitability_score, lat, lon, saved_at
+       FROM saved_recommendations
+       WHERE user_id = ?
+       ORDER BY saved_at DESC`,
+      [userId]
+    );
+    res.json({ success: true, data: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// POST save a recommendation
+app.post("/api/saved-recommendations", requireAuth, async (req, res) => {
+  try {
+    const userId = req.session.user.id;
+    const { business_type, barangay, suitability_score, lat, lon } = req.body;
+
+    if (!business_type) {
+      return res.status(400).json({ success: false, message: "business_type is required" });
+    }
+
+    // Prevent duplicate saves (same user, same business_type, same lat/lon)
+    const [existing] = await geoDB.query(
+      `SELECT id FROM saved_recommendations 
+       WHERE user_id = ? AND business_type = ? 
+       AND ROUND(lat, 6) = ROUND(?, 6) AND ROUND(lon, 6) = ROUND(?, 6)`,
+      [userId, business_type, lat || null, lon || null]
+    );
+
+    if (existing.length > 0) {
+      return res.json({ success: false, message: "Already saved" });
+    }
+
+    const [result] = await geoDB.query(
+      `INSERT INTO saved_recommendations (user_id, business_type, barangay, suitability_score, lat, lon)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [userId, business_type, barangay || null, suitability_score || null, lat || null, lon || null]
+    );
+
+    res.json({ success: true, id: result.insertId, message: "Saved successfully" });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// DELETE a saved recommendation
+app.delete("/api/saved-recommendations/:id", requireAuth, async (req, res) => {
+  try {
+    const userId = req.session.user.id;
+    const [result] = await geoDB.query(
+      "DELETE FROM saved_recommendations WHERE id = ? AND user_id = ?",
+      [req.params.id, userId]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: "Saved recommendation not found" });
+    }
+    res.json({ success: true, message: "Removed successfully" });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ========== END SAVED RECOMMENDATIONS ==========
+
 app.get("/api/admin/stats", requireAdmin, async (req, res) => {
   try {
     const [userCount] = await legendDB.query("SELECT COUNT(*) as total FROM users");
@@ -1077,7 +1149,7 @@ app.get("/api/idea-locations", requireAuth, async (req, res) => {
       if (inPasig(lat, lon)) chosen.push({ ...base, lat, lon });
     }
 
-    return res.json({ success: true, data: chosen.slice(0, topN) });
+    return res.json({ success: true, data: chosen.slice(0, topN) });  
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
