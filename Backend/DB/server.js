@@ -355,6 +355,59 @@ app.get("/api/check-auth", (req, res) => {
   });
 });
 
+// ========== AREA DEMOGRAPHICS ENDPOINT ==========
+
+app.get("/api/area-demographics", requireAuth, async (req, res) => {
+  try {
+    const { barangay, line_of_business } = req.query;
+    if (!barangay) return res.status(400).json({ success: false, message: "barangay required" });
+
+    // Get demographic data for the barangay
+    const [demoRows] = await geoDB.query(
+      `SELECT barangay_name, population, population_density, highest_age_group, 
+              avg_income_min, avg_income_max, gender_distribution
+       FROM demographic_pasig
+       WHERE LOWER(TRIM(barangay_name)) = LOWER(TRIM(?))`,
+      [barangay]
+    );
+
+    const demo = demoRows.length > 0 ? demoRows[0] : null;
+
+    // Get total business count in the barangay
+    const [bizCountRows] = await geoDB.query(
+      `SELECT COUNT(*) AS total FROM businesses WHERE LOWER(TRIM(barangay)) = LOWER(TRIM(?))`,
+      [barangay]
+    );
+    const totalBusinesses = bizCountRows[0]?.total || 0;
+
+    // Get count of businesses in same line of business
+    let sameLineCount = 0;
+    if (line_of_business) {
+      const [sameLineRows] = await geoDB.query(
+        `SELECT COUNT(*) AS cnt FROM businesses 
+         WHERE LOWER(TRIM(barangay)) = LOWER(TRIM(?)) 
+         AND line_of_business = ?`,
+        [barangay, line_of_business]
+      );
+      sameLineCount = sameLineRows[0]?.cnt || 0;
+    }
+
+    res.json({
+      success: true,
+      data: {
+        demographic: demo,
+        totalBusinesses,
+        sameLineCount,
+        lineOfBusiness: line_of_business || null
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ========== END AREA DEMOGRAPHICS ==========
+
 // ========== SAVED RECOMMENDATIONS ENDPOINTS ==========
 
 // GET all saved recommendations for the logged-in user

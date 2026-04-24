@@ -327,3 +327,12 @@ body { font-family: Arial, sans-serif; overflow: hidden; }
 #street-view {
   display: none !important;
 }
+
+.collapsible-header {
+  cursor: pointer !important;
+}
+
+.collapsible-header,
+.collapsible-header * {
+  cursor: pointer !important;
+}

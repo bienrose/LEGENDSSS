@@ -516,6 +516,7 @@ async function renderIdeasAndPins({ type, barangay, prefs, allowPins }) {
     el.addEventListener('click', async () => {
       if (!allowPins) return;
       const idea = el.dataset.idea;
+      loadAreaDemographics(barangay || currentBarangayName, idea);
       const top = isFilterMode ? getFilteredPinCount() : 5;
       if (isFilterMode) {
         lastFilteredIdea = idea;
@@ -596,6 +597,10 @@ document.getElementById('done-btn')?.addEventListener('click', async () => {
   const prefs = getPrefs();
 
   if (!barangay && !type && !prefs.length) return;
+
+  if (barangay) {
+    loadAreaDemographics(barangay);
+  }
 
   const titleEl = document.getElementById('loc-panel-title');
   const badgeEl = document.getElementById('loc-badge');
@@ -697,6 +702,8 @@ async function handleLocationSelect(lat, lon) {
   const listEl = document.getElementById('rec-list');
 
   if (!listEl) return;
+
+  loadAreaDemographics(currentBarangayName);
 
   if (!ideasData.success || !ideasData.data.length) {
     listEl.innerHTML = '<div class="rec-item">No recommendations found.</div>';
@@ -970,6 +977,104 @@ document.getElementById('confirm-profile')?.addEventListener('click', () => {
 profileModal?.addEventListener('click', (e) => {
   if (e.target === profileModal) profileModal.classList.remove('open');
 });
+
+async function loadAreaDemographics(barangay, businessLine) {
+  if (!barangay) return;
+
+  try {
+    const params = new URLSearchParams();
+    params.append('barangay', barangay);
+    if (businessLine) params.append('line_of_business', businessLine);
+    
+    const res = await fetch(`/api/area-demographics?${params.toString()}`);
+    const data = await res.json();
+    
+    if (!data.success) return;
+
+    const demo = data.data.demographic;
+    const totalBiz = data.data.totalBusinesses;
+    const sameLineCount = data.data.sameLineCount;
+
+    // --- Populate Demographic Data ---
+    const demoBody = document.getElementById('demo-body');
+    if (demoBody) {
+      let demoHTML = '<ul>';
+      
+      if (demo) {
+        demoHTML += `<li><strong>Population:</strong> ${demo.population ? demo.population.toLocaleString() : 'N/A'}</li>`;
+        demoHTML += `<li><strong>Population Density:</strong> ${demo.population_density ? demo.population_density.toLocaleString() + ' per km²' : 'N/A'}</li>`;
+        demoHTML += `<li><strong>Dominant Age Group:</strong> ${demo.highest_age_group || 'N/A'}</li>`;
+        
+        const incomeMin = demo.avg_income_min ? '₱' + demo.avg_income_min.toLocaleString() : 'N/A';
+        const incomeMax = demo.avg_income_max ? '₱' + demo.avg_income_max.toLocaleString() : 'N/A';
+        const incomeRange = (demo.avg_income_min || demo.avg_income_max) ? `${incomeMin} – ${incomeMax}` : 'N/A';
+        demoHTML += `<li><strong>Average Income Range:</strong> ${incomeRange}</li>`;
+        demoHTML += `<li><strong>Gender Distribution:</strong> ${demo.gender_distribution || 'N/A'}</li>`;
+        demoHTML += `<li><strong>Total Businesses in Area:</strong> ${totalBiz.toLocaleString()}</li>`;
+        
+        if (businessLine) {
+          demoHTML += `<li><strong>Same Line of Business Count:</strong> ${sameLineCount.toLocaleString()}</li>`;
+        }
+      } else {
+        demoHTML += '<li>No demographic data available for this area.</li>';
+      }
+      
+      demoHTML += '</ul>';
+      demoBody.innerHTML = demoHTML;
+    }
+
+    // --- Populate Area Summary ---
+    const summaryBody = document.getElementById('summary-body');
+    if (summaryBody) {
+      let summary = '';
+      
+      if (!demo) {
+        summary = `<p>No demographic data available for <strong>${escapeHtml(barangay)}</strong>. A detailed area summary cannot be generated at this time.</p>`;
+      } else {
+        const densityLabel = demo.population && demo.population_density
+          ? (demo.population_density > 30000 ? 'densely populated' : demo.population_density > 15000 ? 'moderately populated' : 'sparsely populated')
+          : 'populated';
+
+        const ageLabel = demo.highest_age_group || 'all ages';
+
+        let incomeLabel = 'with varied income levels';
+        if (demo.avg_income_max) {
+          if (demo.avg_income_max > 50000) incomeLabel = 'with high purchasing power';
+          else if (demo.avg_income_max > 25000) incomeLabel = 'with moderate-to-high purchasing power';
+          else incomeLabel = 'with modest income levels';
+        }
+
+        const genderLabel = demo.gender_distribution ? `a predominantly ${demo.gender_distribution.toLowerCase()} population` : 'a balanced gender distribution';
+
+        summary = `<p>
+          <strong>${escapeHtml(demo.barangay_name || barangay)}</strong> is a ${densityLabel} barangay in Pasig 
+          with a total population of <strong>${demo.population ? demo.population.toLocaleString() : 'N/A'}</strong> 
+          and a population density of <strong>${demo.population_density ? demo.population_density.toLocaleString() : 'N/A'} per km²</strong>.
+          The dominant age group is <strong>${ageLabel}</strong>, and the area has ${genderLabel}.
+          Households in this barangay have an average income range of 
+          <strong>${demo.avg_income_min ? '₱' + demo.avg_income_min.toLocaleString() : 'N/A'} – ${demo.avg_income_max ? '₱' + demo.avg_income_max.toLocaleString() : 'N/A'}</strong>,
+          making it an area ${incomeLabel}.
+          There are <strong>${totalBiz.toLocaleString()}</strong> registered businesses operating in the area${businessLine ? `, <strong>${sameLineCount.toLocaleString()}</strong> of which are in the same line of business` : ''}.
+          This barangay is well-suited for businesses targeting the <strong>${ageLabel}</strong> age group with offerings that match the local income profile.
+        </p>`;
+      }
+
+      summaryBody.innerHTML = summary;
+    }
+  } catch (err) {
+    console.error('Error loading area demographics:', err);
+  }
+}
+
+function toggleCollapse(key) {
+  const body  = document.getElementById(key + '-body');
+  const arrow = document.getElementById(key + '-arrow');
+  if (!body || !arrow) return;
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  arrow.classList.toggle('rotated', !isOpen);
+}
+
 
 document.addEventListener('DOMContentLoaded', () => {
   fetchSavedRecommendations();
