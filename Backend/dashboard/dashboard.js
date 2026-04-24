@@ -1,3 +1,4 @@
+let activeRequestId = 0;
 const map = L.map('map').setView([14.5764, 121.0851], 15);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '© OpenStreetMap contributors', maxZoom: 19
@@ -19,6 +20,77 @@ function isInPasig(lat, lon) {
   );
 }
 
+const pinRangeEl = document.getElementById('pin-range');
+const pinCountInput = document.getElementById('pin-count');
+const pinCountLabel = document.getElementById('pin-count-label');
+
+let lastFilteredIdea = null;
+let lastFilteredBarangay = null;
+let lastFilteredPrefs = null;
+
+function showPinRange() {
+  pinRangeEl?.classList.add('show');
+}
+
+function hidePinRange() {
+  pinRangeEl?.classList.remove('show');
+}
+
+function setPinDefault() {
+  if (pinCountInput) pinCountInput.value = '5';
+  if (pinCountLabel) pinCountLabel.textContent = '5';
+}
+
+function getFilteredPinCount() {
+  const v = Number(pinCountInput?.value ?? 5);
+  const n = Number.isFinite(v) ? v : 5;
+  return Math.min(50, Math.max(1, n));
+}
+
+async function replotFilteredPins() {
+  if (!isFilterMode || !lastFilteredIdea) return;
+
+  const requestId = ++activeRequestId;
+
+  const top = getFilteredPinCount();
+  const recs = await fetchIdeaLocations({
+    idea: lastFilteredIdea,
+    barangay: lastFilteredBarangay,
+    top,
+    prefs: lastFilteredPrefs
+  });
+
+  if (!isFilterMode || requestId !== activeRequestId) return;
+
+  plotLocations(recs);
+}
+
+if (pinCountInput && pinCountLabel) {
+  setPinDefault();
+
+pinCountInput.addEventListener('input', () => {
+  if (!isFilterMode) return;
+  pinCountLabel.textContent = String(getFilteredPinCount());
+});
+
+pinCountInput.addEventListener('change', async () => {
+  if (!isFilterMode) return;
+  await replotFilteredPins();
+});
+
+pinCountInput.addEventListener('mouseup', async () => {
+  if (!isFilterMode) return;
+  await replotFilteredPins();
+});
+
+pinCountInput.addEventListener('touchend', async () => {
+  if (!isFilterMode) return;
+  await replotFilteredPins();
+});
+}
+
+hidePinRange();
+
 const filterPanel = document.getElementById('filter-panel');
 const savedPanel = document.getElementById('saved-panel');
 const locPanel = document.getElementById('loc-panel');
@@ -31,7 +103,27 @@ function closeAllPanels() {
 
 document.getElementById('close-saved-panel')?.addEventListener('click', () => savedPanel.classList.remove('open'));
 document.getElementById('close-loc-panel')?.addEventListener('click', () => locPanel.classList.remove('open'));
-document.getElementById('close-filter-panel')?.addEventListener('click', () => filterPanel.classList.remove('open'));
+document.getElementById('close-filter-panel')?.addEventListener('click', () => {
+  filterPanel.classList.remove('open');
+
+  activeRequestId++;
+
+  isFilterMode = false;
+  allowIdeaPins = false;
+
+  lastFilteredIdea = null;
+  lastFilteredBarangay = null;
+  lastFilteredPrefs = null;
+
+  clearBusinessMarkers();
+  clearClickedMarker();
+
+  hidePinRange();
+  setPinDefault();
+
+  const listEl = document.getElementById('rec-list');
+  if (listEl) listEl.innerHTML = '';
+});
 
 document.getElementById('filter-btn')?.addEventListener('click', function (e) {
   e.stopPropagation();
@@ -53,6 +145,7 @@ document.getElementById('saved-btn')?.addEventListener('click', function (e) {
 let businessMarkers = [];
 let clickedMarker = null;
 let allowIdeaPins = true;
+let isFilterMode = false;
 
 function clearBusinessMarkers() {
   businessMarkers.forEach(m => map.removeLayer(m));
@@ -61,26 +154,46 @@ function clearBusinessMarkers() {
 
 function clearClickedMarker() {
   if (clickedMarker) {
+    clickedMarker.off();
     map.removeLayer(clickedMarker);
     clickedMarker = null;
   }
 }
 
+function formatBizName(s) {
+  const raw = (s || '').toString().trim();
+  if (!raw) return '';
+  const withoutPrefix = raw.replace(/^(RES|RET|SER)\s+/i, '');
+  const words = withoutPrefix
+    .toLowerCase()
+    .split(/\s+/)
+    .map(w => w.replace(/[^a-z0-9\-]/gi, ''))
+    .filter(Boolean)
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1));
+  return words.join(' ');
+}
+
+function escapeHtml(str) {
+  return (str || '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 function plotLocations(recs) {
+  if (!isFilterMode && !allowIdeaPins) return;
+
   clearBusinessMarkers();
+
   const bounds = L.latLngBounds();
 
-  recs.forEach((rec, i) => {
+  recs.forEach((rec) => {
     if (!rec.lat || !rec.lon) return;
 
-    const marker = L.marker([parseFloat(rec.lat), parseFloat(rec.lon)])
-      .addTo(map)
-      .bindPopup(`<b>Rank #${i + 1} — ${rec.barangay_name || ''}</b><br>Score: ${rec.score?.toFixed(2) ?? ''}`);
+    const lat = Number(rec.lat);
+    const lon = Number(rec.lon);
+    const brgy = rec.barangay_name || '';
 
-    marker.on('click', () => {
-      map.closePopup();
-      marker.openPopup();
-    });
+    const marker = L.marker([lat, lon])
+      .addTo(map)
+      .bindPopup(`<b>${escapeHtml(brgy)}</b><br>${lat.toFixed(6)}, ${lon.toFixed(6)}`);
 
     businessMarkers.push(marker);
     bounds.extend(marker.getLatLng());
@@ -88,7 +201,6 @@ function plotLocations(recs) {
 
   if (bounds.isValid()) map.fitBounds(bounds.pad(0.2));
 }
-
 function getPrefs() {
   const prefs = [];
   if (document.getElementById('p-totalpop')?.checked) prefs.push('totalpop');
@@ -123,12 +235,15 @@ async function fetchIdeaLocations(filters = {}) {
   return data.success ? data.data : [];
 }
 
+let savedLocations = [];
+let unsavePendingCallback = null;
+
 async function fetchSavedRecommendations() {
   try {
     const res = await fetch('/api/saved-recommendations');
     const data = await res.json();
     if (data.success) {
-      savedLocations = data.data.map((item, i) => ({
+      savedLocations = data.data.map((item) => ({
         dbId: item.id,
         id: `saved-${item.id}`,
         locationName: item.barangay || 'Unknown Area',
@@ -167,9 +282,7 @@ async function saveRecommendationToDB(business_type, barangay, lat, lon) {
 
 async function deleteSavedRecommendationFromDB(dbId) {
   try {
-    const res = await fetch(`/api/saved-recommendations/${dbId}`, {
-      method: 'DELETE'
-    });
+    const res = await fetch(`/api/saved-recommendations/${dbId}`, { method: 'DELETE' });
     const data = await res.json();
     return data;
   } catch (err) {
@@ -178,22 +291,17 @@ async function deleteSavedRecommendationFromDB(dbId) {
   }
 }
 
-function escapeHtml(str) {
-  return (str || '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
 function markSavedInCurrentList() {
   document.querySelectorAll('#rec-list .save-row').forEach(row => {
     const name = row.dataset.name;
     const barangay = row.dataset.barangay || '';
     const isSaved = savedLocations.some(l => l.businesses[0] === name && l.locationName === barangay);
+    const span = row.querySelector('span');
     if (isSaved) {
       row.classList.add('saved');
-      const span = row.querySelector('span');
       if (span) span.textContent = 'Saved';
     } else {
       row.classList.remove('saved');
-      const span = row.querySelector('span');
       if (span) span.textContent = 'Save';
     }
   });
@@ -201,11 +309,16 @@ function markSavedInCurrentList() {
 
 function attachSaveRowListeners() {
   document.querySelectorAll('#rec-list .save-row').forEach(row => {
-    // Remove any existing listener to prevent duplicates
     row.removeEventListener('click', saveRowClickHandler);
     row.addEventListener('click', saveRowClickHandler);
   });
 }
+
+let currentLocShortName = '';
+let currentClickLat = null;
+let currentClickLng = null;
+let currentBarangayName = '';
+const locSavedItems = new Set();
 
 async function saveRowClickHandler(e) {
   e.stopPropagation();
@@ -220,9 +333,8 @@ async function saveRowClickHandler(e) {
   const isCurrentlySaved = row.classList.contains('saved');
 
   if (isCurrentlySaved) {
-    // Unsave flow
     const msg = document.getElementById('unsave-msg');
-    if (msg) msg.textContent = `Remove "${bizName}" from saved?`;
+    if (msg) msg.textContent = `Remove "${formatBizName(bizName)}" from saved?`;
 
     unsavePendingCallback = async () => {
       const savedLoc = savedLocations.find(l => l.businesses[0] === bizName && l.locationName === barangay);
@@ -238,17 +350,11 @@ async function saveRowClickHandler(e) {
     return;
   }
 
-  // Save flow
   const lat = currentClickLat;
   const lon = currentClickLng;
   const result = await saveRecommendationToDB(bizName, barangay, lat, lon);
 
-  if (result.success) {
-    row.classList.add('saved');
-    if (label) label.textContent = 'Saved';
-    locSavedItems.add(saveKey);
-    await fetchSavedRecommendations();
-  } else if (result.message === 'Already saved') {
+  if (result.success || result.message === 'Already saved') {
     row.classList.add('saved');
     if (label) label.textContent = 'Saved';
     locSavedItems.add(saveKey);
@@ -269,7 +375,7 @@ async function renderIdeasAndPins({ type, barangay, prefs, allowPins }) {
   listEl.innerHTML = ideas.map((name, i) => `
     <div class="rec-item" data-idx="${i}" data-idea="${escapeHtml(name)}">
       <span class="rec-item-num">${i + 1}.</span>
-      <span class="rec-item-name">${escapeHtml(name)}</span>
+      <span class="rec-item-name">${escapeHtml(formatBizName(name))}</span>
       <div class="save-row" data-name="${escapeHtml(name)}" data-barangay="${escapeHtml(barangay || '')}">
         <img src="/dashboard/save.png" alt="bookmark"><span>Save</span>
       </div>
@@ -282,7 +388,16 @@ async function renderIdeasAndPins({ type, barangay, prefs, allowPins }) {
     el.addEventListener('click', async () => {
       if (!allowPins) return;
       const idea = el.dataset.idea;
-      const recs = await fetchIdeaLocations({ idea, barangay, top: 5, prefs });
+      const top = isFilterMode ? getFilteredPinCount() : 5;
+      if (isFilterMode) {
+        lastFilteredIdea = idea;
+        lastFilteredBarangay = barangay || null;
+        lastFilteredPrefs = prefs || [];
+        showPinRange();
+      } else {
+        hidePinRange();
+      }
+      const recs = await fetchIdeaLocations({ idea, barangay, top, prefs });
       plotLocations(recs);
     });
   });
@@ -333,6 +448,12 @@ const typeMap = {
 document.getElementById('done-btn')?.addEventListener('click', async () => {
   filterPanel.classList.remove('open');
   allowIdeaPins = true;
+  isFilterMode = true;
+  lastFilteredIdea = null;
+  lastFilteredBarangay = null;
+  lastFilteredPrefs = null;
+  setPinDefault();
+  hidePinRange();
 
   const barangayCheckboxes = document.querySelectorAll('[id^="b-"]:checked');
   const typeCheckboxes = document.querySelectorAll('[id^="f-"]:checked');
@@ -357,11 +478,6 @@ document.getElementById('done-btn')?.addEventListener('click', async () => {
   await renderIdeasAndPins({ type, barangay, prefs, allowPins: true });
 });
 
-let currentLocShortName = '';
-let currentClickLat = null;
-let currentClickLng = null;
-let currentBarangayName = '';
-
 function showPasigToast(msg) {
   const el = document.getElementById('pasig-toast');
   if (!el) return;
@@ -370,9 +486,13 @@ function showPasigToast(msg) {
   setTimeout(() => el.classList.remove('show'), 2500);
 }
 
-const locSavedItems = new Set();
-
 async function handleLocationSelect(lat, lon) {
+  hidePinRange();
+  isFilterMode = false;
+  lastFilteredIdea = null;
+  lastFilteredBarangay = null;
+  lastFilteredPrefs = null;
+
   const latN = Number(lat);
   const lonN = Number(lon);
 
@@ -388,8 +508,22 @@ async function handleLocationSelect(lat, lon) {
   clearBusinessMarkers();
 
   clearClickedMarker();
-  clickedMarker = L.marker([latN, lonN]).addTo(map).bindPopup(`Selected location<br>${currentClickLat}, ${currentClickLng}`).openPopup();
+  clickedMarker = L.marker([latN, lonN], { draggable: true })
+    .addTo(map)
+    .bindPopup(`Selected location<br>${currentClickLat}, ${currentClickLng}`)
+    .openPopup();
+
   clickedMarker.on('popupclose', () => clearClickedMarker());
+
+  clickedMarker.on('drag', (ev) => {
+    const p = ev.target.getLatLng();
+    ev.target.setPopupContent(`Selected location<br>${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}`);
+  });
+
+  clickedMarker.on('dragend', async (ev) => {
+    const p = ev.target.getLatLng();
+    await handleLocationSelect(p.lat, p.lng);
+  });
 
   const svDiv = document.getElementById('street-view');
   if (svDiv) {
@@ -444,7 +578,7 @@ async function handleLocationSelect(lat, lon) {
   listEl.innerHTML = ideasData.data.map((name, i) => `
     <div class="rec-item" data-idx="${i}" data-idea="${escapeHtml(name)}">
       <span class="rec-item-num">${i + 1}.</span>
-      <span class="rec-item-name">${escapeHtml(name)}</span>
+      <span class="rec-item-name">${escapeHtml(formatBizName(name))}</span>
       <div class="save-row" data-name="${escapeHtml(name)}" data-barangay="${escapeHtml(currentBarangayName)}">
         <img src="/dashboard/save.png" alt="bookmark"><span>Save</span>
       </div>
@@ -456,6 +590,9 @@ async function handleLocationSelect(lat, lon) {
 }
 
 map.on('click', async function (e) {
+  hidePinRange();
+  isFilterMode = false;
+
   const lat = Number(e.latlng.lat);
   const lon = Number(e.latlng.lng);
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || !isInPasig(lat, lon)) {
@@ -473,6 +610,14 @@ document.getElementById('closeSV')?.addEventListener('click', () => {
   }
   const closeSV = document.getElementById('closeSV');
   if (closeSV) closeSV.style.display = 'none';
+  hidePinRange();
+  clearBusinessMarkers();
+  clearClickedMarker();
+  lastFilteredIdea = null;
+  lastFilteredBarangay = null;
+  lastFilteredPrefs = null;
+  isFilterMode = false;
+  setPinDefault();
 });
 
 let searchHistory = [];
@@ -528,6 +673,12 @@ document.addEventListener('click', function (e) {
 
 async function doSearch(query) {
   try {
+    hidePinRange();
+    isFilterMode = false;
+    lastFilteredIdea = null;
+    lastFilteredBarangay = null;
+    lastFilteredPrefs = null;
+
     const viewbox = `${PASIG_BOUNDS.minLon},${PASIG_BOUNDS.maxLat},${PASIG_BOUNDS.maxLon},${PASIG_BOUNDS.minLat}`;
     const res = await fetch(
       `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&bounded=1&viewbox=${viewbox}`
@@ -573,9 +724,6 @@ searchInput?.addEventListener('keydown', async function (e) {
   await doSearch(query);
 });
 
-let savedLocations = [];
-let unsavePendingCallback = null;
-
 function renderSavedPanel() {
   const body = document.getElementById('saved-panel-body');
   if (!body) return;
@@ -600,7 +748,7 @@ function renderSavedPanel() {
       </div>
       <div class="saved-card-body" id="saved-body-${loc.id}">
         <ul class="saved-biz-list">
-          ${loc.businesses.map((b, i) => `<li>${i + 1}. ${escapeHtml(b)}</li>`).join('')}
+          ${loc.businesses.map((b, i) => `<li>${i + 1}. ${escapeHtml(formatBizName(b))}</li>`).join('')}
         </ul>
       </div>
     </div>
@@ -608,6 +756,9 @@ function renderSavedPanel() {
 }
 
 function focusSavedLocation(id) {
+  hidePinRange();
+  isFilterMode = false;
+
   const loc = savedLocations.find(l => l.id === id);
   if (!loc || !loc.lat || !loc.lon) return;
 
@@ -634,11 +785,9 @@ function promptUnsaveLocation(id) {
   const loc = savedLocations.find(l => l.id === id);
   if (!loc) return;
   const msg = document.getElementById('unsave-msg');
-  if (msg) msg.textContent = `Remove "${loc.locationName}" from saved?`;
+  if (msg) msg.textContent = `Remove "${escapeHtml(loc.locationName)}" from saved?`;
   unsavePendingCallback = async () => {
-    if (loc.dbId) {
-      await deleteSavedRecommendationFromDB(loc.dbId);
-    }
+    if (loc.dbId) await deleteSavedRecommendationFromDB(loc.dbId);
     savedLocations = savedLocations.filter(l => l.id !== id);
     renderSavedPanel();
   };
@@ -694,7 +843,6 @@ profileModal?.addEventListener('click', (e) => {
   if (e.target === profileModal) profileModal.classList.remove('open');
 });
 
-// Load saved recommendations on page load
 document.addEventListener('DOMContentLoaded', () => {
   fetchSavedRecommendations();
 });

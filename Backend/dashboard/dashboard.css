@@ -296,3 +296,34 @@ body { font-family: Arial, sans-serif; overflow: hidden; }
 .history-item {
   cursor: pointer;
 }
+.pin-range {
+  position: fixed;
+  top: 22px;
+  right: 22px;
+  z-index: 2000;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 10px 12px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+  font-family: Arial, sans-serif;
+}
+
+.pin-range-label {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: #1f2a37;
+}
+
+#pin-count {
+  width: 180px;
+}
+#pin-range {
+  display: none;
+}
+#pin-range.show {
+  display: block;
+}
+#street-view {
+  display: none !important;
+}
