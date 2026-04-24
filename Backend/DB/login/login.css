@@ -55,7 +55,7 @@ h1 {
 
 .right {
   width: 40%;
-  background-color: rgba(31, 61, 85, 0.9); 
+  background-color: rgba(31, 61, 85, 0.9);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -141,11 +141,12 @@ p {
   padding-left: 20px;
 }
 
-input[type="text"], input[type="password"] {
+input[type="text"],
+input[type="password"] {
   background-color: #ffffff;
   border: 1px solid #ffffff;
   border-radius: 5px;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 #verification-section input {
@@ -203,45 +204,64 @@ button:disabled {
 }
 
 @media (max-width: 768px) {
-    .form-box {
-        width: 280px;
-        padding-left: 20px;
-        padding-right: 20px;
-    }
-    
-    #verification-section input {
-        font-size: 16px;
-        letter-spacing: 3px;
-    }
+  .form-box {
+    width: 280px;
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  #verification-section input {
+    font-size: 16px;
+    letter-spacing: 3px;
+  }
 }
 
 .Forgot-Pass {
-    text-align: center;
-    margin-top: 10px;
+  text-align: center;
+  margin-top: 10px;
 }
 
 .Forgot-Pass a {
-    color: #4a9fd4;
-    cursor: pointer;
-    font-size: 12px;
-    text-decoration: none;
+  color: #4a9fd4;
+  cursor: pointer;
+  font-size: 12px;
+  text-decoration: none;
 }
 
 .Forgot-Pass a:hover {
-    text-decoration: underline;
+  text-decoration: underline;
 }
 
 #forgot-code-input {
-    text-align: center;
-    font-size: 20px;
-    letter-spacing: 5px;
+  text-align: center;
+  font-size: 20px;
+  letter-spacing: 5px;
 }
 
 select {
   background-color: #ffffff;
   border: 1px solid #ffffff;
   border-radius: 5px;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   width: 320px;
   height: 35px;
+}
+
+/* Password Requirements */
+.password-requirements {
+  display: block;
+  margin-top: -10px;
+  margin-bottom: 10px;
+  padding-left: 5px;
+}
+
+.password-requirements .req {
+  font-size: 11px;
+  color: #7090a7;
+  margin: 2px 0;
+  padding-left: 0;
+}
+
+input.input-error {
+  border: 2px solid #ff4d4d !important;
 }

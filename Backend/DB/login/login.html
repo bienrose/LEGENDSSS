@@ -1,124 +1,122 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Your App</title>
-    <link rel="stylesheet" href="login.css">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login - Your App</title>
+<link rel="stylesheet" href="login.css">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
-
 <body>
-    <div class="left">
-        <div>
-            <a class="about-btn" href="about_us.html">ABOUT US</a>
-        </div>
-        <div>
-            <h1>Hello, Welcome!</h1>
-            <div class="tagline">Helping you choose the perfect business location through smart data analysis.</div>
-        </div>
-        <div class="footer">© 2026 SPOT. All rights reserved.</div>
+<div class="left">
+  <div>
+    <a class="about-btn" href="about_us.html">ABOUT US</a>
+  </div>
+  <div>
+    <h1>Hello, Welcome!</h1>
+    <div class="tagline">Helping you choose the perfect business location through smart data analysis.</div>
+  </div>
+  <div class="footer">© 2026 SPOT. All rights reserved.</div>
+</div>
+
+<div class="right">
+
+  <!-- LOGIN FORM -->
+  <div id="login-form" class="form-box">
+    <img src="Spot.png" alt="Logo" class="logo">
+    <h2>LOGIN TO YOUR ACCOUNT</h2>
+    <div class="note">Don't have an account? <a onclick="showRegister()">Sign up</a></div>
+    <label>Username</label>
+    <input type="text" id="login-username" placeholder="Enter your username">
+    <label>Password</label>
+    <input type="password" id="login-password" placeholder="Enter your password">
+    <button onclick="login()">Login</button>
+    <div class="Forgot-Pass"><a onclick="showForgotPassword()">Forgot Password?</a></div>
+  </div>
+
+  <!-- REGISTER FORM -->
+  <div id="register-form" class="form-box" style="display: none;">
+    <img src="Spot.png" alt="Logo" class="logo">
+    <h2>CREATE AN ACCOUNT</h2>
+    <div class="note">Already have an account? <a onclick="showLogin()">Sign in</a></div>
+    <label>Full Name</label>
+    <input type="text" id="reg-fullname" placeholder="Enter your full name">
+    <label>Email</label>
+    <input type="text" id="reg-email" placeholder="Enter your email">
+    <label>Username</label>
+    <input type="text" id="reg-username" placeholder="Choose a username">
+    <label>Password</label>
+    <input type="password" id="reg-password" placeholder="Create a password">
+    <div class="password-requirements" id="reg-password-requirements">
+      <p class="req" id="req-length">• At least 8 characters</p>
+      <p class="req" id="req-upper">• At least one uppercase letter</p>
+      <p class="req" id="req-lower">• At least one lowercase letter</p>
+      <p class="req" id="req-number">• At least one number</p>
     </div>
+    <label>Affiliation</label>
+    <select id="affiliation">
+      <option value="" disabled selected>Select your affiliation</option>
+      <option value="Entrepreneur">Entrepreneur</option>
+      <option value="Aspiring Entrepreneur">Aspiring Entrepreneur</option>
+    </select>
+    <button onclick="register()">Register</button>
+  </div>
 
-    <div class="right">
-        <div id="login-form" class="form-box">
-            <img src="Spot.png" alt="Logo" class="logo">
-            <h2>LOGIN TO YOUR ACCOUNT</h2>
-            <div class="note">Don't have an account? <a onclick="showRegister()">Sign up</a></div>
+  <!-- VERIFICATION SECTION -->
+  <div id="verification-section" class="form-box" style="display: none;">
+    <img src="Spot.png" alt="Logo" class="logo">
+    <h2>VERIFY YOUR EMAIL</h2>
+    <div class="note">We sent a 6-digit code to your email</div>
+    <label>Verification Code</label>
+    <input type="text" id="verification-code-input" maxlength="6" placeholder="Enter 6-digit code">
+    <button onclick="verifyCode()">Verify Account</button>
+    <button onclick="resendVerificationCode()">Resend Code</button>
+    <button onclick="showRegister()">Back to Registration</button>
+  </div>
 
-            <label>Username</label>
-            <input type="text" id="login-username" placeholder="Enter your username">
+  <!-- FORGOT PASSWORD SECTION -->
+  <div id="forgot-password-section" class="form-box" style="display: none;">
+    <img src="Spot.png" alt="Logo" class="logo">
+    <h2>RESET PASSWORD</h2>
+    <div class="note">Enter your email to reset your password</div>
+    <label>Email Address</label>
+    <input type="text" id="forgot-email" placeholder="Enter your registered email">
+    <button onclick="sendForgotCode()">Send Reset Code</button>
+    <button onclick="showLogin()">Back to Login</button>
+  </div>
 
-            <label>Password</label>
-            <input type="password" id="login-password" placeholder="Enter your password">
+  <!-- FORGOT VERIFICATION SECTION -->
+  <div id="forgot-verification-section" class="form-box" style="display: none;">
+    <img src="Spot.png" alt="Logo" class="logo">
+    <h2>VERIFY RESET CODE</h2>
+    <div class="note">We sent a 6-digit code to your email</div>
+    <label>Verification Code</label>
+    <input type="text" id="forgot-code-input" maxlength="6" placeholder="Enter 6-digit code">
+    <button onclick="verifyForgotCode()">Verify Code</button>
+    <button onclick="showForgotPassword()">Back</button>
+  </div>
 
-            <button onclick="login()">Login</button>
-            <div class="Forgot-Pass"><a onclick="showForgotPassword()">Forgot Password?</a></div>
-        </div>
-
-        <div id="register-form" class="form-box" style="display: none;">
-            <img src="Spot.png" alt="Logo" class="logo">
-            <h2>CREATE AN ACCOUNT</h2>
-            <div class="note">Already have an account? <a onclick="showLogin()">Sign in</a></div>
-
-            <label>Full Name</label>
-            <input type="text" id="reg-fullname" placeholder="Enter your full name">
-
-            <label>Email</label>
-            <input type="text" id="reg-email" placeholder="Enter your email">
-
-            <label>Username</label>
-            <input type="text" id="reg-username" placeholder="Choose a username">
-
-            <label>Password</label>
-            <input type="password" id="reg-password" placeholder="Create a password">
-
-            <label>Affiliation</label>
-            <select id="affiliation">
-                <option value="" disabled selected>Select your affiliation</option>
-                <option value="Entrepreneur">Entrepreneur</option>
-                <option value="Aspiring Entrepreneur">Aspiring Entrepreneur</option>
-            </select>
-            <button onclick="register()">Register</button>
-        </div>
-
-        <div id="verification-section" class="form-box" style="display: none;">
-            <img src="Spot.png" alt="Logo" class="logo">
-            <h2>VERIFY YOUR EMAIL</h2>
-            <div class="note">We sent a 6-digit code to your email</div>
-
-            <label>Verification Code</label>
-            <input type="text" id="verification-code-input" maxlength="6" placeholder="Enter 6-digit code">
-
-            <button onclick="verifyCode()">Verify Account</button>
-            <button onclick="resendVerificationCode()">Resend Code</button>
-            <button onclick="showRegister()">Back to Registration</button>
-        </div>
-
-        <div id="forgot-password-section" class="form-box" style="display: none;">
-            <img src="Spot.png" alt="Logo" class="logo">
-            <h2>RESET PASSWORD</h2>
-            <div class="note">Enter your email to reset your password</div>
-
-            <label>Email Address</label>
-            <input type="text" id="forgot-email" placeholder="Enter your registered email">
-
-            <!-- ✅ FIXED HERE -->
-            <button onclick="sendForgotCode()">Send Reset Code</button>
-            <button onclick="showLogin()">Back to Login</button>
-        </div>
-
-        <div id="forgot-verification-section" class="form-box" style="display: none;">
-            <img src="Spot.png" alt="Logo" class="logo">
-            <h2>VERIFY RESET CODE</h2>
-            <div class="note">We sent a 6-digit code to your email</div>
-
-            <label>Verification Code</label>
-            <input type="text" id="forgot-code-input" maxlength="6" placeholder="Enter 6-digit code">
-
-            <button onclick="verifyForgotCode()">Verify Code</button>
-            <button onclick="showForgotPassword()">Back</button>
-        </div>
-
-        <div id="reset-password-section" class="form-box" style="display: none;">
-            <img src="Spot.png" alt="Logo" class="logo">
-            <h2>CREATE NEW PASSWORD</h2>
-            <div class="note">Enter your new password below</div>
-
-            <label>New Password</label>
-            <input type="password" id="new-password" placeholder="Enter new password">
-
-            <label>Confirm Password</label>
-            <input type="password" id="confirm-password" placeholder="Confirm new password">
-
-            <button onclick="resetPassword()">Reset Password</button>
-            <button onclick="showLogin()">Back to Login</button>
-        </div>
-
+  <!-- RESET PASSWORD SECTION -->
+  <div id="reset-password-section" class="form-box" style="display: none;">
+    <img src="Spot.png" alt="Logo" class="logo">
+    <h2>CREATE NEW PASSWORD</h2>
+    <div class="note">Enter your new password below</div>
+    <label>New Password</label>
+    <input type="password" id="new-password" placeholder="Enter new password">
+    <div class="password-requirements" id="reset-password-requirements">
+      <p class="req" id="reset-req-length">• At least 8 characters</p>
+      <p class="req" id="reset-req-upper">• At least one uppercase letter</p>
+      <p class="req" id="reset-req-lower">• At least one lowercase letter</p>
+      <p class="req" id="reset-req-number">• At least one number</p>
     </div>
+    <label>Confirm Password</label>
+    <input type="password" id="confirm-password" placeholder="Confirm new password">
+    <button onclick="resetPassword()">Reset Password</button>
+    <button onclick="showLogin()">Back to Login</button>
+  </div>
 
-    <script src="login.js"></script>
+</div>
+
+<script src="login.js"></script>
 </body>
-
 </html>

@@ -16,6 +16,15 @@ function getDeviceId() {
   return deviceId;
 }
 
+function validatePassword(password) {
+  return {
+    length: password.length >= 8,
+    upper: /[A-Z]/.test(password),
+    lower: /[a-z]/.test(password),
+    number: /[0-9]/.test(password),
+  };
+}
+
 function showRegister() {
   document.getElementById("login-form").style.display = "none";
   document.getElementById("verification-section").style.display = "none";
@@ -63,7 +72,6 @@ async function verifyCode() {
 
   if (res.ok && data.success) {
     localStorage.removeItem("tempUserId");
-
     SwalFixed.fire({
       title: "Success",
       text: "Account verified!",
@@ -71,7 +79,6 @@ async function verifyCode() {
     }).then(() => {
       showLogin();
     });
-
   } else {
     SwalFixed.fire({
       title: "Error",
@@ -107,7 +114,6 @@ async function login() {
     }).then(() => {
       window.location.href = data.redirect || "/dashboard";
     });
-
   } else {
     SwalFixed.fire({
       title: "Error",
@@ -123,6 +129,23 @@ async function register() {
   const username = document.getElementById("reg-username").value.trim();
   const password = document.getElementById("reg-password").value;
   const affiliation = document.getElementById("affiliation").value.trim();
+
+  const checks = validatePassword(password);
+  const passwordInput = document.getElementById("reg-password");
+  const requirementsBox = document.getElementById("reg-password-requirements");
+
+  if (!checks.length || !checks.upper || !checks.lower || !checks.number) {
+    passwordInput.classList.add("input-error");
+    requirementsBox.style.display = "block";
+    document.getElementById("req-length").style.color = checks.length ? "#a0bcd0" : "#ff4d4d";
+    document.getElementById("req-upper").style.color = checks.upper ? "#a0bcd0" : "#ff4d4d";
+    document.getElementById("req-lower").style.color = checks.lower ? "#a0bcd0" : "#ff4d4d";
+    document.getElementById("req-number").style.color = checks.number ? "#a0bcd0" : "#ff4d4d";
+    return;
+  }
+
+  passwordInput.classList.remove("input-error");
+  requirementsBox.style.display = "none";
 
   SwalFixed.fire({
     title: "Creating account...",
@@ -148,16 +171,13 @@ async function register() {
 
   if (res.ok && data.success) {
     localStorage.setItem("tempUserId", data.tempUserId);
-
     SwalFixed.fire({
       title: "Success",
       text: "Verification code sent",
       icon: "success"
     });
-
     document.getElementById("register-form").style.display = "none";
     document.getElementById("verification-section").style.display = "block";
-
   } else {
     SwalFixed.fire({
       title: "Error",
@@ -191,16 +211,13 @@ async function sendForgotCode() {
 
   if (res.ok && data.success) {
     forgotPendingEmail = email;
-
     SwalFixed.fire({
       title: "Sent",
       text: data.message || "Check your email for code",
       icon: "success"
     });
-
     document.getElementById("forgot-password-section").style.display = "none";
     document.getElementById("forgot-verification-section").style.display = "block";
-
   } else {
     SwalFixed.fire({
       title: "Error",
@@ -236,6 +253,23 @@ async function verifyForgotCode() {
 async function resetPassword() {
   const newPassword = document.getElementById("new-password").value;
 
+  const checks = validatePassword(newPassword);
+  const passwordInput = document.getElementById("new-password");
+  const requirementsBox = document.getElementById("reset-password-requirements");
+
+  if (!checks.length || !checks.upper || !checks.lower || !checks.number) {
+    passwordInput.classList.add("input-error");
+    requirementsBox.style.display = "block";
+    document.getElementById("reset-req-length").style.color = checks.length ? "#a0bcd0" : "#ff4d4d";
+    document.getElementById("reset-req-upper").style.color = checks.upper ? "#a0bcd0" : "#ff4d4d";
+    document.getElementById("reset-req-lower").style.color = checks.lower ? "#a0bcd0" : "#ff4d4d";
+    document.getElementById("reset-req-number").style.color = checks.number ? "#a0bcd0" : "#ff4d4d";
+    return;
+  }
+
+  passwordInput.classList.remove("input-error");
+  requirementsBox.style.display = "none";
+
   const res = await fetch("/reset-password", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -252,7 +286,6 @@ async function resetPassword() {
     }).then(() => {
       showLogin();
     });
-
   } else {
     SwalFixed.fire({
       title: "Error",
@@ -264,7 +297,7 @@ async function resetPassword() {
 
 async function resendVerificationCode() {
   const tempUserId = localStorage.getItem("tempUserId");
-  
+
   if (!tempUserId) {
     SwalFixed.fire({
       title: "Error",
