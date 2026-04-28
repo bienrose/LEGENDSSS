@@ -15,6 +15,75 @@ let lastFilteredPrefs = null;
 let searchHistory = [];
 const locSavedItems = new Set();
 
+function reportLogRead() {
+  try { return JSON.parse(localStorage.getItem('reportLogs') || '{"searchPins":[],"recommendations":[],"saved":[]}') || { searchPins: [], recommendations: [], saved: [] }; }
+  catch { return { searchPins: [], recommendations: [], saved: [] }; }
+}
+
+function reportLogWrite(logs) {
+  localStorage.setItem('reportLogs', JSON.stringify(logs));
+}
+
+function reportNow() {
+  return new Date().toISOString();
+}
+
+function reportPush(kind, payload) {
+  const logs = reportLogRead();
+  if (!logs[kind]) logs[kind] = [];
+  logs[kind].unshift(payload);
+  logs[kind] = logs[kind].slice(0, 200);
+  reportLogWrite(logs);
+}
+
+function reportCurrentFiltersSnapshot() {
+  const barangayCheckboxes = document.querySelectorAll('[id^="b-"]:checked');
+  const typeCheckboxes = document.querySelectorAll('[id^="f-"]:checked');
+  const selectedBarangays = [...barangayCheckboxes].map(cb => barangayMap[cb.id]).filter(Boolean);
+  const selectedTypes = [...typeCheckboxes].map(cb => typeMap[cb.id]).filter(Boolean);
+  const prefs = getPrefs();
+  return {
+    barangay: selectedBarangays[0] || null,
+    type: selectedTypes[0] || null,
+    prefs,
+    pinCount: isFilterMode ? getFilteredPinCount() : null
+  };
+}
+
+function reportLogSearchOrPin({ source, locationName, lat, lon }) {
+  const f = reportCurrentFiltersSnapshot();
+  reportPush('searchPins', {
+    at: reportNow(),
+    source,
+    locationName: locationName || null,
+    lat: lat ?? null,
+    lon: lon ?? null,
+    filters: f
+  });
+}
+
+function reportLogRecommendation({ idea, area, pinCount }) {
+  const f = reportCurrentFiltersSnapshot();
+  reportPush('recommendations', {
+    at: reportNow(),
+    idea,
+    area: area || null,
+    pinCount: pinCount ?? null,
+    filters: f
+  });
+}
+
+function reportLogSaved({ action, business_type, barangay, lat, lon }) {
+  reportPush('saved', {
+    at: reportNow(),
+    action,
+    business_type,
+    barangay: barangay || null,
+    lat: lat ?? null,
+    lon: lon ?? null
+  });
+}
+
 const map = L.map('map').setView([14.5764, 121.0851], 15);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '© OpenStreetMap contributors', maxZoom: 19
@@ -459,7 +528,9 @@ async function saveRowClickHandler(e) {
       if (label) label.textContent = 'Save';
       await fetchSavedRecommendations();
       locSavedItems.delete(saveKey);
+      reportLogSaved({ action: 'removed', business_type: bizName, barangay, lat: currentClickLat, lon: currentClickLng });
     };
+
     document.getElementById('unsave-modal')?.classList.add('open');
     return;
   }
@@ -473,6 +544,7 @@ async function saveRowClickHandler(e) {
     if (label) label.textContent = 'Saved';
     locSavedItems.add(saveKey);
     await fetchSavedRecommendations();
+    reportLogSaved({ action: 'saved', business_type: bizName, barangay, lat: currentClickLat, lon: currentClickLng });
   }
 }
 
@@ -502,8 +574,17 @@ async function renderIdeasAndPins({ type, barangay, prefs, allowPins }) {
     el.addEventListener('click', async () => {
       if (!allowPins) return;
       const idea = el.dataset.idea;
+
+      const pinCount = isFilterMode ? getFilteredPinCount() : 5;
+      reportLogRecommendation({
+        idea,
+        area: barangay || currentBarangayName || currentLocShortName,
+        pinCount
+      });
+
       loadAreaDemographics(barangay || currentBarangayName, idea);
-      const top = isFilterMode ? getFilteredPinCount() : 5;
+
+      const top = pinCount;
       if (isFilterMode) {
         lastFilteredIdea = idea;
         lastFilteredBarangay = barangay || null;
@@ -619,7 +700,7 @@ function showPasigToast(msg) {
   setTimeout(() => el.classList.remove('show'), 2500);
 }
 
-async function handleLocationSelect(lat, lon) {
+async function handleLocationSelect(lat, lon, source = 'map') {
   hidePinRange();
   isFilterMode = false;
   lastFilteredIdea = null;
@@ -655,7 +736,7 @@ async function handleLocationSelect(lat, lon) {
 
   clickedMarker.on('dragend', async (ev) => {
     const p = ev.target.getLatLng();
-    await handleLocationSelect(p.lat, p.lng);
+    await handleLocationSelect(p.lat, p.lng, 'drag');
   });
 
   const svDiv = document.getElementById('street-view');
@@ -689,6 +770,13 @@ async function handleLocationSelect(lat, lon) {
   } catch {
     if (badge) badge.textContent = `📍 ${currentClickLat}, ${currentClickLng}`;
   }
+
+  reportLogSearchOrPin({
+    source,
+    locationName: currentLocShortName,
+    lat: currentClickLat,
+    lon: currentClickLng
+  });
 
   const typeCheckboxes = document.querySelectorAll('[id^="f-"]:checked');
   const selectedTypes = [...typeCheckboxes].map(cb => typeMap[cb.id]).filter(Boolean);
@@ -732,8 +820,57 @@ map.on('click', async function (e) {
     showPasigToast('Location not found in Pasig.');
     return;
   }
-  await handleLocationSelect(lat, lon);
+  await handleLocationSelect(lat, lon, 'map_click');
 });
+
+async function doSearch(query) {
+  try {
+    hidePinRange();
+    isFilterMode = false;
+    lastFilteredIdea = null;
+    lastFilteredBarangay = null;
+    lastFilteredPrefs = null;
+
+    const viewbox = `${PASIG_BOUNDS.minLon},${PASIG_BOUNDS.maxLat},${PASIG_BOUNDS.maxLon},${PASIG_BOUNDS.minLat}`;
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&bounded=1&viewbox=${viewbox}`);
+    const data = await res.json();
+    if (!data.length) {
+      showPasigToast('Location not found in Pasig.');
+      return;
+    }
+
+    const latNum = Number(data[0].lat);
+    const lonNum = Number(data[0].lon);
+
+    if (!Number.isFinite(latNum) || !Number.isFinite(lonNum) || !isInPasig(latNum, lonNum)) {
+      showPasigToast('Location not found in Pasig.');
+      return;
+    }
+
+    const rev = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latNum}&lon=${lonNum}&format=json`);
+    const revData = await rev.json();
+    const addr = revData.address || {};
+    const city = (addr.city || addr.municipality || addr.town || addr.county || '').toLowerCase();
+
+    if (!city.includes('pasig')) {
+      showPasigToast('Location not found in Pasig.');
+      return;
+    }
+
+    reportLogSearchOrPin({
+      source: 'search',
+      locationName: query,
+      lat: latNum.toFixed(6),
+      lon: lonNum.toFixed(6)
+    });
+
+    map.setView([latNum, lonNum], 16);
+    await handleLocationSelect(latNum, lonNum, 'search');
+  } catch (err) {
+    console.error(err);
+    showPasigToast('Something went wrong.');
+  }
+}
 
 function renderHistory() {
   const container = document.getElementById('search-history');
@@ -784,48 +921,6 @@ document.addEventListener('click', function (e) {
   const wrapper = document.getElementById('search-wrapper');
   if (wrapper && !wrapper.contains(e.target)) document.getElementById('search-history')?.classList.remove('open');
 });
-
-async function doSearch(query) {
-  try {
-    hidePinRange();
-    isFilterMode = false;
-    lastFilteredIdea = null;
-    lastFilteredBarangay = null;
-    lastFilteredPrefs = null;
-
-    const viewbox = `${PASIG_BOUNDS.minLon},${PASIG_BOUNDS.maxLat},${PASIG_BOUNDS.maxLon},${PASIG_BOUNDS.minLat}`;
-    const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&bounded=1&viewbox=${viewbox}`);
-    const data = await res.json();
-    if (!data.length) {
-      showPasigToast('Location not found in Pasig.');
-      return;
-    }
-
-    const latNum = Number(data[0].lat);
-    const lonNum = Number(data[0].lon);
-
-    if (!Number.isFinite(latNum) || !Number.isFinite(lonNum) || !isInPasig(latNum, lonNum)) {
-      showPasigToast('Location not found in Pasig.');
-      return;
-    }
-
-    const rev = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latNum}&lon=${lonNum}&format=json`);
-    const revData = await rev.json();
-    const addr = revData.address || {};
-    const city = (addr.city || addr.municipality || addr.town || addr.county || '').toLowerCase();
-
-    if (!city.includes('pasig')) {
-      showPasigToast('Location not found in Pasig.');
-      return;
-    }
-
-    map.setView([latNum, lonNum], 16);
-    await handleLocationSelect(latNum, lonNum);
-  } catch (err) {
-    console.error(err);
-    showPasigToast('Something went wrong.');
-  }
-}
 
 searchInput?.addEventListener('keydown', async function (e) {
   if (e.key !== 'Enter') return;

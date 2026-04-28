@@ -7,20 +7,28 @@
 </head>
 
 <body>
+  <div class="layout">
+    <aside class="sidebar">
 
-  <div class="profile-container">
-    <div class="profile-header">
-      <button class="back-btn" id="back-btn">← Back to Dashboard</button>
-      <h1>My Profile</h1>
-    </div>
+      <nav class="nav">
+        <button class="nav-item active" id="nav-profile">Profile</button>
+        <button class="nav-item" id="nav-reports">Report Module</button>
+      </nav>
 
-    <div class="profile-content">
-      <div class="profile-card">
+      <div class="sidebar-bottom">
+        <button class="logout-btn" id="logout-btn">Back to Dashboard</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <h1 class="page-title" id="page-title">My Profile</h1>
+
+      <section class="card profile-card" id="profile-section">
         <div class="card-header">
           <h2>Profile Information</h2>
           <div class="card-actions">
             <button class="edit-btn" id="edit-btn">✎ Edit</button>
-            <button class="save-btn" id="save-btn" style="display: none;">✓ Save</button>
+            <button class="save-btn" id="save-btn" style="display:none;">✓ Save</button>
           </div>
         </div>
 
@@ -55,14 +63,41 @@
           </div>
 
           <div class="form-actions">
-            <button type="button" class="cancel-btn" id="cancel-btn" style="display: none;">Cancel</button>
+            <button type="button" class="cancel-btn" id="cancel-btn" style="display:none;">Cancel</button>
           </div>
         </form>
-      </div>
-    </div>
+      </section>
+
+      <section class="card reports-card hidden" id="reports-section">
+        <div class="card-header">
+          <h2>Report Module</h2>
+          <div class="card-actions">
+            <button class="clear-btn" id="clear-reports-btn">Clear</button>
+          </div>
+        </div>
+
+        <div class="reports-grid">
+          <div class="report-block">
+            <div class="report-block-title">Search / Pin History</div>
+            <div id="report-searchpins"></div>
+          </div>
+
+          <div class="report-block">
+            <div class="report-block-title">Recommendation History</div>
+            <div id="report-recs"></div>
+          </div>
+
+          <div class="report-block">
+            <div class="report-block-title">Saved History</div>
+            <div id="report-saved"></div>
+          </div>
+        </div>
+      </section>
+    </main>
   </div>
 
   <script src="/dashboard/Profile.js"></script>
+  <script src="/dashboard/ProfileReport.js"></script>
 </body>
 
 </html>
