@@ -457,8 +457,8 @@ async function saveRecommendationToDB(business_type, barangay, lat, lon) {
         business_type,
         barangay: barangay || null,
         suitability_score: null,
-        lat: lat ? parseFloat(lat) : null,
-        lon: lon ? parseFloat(lon) : null
+        lat: lat ? parseFloat(lat) : null,   // ensure float
+        lon: lon ? parseFloat(lon) : null    // ensure float
       })
     });
     const data = await res.json();
@@ -483,8 +483,11 @@ async function deleteSavedRecommendationFromDB(dbId) {
 function markSavedInCurrentList() {
   document.querySelectorAll('#rec-list .save-row').forEach(row => {
     const name = row.dataset.name;
-    const barangay = row.dataset.barangay || '';
-    const isSaved = savedLocations.some(l => l.businesses[0] === name && l.locationName === barangay);
+    // Fix: same fallback logic as saveRowClickHandler
+    const barangay = row.dataset.barangay || currentBarangayName || '';
+    const isSaved = savedLocations.some(
+      l => l.businesses[0] === name && l.locationName === barangay
+    );
     const span = row.querySelector('span');
     if (isSaved) {
       row.classList.add('saved');
@@ -495,6 +498,7 @@ function markSavedInCurrentList() {
     }
   });
 }
+
 
 function attachSaveRowListeners() {
   document.querySelectorAll('#rec-list .save-row').forEach(row => {
@@ -509,6 +513,7 @@ async function saveRowClickHandler(e) {
   const row = e.currentTarget;
 
   const bizName = row.dataset.name;
+  // Fix: always fall back to currentBarangayName if data-barangay is empty
   const barangay = row.dataset.barangay || currentBarangayName || '';
   const label = row.querySelector('span');
   const saveKey = `${bizName}:${barangay}`;
@@ -520,23 +525,39 @@ async function saveRowClickHandler(e) {
     if (msg) msg.textContent = `Remove "${formatBizName(bizName)}" from saved?`;
 
     unsavePendingCallback = async () => {
-      const savedLoc = savedLocations.find(l => l.businesses[0] === bizName && l.locationName === barangay);
+      // Fix: match by business_type AND locationName (barangay)
+      const savedLoc = savedLocations.find(
+        l => l.businesses[0] === bizName && l.locationName === barangay
+      );
       if (savedLoc && savedLoc.dbId) {
         await deleteSavedRecommendationFromDB(savedLoc.dbId);
       }
       row.classList.remove('saved');
       if (label) label.textContent = 'Save';
-      await fetchSavedRecommendations();
       locSavedItems.delete(saveKey);
-      reportLogSaved({ action: 'removed', business_type: bizName, barangay, lat: currentClickLat, lon: currentClickLng });
+      await fetchSavedRecommendations(); // refresh saved list
+      reportLogSaved({ 
+        action: 'removed', 
+        business_type: bizName, 
+        barangay, 
+        lat: currentClickLat, 
+        lon: currentClickLng 
+      });
     };
 
     document.getElementById('unsave-modal')?.classList.add('open');
     return;
   }
 
+  // Fix: grab lat/lon at click time before any async gap
   const lat = currentClickLat;
   const lon = currentClickLng;
+
+  if (!lat || !lon) {
+    console.warn('No location selected, cannot save');
+    return;
+  }
+
   const result = await saveRecommendationToDB(bizName, barangay, lat, lon);
 
   if (result.success || result.message === 'Already saved') {
@@ -544,7 +565,15 @@ async function saveRowClickHandler(e) {
     if (label) label.textContent = 'Saved';
     locSavedItems.add(saveKey);
     await fetchSavedRecommendations();
-    reportLogSaved({ action: 'saved', business_type: bizName, barangay, lat: currentClickLat, lon: currentClickLng });
+    reportLogSaved({ 
+      action: 'saved', 
+      business_type: bizName, 
+      barangay, 
+      lat, 
+      lon 
+    });
+  } else {
+    console.error('Save failed:', result.message);
   }
 }
 

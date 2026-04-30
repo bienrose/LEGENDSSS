@@ -461,10 +461,14 @@ app.get("/api/area-demographics", requireAuth, async (req, res) => {
   }
 });
 
+// ─── SAVED RECOMMENDATIONS ──────────────────────────────────────────────────
+// FIX: All saved_recommendations queries now use legendDB (legendsss_db),
+//      which is where the table actually lives per your phpMyAdmin screenshot.
+
 app.get("/api/saved-recommendations", requireAuth, async (req, res) => {
   try {
     const userId = req.session.user.id;
-    const [rows] = await geoDB.query(
+    const [rows] = await legendDB.query(
       `SELECT id, business_type, barangay, suitability_score, lat, lon, saved_at
        FROM saved_recommendations
        WHERE user_id = ?
@@ -486,21 +490,34 @@ app.post("/api/saved-recommendations", requireAuth, async (req, res) => {
       return res.status(400).json({ success: false, message: "business_type is required" });
     }
 
-    const [existing] = await geoDB.query(
-      `SELECT id FROM saved_recommendations 
-       WHERE user_id = ? AND business_type = ? 
-       AND ROUND(lat, 6) = ROUND(?, 6) AND ROUND(lon, 6) = ROUND(?, 6)`,
-      [userId, business_type, lat || null, lon || null]
-    );
+    const latVal = (lat !== null && lat !== undefined && lat !== '') ? parseFloat(lat) : null;
+    const lonVal = (lon !== null && lon !== undefined && lon !== '') ? parseFloat(lon) : null;
+    const barangayVal = (barangay && barangay.trim()) ? barangay.trim() : null;
+
+    // FIX: Use IS NULL safe comparison so NULL barangay duplicate-check works correctly
+    let existing;
+    if (barangayVal === null) {
+      [existing] = await legendDB.query(
+        `SELECT id FROM saved_recommendations 
+         WHERE user_id = ? AND business_type = ? AND barangay IS NULL`,
+        [userId, business_type]
+      );
+    } else {
+      [existing] = await legendDB.query(
+        `SELECT id FROM saved_recommendations 
+         WHERE user_id = ? AND business_type = ? AND LOWER(TRIM(barangay)) = LOWER(TRIM(?))`,
+        [userId, business_type, barangayVal]
+      );
+    }
 
     if (existing.length > 0) {
       return res.json({ success: false, message: "Already saved" });
     }
 
-    const [result] = await geoDB.query(
+    const [result] = await legendDB.query(
       `INSERT INTO saved_recommendations (user_id, business_type, barangay, suitability_score, lat, lon)
        VALUES (?, ?, ?, ?, ?, ?)`,
-      [userId, business_type, barangay || null, suitability_score || null, lat || null, lon || null]
+      [userId, business_type, barangayVal, suitability_score || null, latVal, lonVal]
     );
 
     res.json({ success: true, id: result.insertId, message: "Saved successfully" });
@@ -512,7 +529,7 @@ app.post("/api/saved-recommendations", requireAuth, async (req, res) => {
 app.delete("/api/saved-recommendations/:id", requireAuth, async (req, res) => {
   try {
     const userId = req.session.user.id;
-    const [result] = await geoDB.query(
+    const [result] = await legendDB.query(
       "DELETE FROM saved_recommendations WHERE id = ? AND user_id = ?",
       [req.params.id, userId]
     );
@@ -524,6 +541,9 @@ app.delete("/api/saved-recommendations/:id", requireAuth, async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 });
+
+// ─── ADMIN SAVED STATS ───────────────────────────────────────────────────────
+// FIX: Also moved to legendDB since saved_recommendations is there
 
 app.get("/api/admin/stats", requireAdmin, async (req, res) => {
   try {
@@ -552,7 +572,7 @@ app.get("/api/admin/stats", requireAdmin, async (req, res) => {
 
 app.get("/api/admin/saved-stats", requireAdmin, async (req, res) => {
   try {
-    const [stats] = await geoDB.query(`
+    const [stats] = await legendDB.query(`
       SELECT 
         COALESCE(business_type, 'Unknown') as business_type,
         COUNT(*) as count,
@@ -567,6 +587,8 @@ app.get("/api/admin/saved-stats", requireAdmin, async (req, res) => {
     res.json({ success: true, stats: [] });
   }
 });
+
+// ─── ADMIN ROUTES ────────────────────────────────────────────────────────────
 
 app.get("/api/admin/barangays", requireAdmin, async (req, res) => {
   try {

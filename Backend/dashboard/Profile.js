@@ -128,7 +128,7 @@ navReports?.addEventListener('click',()=>showSection('reports'));
 
 logoutBtn?.addEventListener('click',async()=>{
   try{await fetch('/logout',{method:'GET',credentials:'include'});}catch{}
-  window.location.href='/';
+  window.location.href='dashboard.html';
 });
 
 document.addEventListener('DOMContentLoaded',async()=>{await loadUserData();showSection('profile');});
