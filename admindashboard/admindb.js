@@ -6,8 +6,8 @@
 const API_BASE = '/api/admin';
 
 // Current state
-let currentMode = null; // 'add', 'edit', 'delete'
-let currentTable = 'businesses'; // 'businesses' or 'demographics'
+let currentMode = null;
+let currentTable = 'businesses';
 let selectedRecord = null;
 let pendingDelete = null;
 let barangayList = [];
@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadDashboardStats();
     loadBarangayList();
     initEventListeners();
+    initNavTabs();
 });
 
 async function checkAuth() {
@@ -38,16 +39,37 @@ async function checkAuth() {
     }
 }
 
+function initNavTabs() {
+    const navItems = document.querySelectorAll('.nav-item[data-view]');
+    const views = {
+        report: document.getElementById('view-report'),
+        users: document.getElementById('view-users')
+    };
+
+    navItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.preventDefault();
+            const view = item.dataset.view;
+
+            // Update active state
+            navItems.forEach(n => n.classList.remove('active'));
+            item.classList.add('active');
+
+            // Show/hide views
+            Object.keys(views).forEach(key => {
+                if (views[key]) views[key].style.display = key === view ? 'flex' : 'none';
+            });
+        });
+    });
+}
+
 async function loadDashboardStats() {
-    console.log("📊 Loading dashboard stats...");
     try {
         const response = await fetch(`${API_BASE}/stats`);
-        console.log("📊 Stats response status:", response.status);
         const data = await response.json();
-        console.log("📊 Stats data:", data);
         
         document.getElementById('total-users').textContent = data.totalUsers.toLocaleString();
-        updateChart(data.entrepreneurPct, data.aspiringPct);
+        updateChart(data.entrepreneurPct, data.aspiringPct, data.entrepreneurCount, data.aspiringCount);
     } catch (error) {
         console.error('Error loading stats:', error);
         document.getElementById('total-users').textContent = '--';
@@ -65,10 +87,10 @@ async function loadBarangayList() {
     }
 }
 
-function updateChart(entrepreneurPct, aspiringPct) {
+function updateChart(entrepreneurPct, aspiringPct, entrepreneurCount, aspiringCount) {
     const bars = [
-        { barId: 'bar-entrepreneur', pctId: 'pct-entrepreneur', outId: 'outside-entrepreneur', value: entrepreneurPct },
-        { barId: 'bar-aspiring', pctId: 'pct-aspiring', outId: 'outside-aspiring', value: aspiringPct }
+        { barId: 'bar-entrepreneur', pctId: 'pct-entrepreneur', outId: 'outside-entrepreneur', value: entrepreneurPct, count: entrepreneurCount },
+        { barId: 'bar-aspiring', pctId: 'pct-aspiring', outId: 'outside-aspiring', value: aspiringPct, count: aspiringCount }
     ];
     
     requestAnimationFrame(() => {
@@ -82,14 +104,16 @@ function updateChart(entrepreneurPct, aspiringPct) {
                 
                 bar.style.width = b.value + '%';
                 
+                const displayText = b.count !== undefined ? b.count.toLocaleString() : b.value + '%';
+                
                 if (b.value >= 20) {
-                    if (pctEl) pctEl.textContent = b.value + '%';
+                    if (pctEl) pctEl.textContent = displayText;
                     if (outside) outside.style.display = 'none';
                 } else {
                     if (pctEl) pctEl.textContent = '';
                     if (outside) {
                         outside.style.display = 'inline';
-                        outside.textContent = b.value + '%';
+                        outside.textContent = displayText;
                     }
                 }
             });

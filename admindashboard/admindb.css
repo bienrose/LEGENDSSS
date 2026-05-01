@@ -737,3 +737,24 @@ body {
     align-items: stretch;
     margin-top: 4px;
 }
+
+.view-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.report-full {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.report-full .biz-list {
+  flex: 1;
+}
+
+.sidebar-nav .nav-item {
+  line-height: 1.2;
+  text-align: left;
+}

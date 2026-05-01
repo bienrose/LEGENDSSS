@@ -547,7 +547,7 @@ app.delete("/api/saved-recommendations/:id", requireAuth, async (req, res) => {
 
 app.get("/api/admin/stats", requireAdmin, async (req, res) => {
   try {
-    const [userCount] = await legendDB.query("SELECT COUNT(*) as total FROM users");
+    const [userCount] = await legendDB.query("SELECT COUNT(*) as total FROM users WHERE role != 'admin'");
     const totalUsers = userCount[0].total;
 
     const [affiliations] = await legendDB.query(`
@@ -564,7 +564,14 @@ app.get("/api/admin/stats", requireAdmin, async (req, res) => {
     const entrepreneurPct = totalAffiliation > 0 ? Math.round((entrepreneur / totalAffiliation) * 100) : 0;
     const aspiringPct = totalAffiliation > 0 ? Math.round((aspiring / totalAffiliation) * 100) : 0;
 
-    res.json({ success: true, totalUsers, entrepreneurPct, aspiringPct });
+    res.json({ 
+      success: true, 
+      totalUsers, 
+      entrepreneurPct, 
+      aspiringPct,
+      entrepreneurCount: entrepreneur,
+      aspiringCount: aspiring
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
