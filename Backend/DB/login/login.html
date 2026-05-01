@@ -91,13 +91,30 @@
         <label>Please specify your industry</label>
         <input type="text" id="entrepreneur-industry-other" placeholder="Specify your industry">
       </div>
+
+      <!-- NEW: Sub-category field for Entrepreneur -->
+      <div id="entrepreneur-subcategory-div" style="display:none; margin-top: 8px;">
+        <label>Sub-category (optional)</label>
+        <input type="text" id="entrepreneur-subcategory" placeholder="e.g. Bakery, Coffee Shop, Streetwear...">
+      </div>
+
+      <!-- NEW: Recommendation checkbox for Entrepreneur -->
+      <div class="recommendation-checkbox-div" id="entrepreneur-rec-div" style="display:none;">
+        <label class="checkbox-label">
+          <input type="checkbox" id="entrepreneur-rec-checkbox" onchange="handleEntrepreneurRecChange()" checked>
+          Allow recommendations related to my industry
+        </label>
+        <p class="rec-general-note" id="entrepreneur-rec-note" style="display:none;">
+          Recommendations will be general. You can manually filter the industries you want recommendations on, once logged in.
+        </p>
+      </div>
     </div>
 
     <!-- Industry dropdown for Aspiring Entrepreneur -->
     <div id="aspiring-industry-div" style="display:none; margin-top: 10px;">
       <label>What industry are you interested in?</label>
       <select id="aspiring-industry" onchange="handleAspiringIndustryChange()">
-        <option value="" disabled selected>What industry are you interested in?</option>
+        <option value="" disabled selected>Select your answer</option>
         <option value="Food and Beverages">Food and Beverages</option>
         <option value="Retail">Retail</option>
         <option value="Personal Care and Services">Personal Care and Services</option>
@@ -121,6 +138,23 @@
       <div id="aspiring-industry-other-div" style="display:none; margin-top: 8px;">
         <label>Please specify your interest</label>
         <input type="text" id="aspiring-industry-other" placeholder="Specify your interest">
+      </div>
+
+      <!-- NEW: Sub-category field for Aspiring Entrepreneur -->
+      <div id="aspiring-subcategory-div" style="display:none; margin-top: 8px;">
+        <label>Sub-category (optional)</label>
+        <input type="text" id="aspiring-subcategory" placeholder="e.g. Bakery, Coffee Shop, Streetwear...">
+      </div>
+
+      <!-- NEW: Recommendation checkbox for Aspiring Entrepreneur -->
+      <div class="recommendation-checkbox-div" id="aspiring-rec-div" style="display:none;">
+        <label class="checkbox-label">
+          <input type="checkbox" id="aspiring-rec-checkbox" onchange="handleAspiringRecChange()" checked>
+          Allow recommendations related to my industry
+        </label>
+        <p class="rec-general-note" id="aspiring-rec-note" style="display:none;">
+          Recommendations will be general. You can manually filter the industries you want recommendations on, once logged in.
+        </p>
       </div>
     </div>
 
