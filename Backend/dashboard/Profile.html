@@ -22,6 +22,7 @@
     <main class="main">
       <h1 class="page-title" id="page-title">My Profile</h1>
 
+      <!-- PROFILE -->
       <section class="card profile-card" id="profile-section">
         <div class="card-header">
           <h2>Profile Information</h2>
@@ -34,22 +35,22 @@
         <form id="profile-form" class="profile-form">
           <div class="form-group">
             <label for="fullname">Full Name</label>
-            <input type="text" id="fullname" name="fullname" placeholder="Enter your full name" readonly>
+            <input type="text" id="fullname" name="fullname" readonly>
           </div>
 
           <div class="form-group">
             <label for="email">Email</label>
-            <input type="email" id="email" name="email" placeholder="Enter your email" readonly>
+            <input type="email" id="email" name="email" readonly>
           </div>
 
           <div class="form-group">
             <label for="username">Username</label>
-            <input type="text" id="username" name="username" placeholder="Enter your username" readonly>
+            <input type="text" id="username" name="username" readonly>
           </div>
 
           <div class="form-group">
             <label for="password">Password</label>
-            <input type="password" id="password" name="password" placeholder="••••••••" readonly>
+            <input type="password" id="password" name="password" readonly>
           </div>
 
           <div class="form-group">
@@ -67,6 +68,7 @@
         </form>
       </section>
 
+      <!-- REPORT MODULE -->
       <section class="card reports-card hidden" id="reports-section">
         <div class="card-header">
           <h2>Report Module</h2>
@@ -76,20 +78,25 @@
         </div>
 
         <div class="reports-grid">
+
+          <!-- ✅ SCROLLABLE BLOCK -->
           <div class="report-block">
             <div class="report-block-title">Search / Pin History</div>
-            <div class="report-list" id="report-searchpins"></div>
+            <div class="report-list scrollable" id="report-searchpins"></div>
           </div>
 
+          <!-- ✅ SCROLLABLE BLOCK -->
           <div class="report-block">
             <div class="report-block-title">Recommendation History</div>
-            <div class="report-list" id="report-recs"></div>
+            <div class="report-list scrollable" id="report-recs"></div>
           </div>
 
+          <!-- ✅ SCROLLABLE BLOCK -->
           <div class="report-block">
             <div class="report-block-title">Saved History</div>
-            <div class="report-list" id="report-saved"></div>
+            <div class="report-list scrollable" id="report-saved"></div>
           </div>
+
         </div>
       </section>
     </main>

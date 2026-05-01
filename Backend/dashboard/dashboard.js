@@ -66,7 +66,9 @@ function reportCurrentFiltersSnapshot() {
   };
 }
 
-function reportLogSearchOrPin({ source, locationName, lat, lon }) {
+// ─── REPORT LOGGING (localStorage + DB) ─────────────────────────────────────
+
+async function reportLogSearchOrPin({ source, locationName, lat, lon }) {
   const f = reportCurrentFiltersSnapshot();
   reportPush('searchPins', {
     at: reportNow(),
@@ -76,9 +78,24 @@ function reportLogSearchOrPin({ source, locationName, lat, lon }) {
     lon: lon ?? null,
     filters: f
   });
+
+  try {
+    await fetch('/api/report/search-pin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query: locationName || null,
+        source: source || 'map',
+        lat: lat ?? null,
+        lon: lon ?? null
+      })
+    });
+  } catch (e) {
+    console.warn('DB report search-pin failed:', e);
+  }
 }
 
-function reportLogRecommendation({ idea, area, pinCount, lat, lon }) {
+async function reportLogRecommendation({ idea, area, pinCount, lat, lon }) {
   const f = reportCurrentFiltersSnapshot();
   reportPush('recommendations', {
     at: reportNow(),
@@ -89,9 +106,24 @@ function reportLogRecommendation({ idea, area, pinCount, lat, lon }) {
     lon: lon ?? null,
     filters: f
   });
+
+  try {
+    await fetch('/api/report/recommendation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        idea: idea || null,
+        area: area || null,
+        lat: lat ?? null,
+        lon: lon ?? null
+      })
+    });
+  } catch (e) {
+    console.warn('DB report recommendation failed:', e);
+  }
 }
 
-function reportLogSaved({ action, business_type, barangay, lat, lon }) {
+async function reportLogSaved({ action, business_type, barangay, lat, lon }) {
   reportPush('saved', {
     at: reportNow(),
     action,
@@ -100,7 +132,25 @@ function reportLogSaved({ action, business_type, barangay, lat, lon }) {
     lat: lat ?? null,
     lon: lon ?? null
   });
+
+  try {
+    await fetch('/api/report/saved', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: action || 'saved',
+        business_type: business_type || null,
+        barangay: barangay || null,
+        lat: lat ?? null,
+        lon: lon ?? null
+      })
+    });
+  } catch (e) {
+    console.warn('DB report saved failed:', e);
+  }
 }
+
+// ─── MAP SETUP ───────────────────────────────────────────────────────────────
 
 const map = L.map('map').setView([14.5764, 121.0851], 15);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -465,17 +515,16 @@ async function saveRowClickHandler(e) {
       if (label) label.textContent = 'Save';
       locSavedItems.delete(saveKey);
       await fetchSavedRecommendations();
-      reportLogSaved({ action: 'removed', business_type: bizName, barangay, lat: currentClickLat, lon: currentClickLng });
+      await reportLogSaved({ action: 'removed', business_type: bizName, barangay, lat: currentClickLat, lon: currentClickLng });
     };
 
     document.getElementById('unsave-modal')?.classList.add('open');
     return;
   }
 
-  const lat = currentClickLat;
-  const lon = currentClickLng;
-
-  if (!lat || !lon) return;
+  // FIX: removed `if (!lat || !lon) return;` — allows saving in filter mode without a map click
+  const lat = currentClickLat || null;
+  const lon = currentClickLng || null;
 
   const result = await saveRecommendationToDB(bizName, barangay, lat, lon);
 
@@ -484,7 +533,7 @@ async function saveRowClickHandler(e) {
     if (label) label.textContent = 'Saved';
     locSavedItems.add(saveKey);
     await fetchSavedRecommendations();
-    reportLogSaved({ action: 'saved', business_type: bizName, barangay, lat, lon });
+    await reportLogSaved({ action: 'saved', business_type: bizName, barangay, lat, lon });
   }
 }
 
@@ -516,7 +565,7 @@ async function renderIdeasAndPins({ type, barangay, prefs, allowPins }) {
       const idea = el.dataset.idea;
 
       const pinCount = isFilterMode ? getFilteredPinCount() : 5;
-      reportLogRecommendation({
+      await reportLogRecommendation({
         idea,
         area: barangay || currentBarangayName || currentLocShortName,
         pinCount,
@@ -691,7 +740,7 @@ async function handleLocationSelect(lat, lon, source = 'map') {
   }
 
   if (source !== 'search') {
-    reportLogSearchOrPin({
+    await reportLogSearchOrPin({
       source,
       locationName: currentLocShortName,
       lat: currentClickLat,
@@ -767,7 +816,7 @@ async function doSearch(query) {
       return;
     }
 
-    reportLogSearchOrPin({
+    await reportLogSearchOrPin({
       source: 'search',
       locationName: query,
       lat: latNum.toFixed(6),

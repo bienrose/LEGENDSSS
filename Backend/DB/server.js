@@ -1289,7 +1289,117 @@ app.get("/api/debug-session", (req, res) => {
     adminDashboardPath
   });
 });
+// ─── REPORT LOGGING ROUTES ───────────────────────────────────────────────────
 
+app.post("/api/report/search-pin", requireAuth, async (req, res) => {
+  try {
+    const userId = req.session.user.id;
+    const { query, source, lat, lon } = req.body;
+
+    await legendDB.query(
+      `INSERT INTO search_pin_history (user_id, query, pinned_item_id, pinned_item_type, is_pinned, created_at)
+       VALUES (?, ?, NULL, 'location', ?, NOW())`,
+      [userId, query || null, (source === 'map_click' || source === 'drag') ? 1 : 0]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("search-pin report error:", err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.post("/api/report/recommendation", requireAuth, async (req, res) => {
+  try {
+    const userId = req.session.user.id;
+    const { idea, area, lat, lon } = req.body;
+
+    await legendDB.query(
+      `INSERT INTO recommendation_history (user_id, recommended_item_id, recommended_item_type, source, was_clicked, created_at)
+       VALUES (?, ?, 'business_idea', ?, 1, NOW())`,
+      [userId, idea || null, area || null]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("recommendation report error:", err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.post("/api/report/saved", requireAuth, async (req, res) => {
+  try {
+    const userId = req.session.user.id;
+    const { action, business_type, barangay, lat, lon } = req.body;
+
+    const wasRemoved = action === 'removed' ? 1 : 0;
+
+    await legendDB.query(
+      `INSERT INTO saved_history (user_id, business_type, barangay, suitability_score, lat, lon, saved_at, was_removed, removed_at)
+       VALUES (?, ?, ?, NULL, ?, ?, NOW(), ?, ?)`,
+      [
+        userId,
+        business_type || null,
+        barangay || null,
+        lat ? parseFloat(lat) : null,
+        lon ? parseFloat(lon) : null,
+        wasRemoved,
+        wasRemoved ? new Date() : null
+      ]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("saved report error:", err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+// ─── ADMIN REPORT HISTORY ROUTES ─────────────────────────────────────────────
+
+app.get("/api/admin/report/search-pins", requireAdmin, async (req, res) => {
+  try {
+    const [rows] = await legendDB.query(`
+      SELECT s.*, u.username, u.fullname
+      FROM search_pin_history s
+      LEFT JOIN users u ON s.user_id = u.id
+      ORDER BY s.created_at DESC
+      LIMIT 200
+    `);
+    res.json({ success: true, data: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.get("/api/admin/report/recommendations", requireAdmin, async (req, res) => {
+  try {
+    const [rows] = await legendDB.query(`
+      SELECT r.*, u.username, u.fullname
+      FROM recommendation_history r
+      LEFT JOIN users u ON r.user_id = u.id
+      ORDER BY r.created_at DESC
+      LIMIT 200
+    `);
+    res.json({ success: true, data: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.get("/api/admin/report/saved", requireAdmin, async (req, res) => {
+  try {
+    const [rows] = await legendDB.query(`
+      SELECT s.*, u.username, u.fullname
+      FROM saved_history s
+      LEFT JOIN users u ON s.user_id = u.id
+      ORDER BY s.saved_at DESC
+      LIMIT 200
+    `);
+    res.json({ success: true, data: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
 app.use(express.static(frontendPath));
 app.use("/dashboard", express.static(dashboardPath));
 app.use("/admin", express.static(adminDashboardPath));

@@ -758,3 +758,77 @@ body {
   line-height: 1.2;
   text-align: left;
 }
+/* ── Report Module ── */
+.report-filter-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.report-filter-btn {
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1.5px solid #1a3a5c;
+  background: #fff;
+  color: #1a3a5c;
+  font-size: 13px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.15s;
+}
+
+.report-filter-btn.active,
+.report-filter-btn:hover {
+  background: #1a3a5c;
+  color: #fff;
+}
+
+.report-item {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  list-style: none;
+}
+
+.report-item:last-child { border-bottom: none; }
+
+.report-item-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.report-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badge-search   { background: #e8f4fd; color: #1a6fa8; }
+.badge-rec      { background: #eafaf1; color: #1a8a4a; }
+.badge-saved    { background: #fef9e7; color: #b7860a; }
+.badge-unsaved  { background: #fdecea; color: #c0392b; }
+
+.report-user {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a3a5c;
+}
+
+.report-date {
+  font-size: 12px;
+  color: #999;
+  margin-left: auto;
+}
+
+.report-detail {
+  font-size: 13px;
+  color: #555;
+  padding-left: 2px;
+}

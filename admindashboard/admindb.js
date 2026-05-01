@@ -5,12 +5,12 @@
 
 const API_BASE = '/api/admin';
 
-// Current state
 let currentMode = null;
 let currentTable = 'businesses';
 let selectedRecord = null;
 let pendingDelete = null;
 let barangayList = [];
+let reportFilter = 'all'; // all | search | recommendation | saved
 
 document.addEventListener('DOMContentLoaded', () => {
     checkAuth();
@@ -18,23 +18,21 @@ document.addEventListener('DOMContentLoaded', () => {
     loadBarangayList();
     initEventListeners();
     initNavTabs();
+    loadReportHistory();
 });
 
 async function checkAuth() {
     try {
         const response = await fetch('/api/check-auth');
         const data = await response.json();
-        
         if (!data.authenticated || !data.isAdmin) {
             window.location.href = '/';
             return;
         }
-        
         if (data.user) {
             document.querySelector('.sidebar-name').textContent = data.user.fullname || 'Admin';
         }
     } catch (error) {
-        console.error('Auth check error:', error);
         window.location.href = '/';
     }
 }
@@ -50,12 +48,8 @@ function initNavTabs() {
         item.addEventListener('click', (e) => {
             e.preventDefault();
             const view = item.dataset.view;
-
-            // Update active state
             navItems.forEach(n => n.classList.remove('active'));
             item.classList.add('active');
-
-            // Show/hide views
             Object.keys(views).forEach(key => {
                 if (views[key]) views[key].style.display = key === view ? 'flex' : 'none';
             });
@@ -63,15 +57,108 @@ function initNavTabs() {
     });
 }
 
+// ─── REPORT MODULE ────────────────────────────────────────────────────────────
+
+async function loadReportHistory() {
+    const listEl = document.getElementById('user-history-list');
+    listEl.innerHTML = '<li style="color:#aaa;padding:16px;">Loading...</li>';
+
+    try {
+        const [searchRes, recRes, savedRes] = await Promise.all([
+            fetch('/api/admin/report/search-pins').then(r => r.json()),
+            fetch('/api/admin/report/recommendations').then(r => r.json()),
+            fetch('/api/admin/report/saved').then(r => r.json())
+        ]);
+
+        const searchRows = (searchRes.data || []).map(r => ({ ...r, _type: 'search' }));
+        const recRows = (recRes.data || []).map(r => ({ ...r, _type: 'recommendation' }));
+        const savedRows = (savedRes.data || []).map(r => ({ ...r, _type: 'saved' }));
+
+        // Merge and sort by date descending
+        const all = [...searchRows, ...recRows, ...savedRows].sort((a, b) => {
+            const dateA = new Date(a.created_at || a.saved_at || 0);
+            const dateB = new Date(b.created_at || b.saved_at || 0);
+            return dateB - dateA;
+        });
+
+        window._allReportRows = all;
+        renderReportList(all);
+    } catch (err) {
+        listEl.innerHTML = '<li style="color:#e74c3c;padding:16px;">Failed to load report data.</li>';
+    }
+}
+
+function renderReportList(rows) {
+    const listEl = document.getElementById('user-history-list');
+
+    const filtered = reportFilter === 'all'
+        ? rows
+        : rows.filter(r => r._type === reportFilter);
+
+    if (!filtered.length) {
+        listEl.innerHTML = '<li style="color:#aaa;padding:16px;">No records found.</li>';
+        return;
+    }
+
+    listEl.innerHTML = filtered.map(r => {
+        const user = r.fullname ? `${r.fullname} (@${r.username})` : `User #${r.user_id}`;
+        const date = formatDate(r.created_at || r.saved_at);
+
+        let badge = '';
+        let detail = '';
+
+        if (r._type === 'search') {
+            badge = '<span class="report-badge badge-search">Map Search</span>';
+            const label = r.query ? `Searched: <strong>${escapeHtml(r.query)}</strong>` : 'Dropped a pin on the map';
+            const pinned = r.is_pinned ? ' · <em>pinned</em>' : '';
+            detail = `${label}${pinned}`;
+        } else if (r._type === 'recommendation') {
+            badge = '<span class="report-badge badge-rec">Recommendation</span>';
+            const idea = r.recommended_item_id ? `<strong>${escapeHtml(r.recommended_item_id)}</strong>` : 'an idea';
+            const area = r.source ? ` in <strong>${escapeHtml(r.source)}</strong>` : '';
+            detail = `Clicked recommendation: ${idea}${area}`;
+        } else if (r._type === 'saved') {
+            const wasRemoved = r.was_removed == 1;
+            badge = wasRemoved
+                ? '<span class="report-badge badge-unsaved">Unsaved</span>'
+                : '<span class="report-badge badge-saved">Saved</span>';
+            const biz = r.business_type ? `<strong>${escapeHtml(r.business_type)}</strong>` : 'a business';
+            const area = r.barangay ? ` in <strong>${escapeHtml(r.barangay)}</strong>` : '';
+            detail = `${wasRemoved ? 'Removed' : 'Saved'} ${biz}${area}`;
+        }
+
+        return `
+            <li class="report-item">
+                <div class="report-item-top">
+                    ${badge}
+                    <span class="report-user">${escapeHtml(user)}</span>
+                    <span class="report-date">${date}</span>
+                </div>
+                <div class="report-detail">${detail}</div>
+            </li>
+        `;
+    }).join('');
+}
+
+function formatDate(raw) {
+    if (!raw) return '--';
+    const d = new Date(raw);
+    if (isNaN(d)) return raw;
+    return d.toLocaleString('en-PH', {
+        year: 'numeric', month: 'short', day: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+    });
+}
+
+// ─── STATS ────────────────────────────────────────────────────────────────────
+
 async function loadDashboardStats() {
     try {
         const response = await fetch(`${API_BASE}/stats`);
         const data = await response.json();
-        
         document.getElementById('total-users').textContent = data.totalUsers.toLocaleString();
         updateChart(data.entrepreneurPct, data.aspiringPct, data.entrepreneurCount, data.aspiringCount);
     } catch (error) {
-        console.error('Error loading stats:', error);
         document.getElementById('total-users').textContent = '--';
     }
 }
@@ -82,7 +169,6 @@ async function loadBarangayList() {
         const data = await response.json();
         barangayList = data.barangays || [];
     } catch (error) {
-        console.error('Error loading barangays:', error);
         barangayList = [];
     }
 }
@@ -92,40 +178,35 @@ function updateChart(entrepreneurPct, aspiringPct, entrepreneurCount, aspiringCo
         { barId: 'bar-entrepreneur', pctId: 'pct-entrepreneur', outId: 'outside-entrepreneur', value: entrepreneurPct, count: entrepreneurCount },
         { barId: 'bar-aspiring', pctId: 'pct-aspiring', outId: 'outside-aspiring', value: aspiringPct, count: aspiringCount }
     ];
-    
+
     requestAnimationFrame(() => {
         setTimeout(() => {
             bars.forEach(b => {
                 const bar = document.getElementById(b.barId);
                 const pctEl = document.getElementById(b.pctId);
                 const outside = document.getElementById(b.outId);
-                
                 if (!bar) return;
-                
                 bar.style.width = b.value + '%';
-                
                 const displayText = b.count !== undefined ? b.count.toLocaleString() : b.value + '%';
-                
                 if (b.value >= 20) {
                     if (pctEl) pctEl.textContent = displayText;
                     if (outside) outside.style.display = 'none';
                 } else {
                     if (pctEl) pctEl.textContent = '';
-                    if (outside) {
-                        outside.style.display = 'inline';
-                        outside.textContent = displayText;
-                    }
+                    if (outside) { outside.style.display = 'inline'; outside.textContent = displayText; }
                 }
             });
         }, 120);
     });
 }
 
+// ─── CRUD ─────────────────────────────────────────────────────────────────────
+
 function initEventListeners() {
     document.getElementById('add-data-btn').addEventListener('click', () => openModal('add'));
     document.getElementById('edit-data-btn').addEventListener('click', () => openModal('edit'));
     document.getElementById('delete-data-btn').addEventListener('click', () => openModal('delete'));
-    
+
     document.getElementById('logout-nav-btn').addEventListener('click', () => {
         document.getElementById('logout-modal').classList.add('open');
     });
@@ -133,39 +214,50 @@ function initEventListeners() {
         document.getElementById('logout-modal').classList.remove('open');
     });
     document.getElementById('confirm-logout').addEventListener('click', async () => {
-        try {
-            await fetch('/api/logout', { method: 'POST' });
-        } catch (e) {}
+        try { await fetch('/api/logout', { method: 'POST' }); } catch (e) {}
         window.location.href = '/';
     });
-    
+
     document.getElementById('crud-close').addEventListener('click', closeCrudModal);
     document.getElementById('crud-cancel').addEventListener('click', closeCrudModal);
-    
+
     document.querySelectorAll('.modal-tab').forEach(tab => {
         tab.addEventListener('click', () => switchTab(tab.dataset.tab));
     });
-    
+
     document.getElementById('crud-search-btn').addEventListener('click', performSearch);
     document.getElementById('crud-search-input').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') performSearch();
     });
-    
+
     document.getElementById('crud-form').addEventListener('submit', handleFormSubmit);
-    
+
     document.getElementById('delete-cancel').addEventListener('click', () => {
         document.getElementById('delete-confirm-modal').classList.remove('open');
         pendingDelete = null;
     });
     document.getElementById('delete-confirm').addEventListener('click', confirmDelete);
-    
+
     document.querySelectorAll('.modal-overlay').forEach(overlay => {
         overlay.addEventListener('click', (e) => {
-            if (e.target === overlay) {
-                overlay.classList.remove('open');
-            }
+            if (e.target === overlay) overlay.classList.remove('open');
         });
     });
+
+    // Report filter buttons
+    document.getElementById('report-filter-all')?.addEventListener('click', () => setReportFilter('all'));
+    document.getElementById('report-filter-search')?.addEventListener('click', () => setReportFilter('search'));
+    document.getElementById('report-filter-rec')?.addEventListener('click', () => setReportFilter('recommendation'));
+    document.getElementById('report-filter-saved')?.addEventListener('click', () => setReportFilter('saved'));
+    document.getElementById('report-refresh')?.addEventListener('click', loadReportHistory);
+}
+
+function setReportFilter(filter) {
+    reportFilter = filter;
+    document.querySelectorAll('.report-filter-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.filter === filter);
+    });
+    if (window._allReportRows) renderReportList(window._allReportRows);
 }
 
 function openModal(mode) {
@@ -176,20 +268,16 @@ function openModal(mode) {
     const resultsSection = document.getElementById('crud-results');
     const form = document.getElementById('crud-form');
     const initialActions = document.getElementById('crud-initial-actions');
-    
-    const titles = {
-        'add': 'Add New Data',
-        'edit': 'Edit Existing Data',
-        'delete': 'Delete Data'
-    };
+
+    const titles = { 'add': 'Add New Data', 'edit': 'Edit Existing Data', 'delete': 'Delete Data' };
     title.textContent = titles[mode];
-    
+
     currentTable = 'businesses';
     selectedRecord = null;
     document.querySelectorAll('.modal-tab').forEach(t => {
         t.classList.toggle('active', t.dataset.tab === 'businesses');
     });
-    
+
     if (mode === 'add') {
         searchSection.style.display = 'none';
         resultsSection.style.display = 'none';
@@ -202,7 +290,6 @@ function openModal(mode) {
         form.style.display = 'none';
         initialActions.style.display = 'flex';
         document.getElementById('crud-search-input').value = '';
-        
         const filterSelect = document.getElementById('crud-filter-barangay');
         if (mode === 'edit') {
             filterSelect.style.display = 'inline-block';
@@ -211,7 +298,7 @@ function openModal(mode) {
             filterSelect.style.display = 'none';
         }
     }
-    
+
     modal.classList.add('open');
 }
 
@@ -226,7 +313,6 @@ function switchTab(table) {
     document.querySelectorAll('.modal-tab').forEach(t => {
         t.classList.toggle('active', t.dataset.tab === table);
     });
-    
     if (currentMode !== 'add') {
         document.getElementById('crud-search-input').value = '';
         document.getElementById('crud-results').style.display = 'none';
@@ -249,24 +335,18 @@ function populateBarangayFilter() {
 async function performSearch() {
     const searchTerm = document.getElementById('crud-search-input').value.trim();
     const barangayFilter = document.getElementById('crud-filter-barangay')?.value || '';
-    
     let url = `${API_BASE}/${currentTable}`;
     let params = new URLSearchParams();
-    
     if (currentTable === 'businesses') {
         params.append('limit', '50');
         if (searchTerm) params.append('search', searchTerm);
         if (barangayFilter) params.append('barangay', barangayFilter);
     }
-    
     try {
         const response = await fetch(`${url}?${params.toString()}`);
         const data = await response.json();
-        
-        const results = currentTable === 'businesses' ? data.data : data.data;
-        displaySearchResults(results);
+        displaySearchResults(data.data);
     } catch (error) {
-        console.error('Search error:', error);
         alert('Error searching. Please try again.');
     }
 }
@@ -275,31 +355,19 @@ function displaySearchResults(results) {
     const resultsSection = document.getElementById('crud-results');
     const thead = document.getElementById('crud-table-header');
     const tbody = document.getElementById('crud-table-body');
-    
+
     if (!results || results.length === 0) {
         tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:20px;">No results found</td></tr>';
         resultsSection.style.display = 'block';
         return;
     }
-    
+
     if (currentTable === 'businesses') {
         thead.innerHTML = `
-            <th>ID</th>
-            <th>Business Name</th>
-            <th>Line of Business</th>
-            <th>Category</th>
-            <th>Barangay</th>
-            <th>Street</th>
-            <th>Address</th>
-            <th>Latitude</th>
-            <th>Longitude</th>
-            <th>Population</th>
-            <th>Density</th>
-            <th>Income Min</th>
-            <th>Income Max</th>
-            <th>Actions</th>
+            <th>ID</th><th>Business Name</th><th>Line of Business</th><th>Category</th>
+            <th>Barangay</th><th>Street</th><th>Address</th><th>Latitude</th><th>Longitude</th>
+            <th>Population</th><th>Density</th><th>Income Min</th><th>Income Max</th><th>Actions</th>
         `;
-        
         tbody.innerHTML = results.map(b => `
             <tr>
                 <td>${b.id}</td>
@@ -316,28 +384,16 @@ function displaySearchResults(results) {
                 <td>${b.avg_income_min ? '₱' + b.avg_income_min.toLocaleString() : '--'}</td>
                 <td>${b.avg_income_max ? '₱' + b.avg_income_max.toLocaleString() : '--'}</td>
                 <td class="action-cell">
-                    ${currentMode === 'edit' 
-                        ? `<button class="edit-btn" onclick="editRecord(${b.id})">Edit</button>` 
-                        : ''}
-                    ${currentMode === 'delete' 
-                        ? `<button class="delete-btn" onclick="deleteRecord(${b.id}, '${escapeHtml(b.business_trade_name || 'this business')}')">Delete</button>` 
-                        : ''}
+                    ${currentMode === 'edit' ? `<button class="edit-btn" onclick="editRecord(${b.id})">Edit</button>` : ''}
+                    ${currentMode === 'delete' ? `<button class="delete-btn" onclick="deleteRecord(${b.id}, '${escapeHtml(b.business_trade_name || 'this business')}')">Delete</button>` : ''}
                 </td>
             </tr>
         `).join('');
     } else {
         thead.innerHTML = `
-            <th>ID</th>
-            <th>Barangay</th>
-            <th>Population</th>
-            <th>Density</th>
-            <th>Age Group</th>
-            <th>Income Min</th>
-            <th>Income Max</th>
-            <th>Gender</th>
-            <th>Actions</th>
+            <th>ID</th><th>Barangay</th><th>Population</th><th>Density</th>
+            <th>Age Group</th><th>Income Min</th><th>Income Max</th><th>Gender</th><th>Actions</th>
         `;
-        
         tbody.innerHTML = results.map(d => `
             <tr>
                 <td>${d.id}</td>
@@ -349,17 +405,13 @@ function displaySearchResults(results) {
                 <td>${d.avg_income_max ? '₱' + d.avg_income_max.toLocaleString() : '--'}</td>
                 <td>${escapeHtml(d.gender_distribution || '--')}</td>
                 <td class="action-cell">
-                    ${currentMode === 'edit' 
-                        ? `<button class="edit-btn" onclick="editRecord(${d.id})">Edit</button>` 
-                        : ''}
-                    ${currentMode === 'delete' 
-                        ? `<button class="delete-btn" onclick="deleteRecord(${d.id}, '${escapeHtml(d.barangay_name || 'this barangay')}')">Delete</button>` 
-                        : ''}
+                    ${currentMode === 'edit' ? `<button class="edit-btn" onclick="editRecord(${d.id})">Edit</button>` : ''}
+                    ${currentMode === 'delete' ? `<button class="delete-btn" onclick="deleteRecord(${d.id}, '${escapeHtml(d.barangay_name || 'this barangay')}')">Delete</button>` : ''}
                 </td>
             </tr>
         `).join('');
     }
-    
+
     resultsSection.style.display = 'block';
 }
 
@@ -367,40 +419,31 @@ async function editRecord(id) {
     try {
         const response = await fetch(`${API_BASE}/${currentTable}/${id}`);
         const data = await response.json();
-        
         selectedRecord = currentTable === 'businesses' ? data.business : data.demographic;
-        
         document.getElementById('crud-results').style.display = 'none';
         document.getElementById('crud-search-section').style.display = 'none';
         document.getElementById('crud-form').style.display = 'block';
         document.getElementById('crud-initial-actions').style.display = 'none';
         document.getElementById('crud-modal-title').textContent = `Edit ${currentTable === 'businesses' ? 'Business' : 'Demographic'}`;
-        
         renderForm(selectedRecord);
     } catch (error) {
-        console.error('Error fetching record:', error);
         alert('Error loading record. Please try again.');
     }
 }
 
 function deleteRecord(id, name) {
     pendingDelete = { id, table: currentTable, name };
-    document.getElementById('delete-confirm-message').textContent = 
+    document.getElementById('delete-confirm-message').textContent =
         `Are you sure you want to delete "${name}"? This action cannot be undone.`;
     document.getElementById('delete-confirm-modal').classList.add('open');
 }
 
 async function confirmDelete() {
     if (!pendingDelete) return;
-    
     const { id, table } = pendingDelete;
-    
     try {
-        const response = await fetch(`${API_BASE}/${table}/${id}`, {
-            method: 'DELETE'
-        });
+        const response = await fetch(`${API_BASE}/${table}/${id}`, { method: 'DELETE' });
         const data = await response.json();
-        
         if (data.success) {
             alert('Record deleted successfully!');
             document.getElementById('delete-confirm-modal').classList.remove('open');
@@ -409,18 +452,15 @@ async function confirmDelete() {
             alert('Error: ' + (data.message || 'Unable to delete'));
         }
     } catch (error) {
-        console.error('Delete error:', error);
         alert('Error deleting record. Please try again.');
     }
-    
     pendingDelete = null;
 }
 
 function renderForm(data = null) {
     const fieldsContainer = document.getElementById('crud-form-fields');
-    
     let html = '';
-    
+
     if (currentTable === 'businesses') {
         html = `
             <div class="form-field full-width">
@@ -513,37 +553,30 @@ function renderForm(data = null) {
             </div>
         `;
     }
-    
+
     fieldsContainer.innerHTML = html;
 }
 
 async function handleFormSubmit(e) {
     e.preventDefault();
-    
     const formData = new FormData(e.target);
     const data = Object.fromEntries(formData.entries());
-    
-    Object.keys(data).forEach(key => {
-        if (data[key] === '') delete data[key];
-    });
-    
+    Object.keys(data).forEach(key => { if (data[key] === '') delete data[key]; });
+
     let url = `${API_BASE}/${currentTable}`;
     let method = 'POST';
-    
     if (selectedRecord) {
         url += `/${selectedRecord.id}`;
         method = 'PUT';
     }
-    
+
     try {
         const response = await fetch(url, {
-            method: method,
+            method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
-        
         const result = await response.json();
-        
         if (result.success) {
             alert(selectedRecord ? 'Record updated successfully!' : 'Record added successfully!');
             closeCrudModal();
@@ -551,7 +584,6 @@ async function handleFormSubmit(e) {
             alert('Error: ' + (result.message || 'Operation failed'));
         }
     } catch (error) {
-        console.error('Submit error:', error);
         alert('Error saving data. Please try again.');
     }
 }
