@@ -15,7 +15,6 @@ let barangayList = [];
 document.addEventListener('DOMContentLoaded', () => {
     checkAuth();
     loadDashboardStats();
-    loadSavedStats();
     loadBarangayList();
     initEventListeners();
 });
@@ -52,27 +51,6 @@ async function loadDashboardStats() {
     } catch (error) {
         console.error('Error loading stats:', error);
         document.getElementById('total-users').textContent = '--';
-    }
-}
-
-async function loadSavedStats() {
-    try {
-        const response = await fetch(`${API_BASE}/saved-stats`);
-        const data = await response.json();
-        
-        const listEl = document.getElementById('saved-stats-list');
-        
-        if (!data.stats || data.stats.length === 0) {
-            listEl.innerHTML = '<li>No saved recommendations yet</li>';
-            return;
-        }
-        
-        listEl.innerHTML = data.stats.map(item => 
-            `<li>${escapeHtml(item.business_type || 'Unknown')}: ${item.percentage || 0}%</li>`
-        ).join('');
-    } catch (error) {
-        console.error('Error loading saved stats:', error);
-        document.getElementById('saved-stats-list').innerHTML = '<li>Error loading data</li>';
     }
 }
 
@@ -403,10 +381,6 @@ async function confirmDelete() {
             alert('Record deleted successfully!');
             document.getElementById('delete-confirm-modal').classList.remove('open');
             closeCrudModal();
-            
-            if (table === 'businesses') {
-                loadSavedStats();
-            }
         } else {
             alert('Error: ' + (data.message || 'Unable to delete'));
         }
@@ -549,10 +523,6 @@ async function handleFormSubmit(e) {
         if (result.success) {
             alert(selectedRecord ? 'Record updated successfully!' : 'Record added successfully!');
             closeCrudModal();
-            
-            if (currentTable === 'businesses') {
-                loadSavedStats();
-            }
         } else {
             alert('Error: ' + (result.message || 'Operation failed'));
         }

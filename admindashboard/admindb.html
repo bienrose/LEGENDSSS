@@ -33,28 +33,33 @@
 
   <h1 class="welcome-title">Welcome, Admin!</h1>
 
-  <div class="top-row">
+  <!-- Report Module + Action Buttons -->
+  <div class="report-row">
+    <div class="search-card report-card">
+      <div class="search-card-title">Report Module</div>
+      <ul class="biz-list" id="user-history-list">
+        <li>No data yet.</li>
+      </ul>
+    </div>
+
+    <div class="update-panel">
+      <div class="update-panel-title">Update Data</div>
+      <div class="action-btns">
+        <button class="action-btn" id="add-data-btn">Add data</button>
+        <button class="action-btn" id="edit-data-btn">Edit data</button>
+        <button class="action-btn" id="delete-data-btn">Delete data</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- User Profiling + Users Card -->
+  <div class="section-title">User Profiling</div>
+  <div class="profiling-row">
     <div class="users-card">
       <div class="users-count" id="total-users">--</div>
       <div class="users-label">Users</div>
     </div>
 
-    <div class="search-card">
-      <div class="search-card-title">Most Saved Recommended Business</div>
-      <ul class="biz-list" id="saved-stats-list">
-        <li>Loading...</li>
-      </ul>
-    </div>
-
-    <div class="action-btns">
-      <button class="action-btn" id="add-data-btn">Add data</button>
-      <button class="action-btn" id="edit-data-btn">Edit data</button>
-      <button class="action-btn" id="delete-data-btn">Delete data</button>
-    </div>
-  </div>
-
-  <div>
-    <div class="section-title">User Profiling</div>
     <div class="chart-card">
       <div class="axis-row">
         <div class="axis-labels">

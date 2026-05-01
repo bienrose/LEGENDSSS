@@ -160,52 +160,7 @@ body {
     letter-spacing: -0.3px;
 }
 
-.top-row {
-    display: grid;
-    grid-template-columns: 180px 1fr 160px;
-    gap: 18px;
-    align-items: stretch;
-}
-
-.users-card {
-    background: var(--card-bg);
-    border-radius: var(--radius);
-    padding: 24px 22px;
-    display: flex; 
-    flex-direction: column; 
-    justify-content: center;
-    box-shadow: var(--shadow);
-}
-
-.users-count {
-    font-size: 28px; 
-    font-weight: 400; 
-    color: var(--text-muted);
-    line-height: 1;
-}
-
-.users-label {
-    font-size: 26px; 
-    font-weight: 900; 
-    color: var(--navy);
-    margin-top: 4px;
-}
-
-.search-card {
-    background: var(--card-bg);
-    border-radius: var(--radius);
-    padding: 22px 26px;
-    box-shadow: var(--shadow);
-}
-
-.search-card-title {
-    font-size: 17px; 
-    font-weight: 600; 
-    color: var(--navy);
-    margin-bottom: 14px;
-}
-
-.biz-list { 
+.user-history-list {
     list-style: disc; 
     padding-left: 20px; 
     display: flex; 
@@ -213,7 +168,7 @@ body {
     gap: 5px; 
 }
 
-.biz-list li { 
+.user-history-list li { 
     font-size: 13.5px; 
     color: var(--text-main); 
     font-weight: 600; 
@@ -253,7 +208,8 @@ body {
     font-size: 20px; 
     font-weight: 900; 
     color: var(--navy);
-    margin-bottom: 18px;
+    margin-bottom: 14px;
+    margin-top: 24px;
 }
 
 .chart-card {
@@ -690,24 +646,94 @@ body {
 .data-table td {
     border-bottom: 1px solid #e2e8f0;
 }
-.modal-results {
-    margin-bottom: 20px;
-    max-height: 300px;
-    overflow-y: auto;
-    overflow-x: auto;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
+
+/* ─── NEW LAYOUT STYLES ──────────────────────────────────────────────────── */
+
+.report-row {
+    display: grid;
+    grid-template-columns: 1fr 160px;
+    gap: 18px;
+    align-items: stretch;
+    flex: 1;
 }
 
-.data-table {
-    width: max-content;
-    min-width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
+.report-card {
+    min-height: 100%;
 }
 
-.data-table th,
-.data-table td {
-    padding: 10px 12px;
-    white-space: nowrap;
+.users-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    padding: 24px 22px;
+    display: flex; 
+    flex-direction: column; 
+    justify-content: center;
+    box-shadow: var(--shadow);
+}
+
+.users-count {
+    font-size: 28px; 
+    font-weight: 400; 
+    color: var(--text-muted);
+    line-height: 1;
+}
+
+.users-label {
+    font-size: 26px; 
+    font-weight: 900; 
+    color: var(--navy);
+    margin-top: 4px;
+}
+
+.search-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    padding: 22px 26px;
+    box-shadow: var(--shadow);
+}
+
+.search-card-title {
+    font-size: 17px; 
+    font-weight: 600; 
+    color: var(--navy);
+    margin-bottom: 14px;
+}
+
+.biz-list { 
+    list-style: disc; 
+    padding-left: 20px; 
+    display: flex; 
+    flex-direction: column; 
+    gap: 5px; 
+}
+
+.biz-list li { 
+    font-size: 13.5px; 
+    color: var(--text-main); 
+    font-weight: 600; 
+}
+
+.update-panel {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    padding: 18px 16px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+}
+
+.update-panel-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 14px;
+    text-align: center;
+}
+
+.profiling-row {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    gap: 18px;
+    align-items: stretch;
+    margin-top: 4px;
 }
