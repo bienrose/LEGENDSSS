@@ -50,16 +50,50 @@
 
           <div class="form-group">
             <label for="password">Password</label>
-            <input type="password" id="password" name="password" readonly>
+            <input type="password" id="password" name="password" readonly placeholder="Leave blank to keep current">
           </div>
 
           <div class="form-group">
             <label for="affiliation">Affiliation</label>
             <select id="affiliation" name="affiliation" disabled>
               <option value="" disabled selected>Select your affiliation</option>
-              <option value="aspiring">Aspiring Entrepreneur</option>
-              <option value="entrepreneur">Entrepreneur</option>
+              <option value="Aspiring Entrepreneur">Aspiring Entrepreneur</option>
+              <option value="Entrepreneur">Entrepreneur</option>
             </select>
+          </div>
+
+          <div class="form-group">
+            <label for="industry">Industry</label>
+            <select id="industry" name="industry" disabled>
+              <option value="">— Select industry —</option>
+              <option value="Food and Beverages">Food and Beverages</option>
+              <option value="Retail">Retail</option>
+              <option value="Personal Care and Services">Personal Care and Services</option>
+              <option value="Technology Digital Service">Technology Digital Service</option>
+              <option value="Wholesale & Import">Wholesale &amp; Import</option>
+              <option value="Manufacturing">Manufacturing</option>
+              <option value="IT & Software">IT &amp; Software</option>
+              <option value="BPO & Call Center">BPO &amp; Call Center</option>
+              <option value="Construction">Construction</option>
+              <option value="Finance & Banking">Finance &amp; Banking</option>
+              <option value="Education">Education</option>
+              <option value="Healthcare">Healthcare</option>
+              <option value="Energy and Fuel">Energy and Fuel</option>
+              <option value="Logistics & Transport">Logistics &amp; Transport</option>
+              <option value="Hospitality">Hospitality</option>
+              <option value="Security Services">Security Services</option>
+              <option value="Legal & Consulting">Legal &amp; Consulting</option>
+              <option value="Marketing & Advertising">Marketing &amp; Advertising</option>
+              <option value="Admin & Management">Admin &amp; Management</option>
+              <option value="General Services">General Services</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="industry_specific">Specific Business / Sub-category</label>
+            <input type="text" id="industry_specific" name="industry_specific" readonly
+              placeholder="e.g. Pizza Resto, Coffee Shop, Barbershop">
+            <small class="field-hint">Describe your specific business type within your industry.</small>
           </div>
 
           <div class="form-actions">
@@ -79,19 +113,16 @@
 
         <div class="reports-grid">
 
-          <!-- ✅ SCROLLABLE BLOCK -->
           <div class="report-block">
             <div class="report-block-title">Search / Pin History</div>
             <div class="report-list scrollable" id="report-searchpins"></div>
           </div>
 
-          <!-- ✅ SCROLLABLE BLOCK -->
           <div class="report-block">
             <div class="report-block-title">Recommendation History</div>
             <div class="report-list scrollable" id="report-recs"></div>
           </div>
 
-          <!-- ✅ SCROLLABLE BLOCK -->
           <div class="report-block">
             <div class="report-block-title">Saved History</div>
             <div class="report-list scrollable" id="report-saved"></div>

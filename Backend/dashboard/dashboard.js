@@ -15,6 +15,83 @@ let lastFilteredPrefs = null;
 let searchHistory = [];
 const locSavedItems = new Set();
 
+// Populated on DOMContentLoaded from /api/me — used to auto-pass category
+// to the ideas-by-point API so recommendations match the user's industry
+let userIndustry = '';
+let userIndustrySpecific = '';
+
+// ─── INDUSTRY → FILTER CHECKBOX MAP ─────────────────────────────────────────
+// Maps the user's industry (from DB, lowercased) to the matching checkbox id.
+// Add more entries here as needed to cover new industries.
+
+const INDUSTRY_FILTER_MAP = {
+  'food and beverages': 'f-food',
+  'food & beverages': 'f-food',
+  'food and beverage': 'f-food',
+  'food & beverage': 'f-food',
+  'food': 'f-food',
+  'restaurant': 'f-food',
+  'retail': 'f-retail',
+  'retail & trading': 'f-retail',
+  'retail and trading': 'f-retail',
+  'personal care': 'f-personal',
+  'personal services': 'f-personal',
+  'personal care and services': 'f-personal',
+  'beauty & wellness': 'f-personal',
+  'beauty and wellness': 'f-personal',
+  'technology': 'f-tech',
+  'technology digital service': 'f-tech',
+  'digital services': 'f-tech',
+  'wholesale': 'f-wholesale',
+  'wholesale & import': 'f-wholesale',
+  'wholesale and import': 'f-wholesale',
+  'manufacturing': 'f-manufacturing',
+  'it': 'f-it',
+  'it & software': 'f-it',
+  'it and software': 'f-it',
+  'information technology': 'f-it',
+  'software': 'f-it',
+  'bpo': 'f-bpo',
+  'bpo & call center': 'f-bpo',
+  'bpo and call center': 'f-bpo',
+  'call center': 'f-bpo',
+  'construction': 'f-construction',
+  'finance': 'f-finance',
+  'finance & banking': 'f-finance',
+  'finance and banking': 'f-finance',
+  'banking': 'f-finance',
+  'education': 'f-education',
+  'healthcare': 'f-healthcare',
+  'health': 'f-healthcare',
+  'energy': 'f-energy',
+  'energy and fuel': 'f-energy',
+  'energy & fuel': 'f-energy',
+  'logistics': 'f-logistics',
+  'logistics & transport': 'f-logistics',
+  'logistics and transport': 'f-logistics',
+  'transport': 'f-logistics',
+  'hospitality': 'f-hospitality',
+  'hotel': 'f-hospitality',
+  'security': 'f-security',
+  'security services': 'f-security',
+  'legal': 'f-legal',
+  'legal & consulting': 'f-legal',
+  'legal and consulting': 'f-legal',
+  'consulting': 'f-legal',
+  'consultancy': 'f-legal',
+  'marketing': 'f-marketing',
+  'marketing & advertising': 'f-marketing',
+  'marketing and advertising': 'f-marketing',
+  'advertising': 'f-marketing',
+  'admin': 'f-admin',
+  'admin & management': 'f-admin',
+  'admin and management': 'f-admin',
+  'hr & manpower': 'f-admin',
+  'hr and manpower': 'f-admin',
+  'general services': 'f-general',
+  'general': 'f-general'
+};
+
 function reportLogRead() {
   try {
     return JSON.parse(localStorage.getItem('reportLogs') || '{"searchPins":[],"recommendations":[],"saved":[]}') || {
@@ -522,7 +599,6 @@ async function saveRowClickHandler(e) {
     return;
   }
 
-  // FIX: removed `if (!lat || !lon) return;` — allows saving in filter mode without a map click
   const lat = currentClickLat || null;
   const lon = currentClickLng || null;
 
@@ -750,7 +826,11 @@ async function handleLocationSelect(lat, lon, source = 'map') {
 
   const typeCheckboxes = document.querySelectorAll('[id^="f-"]:checked');
   const selectedTypes = [...typeCheckboxes].map(cb => typeMap[cb.id]).filter(Boolean);
-  const type = selectedTypes[0] || null;
+  // If no manual type filter is checked, fall back to the industry-derived category
+  // so that clicking the map always scopes recommendations to the user's industry
+  const industryCheckboxId = userIndustry ? INDUSTRY_FILTER_MAP[userIndustry.toLowerCase().trim()] : null;
+  const industryDerivedType = industryCheckboxId ? typeMap[industryCheckboxId] : null;
+  const type = selectedTypes[0] || industryDerivedType || null;
   const prefs = getPrefs();
 
   const ideasRes = await fetch(`/api/ideas-by-point?lat=${currentClickLat}&lon=${currentClickLng}&category=${type || ''}&prefs=${prefs.join(',')}`);
@@ -1117,6 +1197,51 @@ function parseJumpTarget(){
   }
 }
 
+// ─── APPLY INDUSTRY PERSONALIZATION ─────────────────────────────────────────
+// Called once on DOMContentLoaded with the data returned from /api/me.
+// 1. Pre-checks the filter checkbox that matches the user's industry.
+// 2. Shows a tip banner inside the filter panel so users know it's personalized.
+
+function applyIndustryPersonalization(industry, industrySpecific) {
+  if (!industry) return;
+
+  const key = industry.toLowerCase().trim();
+  const matchedId = INDUSTRY_FILTER_MAP[key];
+
+  // Pre-check the matching category checkbox
+  if (matchedId) {
+    const cb = document.getElementById(matchedId);
+    if (cb) cb.checked = true;
+  }
+
+  // Build tip banner text
+  const tipEl = document.getElementById('industry-tip');
+  if (!tipEl) return;
+
+  const displayIndustry = industry.trim();
+  const displaySpecific = (industrySpecific || '').trim();
+
+  let tipHTML = `<strong>Personalized for you:</strong> `;
+
+  if (displaySpecific) {
+    // e.g.  "Pizza resto · Food and Beverages"
+    tipHTML += `${escapeHtml(displaySpecific)} &nbsp;·&nbsp; ${escapeHtml(displayIndustry)}`;
+  } else {
+    tipHTML += escapeHtml(displayIndustry);
+  }
+
+  if (matchedId) {
+    // Tell the user which filter was auto-selected
+    const label = document.querySelector(`label[for="${matchedId}"]`);
+    if (label) {
+      tipHTML += `<br><span style="opacity:0.8;">The <em>${escapeHtml(label.textContent.trim())}</em> category has been pre-selected for you.</span>`;
+    }
+  }
+
+  tipEl.innerHTML = tipHTML;
+  tipEl.style.display = 'block';
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   fetchSavedRecommendations();
 
@@ -1135,12 +1260,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     const res = await fetch('/api/me');
     const data = await res.json();
     const affiliation = (data.affiliation || '').toLowerCase().trim();
+    const industry = (data.industry || '').trim();
+    const industrySpecific = (data.industry_specific || '').trim();
 
+    // Store globally so handleLocationSelect can always pass the right category
+    userIndustry = industry;
+    userIndustrySpecific = industrySpecific;
+
+    // Show/hide entrepreneur-only filter options
     if (affiliation === 'entrepreneur') {
       document.querySelectorAll('.entrepreneur-only').forEach(el => { el.style.display = ''; });
     } else {
       document.querySelectorAll('.entrepreneur-only').forEach(el => { el.style.display = 'none'; });
     }
+
+    // Pre-select filter + show personalization banner
+    applyIndustryPersonalization(industry, industrySpecific);
+
   } catch (err) {
     console.error('Failed to fetch user info:', err);
     document.querySelectorAll('.entrepreneur-only').forEach(el => { el.style.display = 'none'; });

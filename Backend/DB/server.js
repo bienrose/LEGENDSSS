@@ -82,8 +82,8 @@ function ageScore(ageGroup) {
 
 async function isSubCategorySaturated(barangay, subCategory) {
   if (!subCategory || !barangay) return false;
-  
-    const stopWords = [
+
+  const stopWords = [
     'place', 'restaurant', 'owner', 'shop', 'store', 'business', 'service',
     'company', 'center', 'centre', 'hub', 'spot', 'joint', 'house', 'bar',
     'cafe', 'diner', 'grill', 'bistro', 'parlor', 'parlour', 'salon',
@@ -101,18 +101,18 @@ async function isSubCategorySaturated(barangay, subCategory) {
   ];
   const keywords = subCategory.toLowerCase().trim().split(/\s+/).filter(w => w.length > 2 && !stopWords.includes(w));
   if (keywords.length === 0) return false;
-  
+
   let sql = `SELECT COUNT(*) AS cnt FROM businesses 
              WHERE LOWER(TRIM(barangay)) = LOWER(TRIM(?)) AND (`;
   const params = [barangay];
-  
+
   const conditions = keywords.map(() => `(LOWER(line_of_business) LIKE ? OR LOWER(business_trade_name) LIKE ?)`);
   sql += conditions.join(' OR ') + ')';
-  
+
   keywords.forEach(kw => {
     params.push(`%${kw}%`, `%${kw}%`);
   });
-  
+
   const [rows] = await geoDB.query(sql, params);
   const count = rows[0]?.cnt || 0;
   return count >= 2;
@@ -377,7 +377,7 @@ app.get("/api/me", requireAuth, async (req, res) => {
 app.get("/api/user-profile", requireAuth, async (req, res) => {
   try {
     const [rows] = await legendDB.query(
-      "SELECT id, fullname, email, username, affiliation, role FROM users WHERE id = ?",
+      "SELECT id, fullname, email, username, affiliation, industry, industry_specific, role FROM users WHERE id = ?",
       [req.session.user.id]
     );
     if (rows.length === 0) return res.status(404).json({ success: false, message: "User not found" });
@@ -389,7 +389,7 @@ app.get("/api/user-profile", requireAuth, async (req, res) => {
 
 app.post("/api/user-profile", requireAuth, async (req, res) => {
   try {
-    const { fullname, email, username, password, affiliation } = req.body;
+    const { fullname, email, username, password, affiliation, industry, industry_specific } = req.body;
     const userId = req.session.user.id;
 
     const [existing] = await legendDB.query(
@@ -398,8 +398,8 @@ app.post("/api/user-profile", requireAuth, async (req, res) => {
     );
     if (existing.length > 0) return res.status(400).json({ success: false, message: "Email or username already in use" });
 
-    let updateFields = [fullname, email, username, affiliation];
-    let updateQuery = "UPDATE users SET fullname = ?, email = ?, username = ?, affiliation = ?";
+    let updateFields = [fullname, email, username, affiliation, industry || null, industry_specific || null];
+    let updateQuery = "UPDATE users SET fullname = ?, email = ?, username = ?, affiliation = ?, industry = ?, industry_specific = ?";
 
     if (password && password.trim() !== "") {
       const hashedPassword = await bcrypt.hash(password, 10);
@@ -413,7 +413,7 @@ app.post("/api/user-profile", requireAuth, async (req, res) => {
     await legendDB.query(updateQuery, updateFields);
 
     const [updatedRows] = await legendDB.query(
-      "SELECT id, fullname, email, username, affiliation, role FROM users WHERE id = ?",
+      "SELECT id, fullname, email, username, affiliation, industry, industry_specific, role FROM users WHERE id = ?",
       [userId]
     );
 
@@ -617,10 +617,10 @@ app.get("/api/admin/stats", requireAdmin, async (req, res) => {
     const entrepreneurPct = totalAffiliation > 0 ? Math.round((entrepreneur / totalAffiliation) * 100) : 0;
     const aspiringPct = totalAffiliation > 0 ? Math.round((aspiring / totalAffiliation) * 100) : 0;
 
-    res.json({ 
-      success: true, 
-      totalUsers, 
-      entrepreneurPct, 
+    res.json({
+      success: true,
+      totalUsers,
+      entrepreneurPct,
       aspiringPct,
       entrepreneurCount: entrepreneur,
       aspiringCount: aspiring
@@ -910,7 +910,7 @@ app.get("/api/ideas", requireAuth, async (req, res) => {
       const saturated = await isSubCategorySaturated(ownBarangay, userSubCategory);
       const subKw = userSubCategory.toLowerCase();
       const keywords = subKw.split(/\s+/).filter(w => w.length > 2);
-            if (!saturated) {
+      if (!saturated) {
         userSubCategoryIdea = ideaRows.find(row => {
           const name = (row.name || '').toLowerCase();
           return keywords.some(kw => name.includes(kw));
