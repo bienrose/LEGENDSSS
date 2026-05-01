@@ -25,6 +25,10 @@ function validatePassword(password) {
   };
 }
 
+/* =========================
+   FORM SWITCHING
+========================= */
+
 function showRegister() {
   document.getElementById("login-form").style.display = "none";
   document.getElementById("verification-section").style.display = "none";
@@ -52,41 +56,55 @@ function showLogin() {
   document.getElementById("login-form").style.display = "block";
 }
 
-async function verifyCode() {
-  const code = document.getElementById("verification-code-input").value.trim();
-  const tempUserId = localStorage.getItem("tempUserId");
+/* =========================
+   INDUSTRY HANDLING
+========================= */
 
-  SwalFixed.fire({
-    title: "Verifying...",
-    allowOutsideClick: false,
-    didOpen: () => SwalFixed.showLoading()
-  });
+function handleAffiliationChange() {
+  const affiliation = document.getElementById("affiliation").value;
 
-  const res = await fetch("/verify-code", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ tempUserId, code })
-  });
+  document.getElementById("entrepreneur-industry-div").style.display = "none";
+  document.getElementById("aspiring-industry-div").style.display = "none";
+  document.getElementById("entrepreneur-industry-other-div").style.display = "none";
+  document.getElementById("aspiring-industry-other-div").style.display = "none";
 
-  const data = await res.json();
+  document.getElementById("entrepreneur-industry").selectedIndex = 0;
+  document.getElementById("aspiring-industry").selectedIndex = 0;
+  document.getElementById("entrepreneur-industry-other").value = "";
+  document.getElementById("aspiring-industry-other").value = "";
 
-  if (res.ok && data.success) {
-    localStorage.removeItem("tempUserId");
-    SwalFixed.fire({
-      title: "Success",
-      text: "Account verified!",
-      icon: "success"
-    }).then(() => {
-      showLogin();
-    });
-  } else {
-    SwalFixed.fire({
-      title: "Error",
-      text: data.message || "Invalid code",
-      icon: "error"
-    });
+  if (affiliation === "Entrepreneur") {
+    document.getElementById("entrepreneur-industry-div").style.display = "block";
+  } else if (affiliation === "Aspiring Entrepreneur") {
+    document.getElementById("aspiring-industry-div").style.display = "block";
   }
 }
+
+function handleEntrepreneurIndustryChange() {
+  const val = document.getElementById("entrepreneur-industry").value;
+  const otherDiv = document.getElementById("entrepreneur-industry-other-div");
+
+  otherDiv.style.display = val === "Others" ? "block" : "none";
+
+  if (val !== "Others") {
+    document.getElementById("entrepreneur-industry-other").value = "";
+  }
+}
+
+function handleAspiringIndustryChange() {
+  const val = document.getElementById("aspiring-industry").value;
+  const otherDiv = document.getElementById("aspiring-industry-other-div");
+
+  otherDiv.style.display = val === "Others" ? "block" : "none";
+
+  if (val !== "Others") {
+    document.getElementById("aspiring-industry-other").value = "";
+  }
+}
+
+/* =========================
+   AUTH FUNCTIONS
+========================= */
 
 async function login() {
   const username = document.getElementById("login-username").value.trim();
@@ -128,7 +146,7 @@ async function register() {
   const email = document.getElementById("reg-email").value.trim();
   const username = document.getElementById("reg-username").value.trim();
   const password = document.getElementById("reg-password").value;
-  const affiliation = document.getElementById("affiliation").value.trim();
+  const affiliation = document.getElementById("affiliation").value;
 
   const checks = validatePassword(password);
   const passwordInput = document.getElementById("reg-password");
@@ -137,10 +155,6 @@ async function register() {
   if (!checks.length || !checks.upper || !checks.lower || !checks.number) {
     passwordInput.classList.add("input-error");
     requirementsBox.style.display = "block";
-    document.getElementById("req-length").style.color = checks.length ? "#a0bcd0" : "#ff4d4d";
-    document.getElementById("req-upper").style.color = checks.upper ? "#a0bcd0" : "#ff4d4d";
-    document.getElementById("req-lower").style.color = checks.lower ? "#a0bcd0" : "#ff4d4d";
-    document.getElementById("req-number").style.color = checks.number ? "#a0bcd0" : "#ff4d4d";
     return;
   }
 
@@ -171,166 +185,20 @@ async function register() {
 
   if (res.ok && data.success) {
     localStorage.setItem("tempUserId", data.tempUserId);
+
     SwalFixed.fire({
       title: "Success",
       text: "Verification code sent",
       icon: "success"
     });
+
     document.getElementById("register-form").style.display = "none";
     document.getElementById("verification-section").style.display = "block";
+    
   } else {
     SwalFixed.fire({
       title: "Error",
       text: data.message || "Registration failed",
-      icon: "error"
-    });
-  }
-}
-
-async function sendForgotCode() {
-  const email = document.getElementById("forgot-email").value.trim();
-
-  if (!email) {
-    SwalFixed.fire({ title: "Error", text: "Please enter an email", icon: "error" });
-    return;
-  }
-
-  SwalFixed.fire({
-    title: "Sending code...",
-    allowOutsideClick: false,
-    didOpen: () => SwalFixed.showLoading()
-  });
-
-  const res = await fetch("/forgot-password", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email })
-  });
-
-  const data = await res.json();
-
-  if (res.ok && data.success) {
-    forgotPendingEmail = email;
-    SwalFixed.fire({
-      title: "Sent",
-      text: data.message || "Check your email for code",
-      icon: "success"
-    });
-    document.getElementById("forgot-password-section").style.display = "none";
-    document.getElementById("forgot-verification-section").style.display = "block";
-  } else {
-    SwalFixed.fire({
-      title: "Error",
-      text: data.message || "Email not found",
-      icon: "error"
-    });
-  }
-}
-
-async function verifyForgotCode() {
-  const code = document.getElementById("forgot-code-input").value.trim();
-
-  const res = await fetch("/verify-forgot-code", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email: forgotPendingEmail, code })
-  });
-
-  const data = await res.json();
-
-  if (res.ok && data.success) {
-    document.getElementById("forgot-verification-section").style.display = "none";
-    document.getElementById("reset-password-section").style.display = "block";
-  } else {
-    SwalFixed.fire({
-      title: "Error",
-      text: "Invalid code",
-      icon: "error"
-    });
-  }
-}
-
-async function resetPassword() {
-  const newPassword = document.getElementById("new-password").value;
-
-  const checks = validatePassword(newPassword);
-  const passwordInput = document.getElementById("new-password");
-  const requirementsBox = document.getElementById("reset-password-requirements");
-
-  if (!checks.length || !checks.upper || !checks.lower || !checks.number) {
-    passwordInput.classList.add("input-error");
-    requirementsBox.style.display = "block";
-    document.getElementById("reset-req-length").style.color = checks.length ? "#a0bcd0" : "#ff4d4d";
-    document.getElementById("reset-req-upper").style.color = checks.upper ? "#a0bcd0" : "#ff4d4d";
-    document.getElementById("reset-req-lower").style.color = checks.lower ? "#a0bcd0" : "#ff4d4d";
-    document.getElementById("reset-req-number").style.color = checks.number ? "#a0bcd0" : "#ff4d4d";
-    return;
-  }
-
-  passwordInput.classList.remove("input-error");
-  requirementsBox.style.display = "none";
-
-  const res = await fetch("/reset-password", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email: forgotPendingEmail, newPassword })
-  });
-
-  const data = await res.json();
-
-  if (res.ok && data.success) {
-    SwalFixed.fire({
-      title: "Success",
-      text: "Password reset complete",
-      icon: "success"
-    }).then(() => {
-      showLogin();
-    });
-  } else {
-    SwalFixed.fire({
-      title: "Error",
-      text: "Reset failed",
-      icon: "error"
-    });
-  }
-}
-
-async function resendVerificationCode() {
-  const tempUserId = localStorage.getItem("tempUserId");
-
-  if (!tempUserId) {
-    SwalFixed.fire({
-      title: "Error",
-      text: "No pending verification found",
-      icon: "error"
-    });
-    return;
-  }
-
-  SwalFixed.fire({
-    title: "Resending code...",
-    allowOutsideClick: false,
-    didOpen: () => SwalFixed.showLoading()
-  });
-
-  const res = await fetch("/resend-code", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ tempUserId })
-  });
-
-  const data = await res.json();
-
-  if (res.ok && data.success) {
-    SwalFixed.fire({
-      title: "Success",
-      text: "Verification code resent!",
-      icon: "success"
-    });
-  } else {
-    SwalFixed.fire({
-      title: "Error",
-      text: data.message || "Failed to resend code",
       icon: "error"
     });
   }

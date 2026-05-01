@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Login - Your App</title>
 <link rel="stylesheet" href="login.css">
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
 <div class="left">
@@ -39,12 +38,16 @@
     <img src="Spot.png" alt="Logo" class="logo">
     <h2>CREATE AN ACCOUNT</h2>
     <div class="note">Already have an account? <a onclick="showLogin()">Sign in</a></div>
+
     <label>Full Name</label>
     <input type="text" id="reg-fullname" placeholder="Enter your full name">
+
     <label>Email</label>
     <input type="text" id="reg-email" placeholder="Enter your email">
+
     <label>Username</label>
     <input type="text" id="reg-username" placeholder="Choose a username">
+
     <label>Password</label>
     <input type="password" id="reg-password" placeholder="Create a password">
     <div class="password-requirements" id="reg-password-requirements">
@@ -53,12 +56,74 @@
       <p class="req" id="req-lower">• At least one lowercase letter</p>
       <p class="req" id="req-number">• At least one number</p>
     </div>
+
     <label>Affiliation</label>
-    <select id="affiliation">
+    <select id="affiliation" onchange="handleAffiliationChange()">
       <option value="" disabled selected>Select your affiliation</option>
       <option value="Entrepreneur">Entrepreneur</option>
       <option value="Aspiring Entrepreneur">Aspiring Entrepreneur</option>
     </select>
+
+    <!-- Industry dropdown for Entrepreneur -->
+    <div id="entrepreneur-industry-div" style="display:none; margin-top: 10px;">
+      <label>What industry do you belong?</label>
+      <select id="entrepreneur-industry" onchange="handleEntrepreneurIndustryChange()">
+        <option value="" disabled selected>Select your answer</option>
+        <option value="Food and Beverages">Food and Beverages</option>
+        <option value="Retail">Retail</option>
+        <option value="Personal Care and Services">Personal Care and Services</option>
+        <option value="Technology Digital Service">Technology Digital Service</option>
+        <option value="Wholesale & Import">Wholesale & Import</option>
+        <option value="Manufacturing">Manufacturing</option>
+        <option value="IT & Software">IT & Software</option>
+        <option value="Construction">Construction</option>
+        <option value="Education">Education</option>
+        <option value="Healthcare">Healthcare</option>
+        <option value="Logistics & Transport">Logistics & Transport</option>
+        <option value="Security Services">Security Services</option>
+        <option value="Legal & Consulting">Legal & Consulting</option>
+        <option value="Marketing & Advertising">Marketing & Advertising</option>
+        <option value="Admin & Management">Admin & Management</option>
+        <option value="General Services">General Services</option>
+        <option value="Others">Others</option>
+      </select>
+      <div id="entrepreneur-industry-other-div" style="display:none; margin-top: 8px;">
+        <label>Please specify your industry</label>
+        <input type="text" id="entrepreneur-industry-other" placeholder="Specify your industry">
+      </div>
+    </div>
+
+    <!-- Industry dropdown for Aspiring Entrepreneur -->
+    <div id="aspiring-industry-div" style="display:none; margin-top: 10px;">
+      <label>What industry are you interested in?</label>
+      <select id="aspiring-industry" onchange="handleAspiringIndustryChange()">
+        <option value="" disabled selected>What industry are you interested in?</option>
+        <option value="Food and Beverages">Food and Beverages</option>
+        <option value="Retail">Retail</option>
+        <option value="Personal Care and Services">Personal Care and Services</option>
+        <option value="Technology Digital Service">Technology Digital Service</option>
+        <option value="Wholesale & Import">Wholesale & Import</option>
+        <option value="Manufacturing">Manufacturing</option>
+        <option value="IT & Software">IT & Software</option>
+        <option value="BPO & Call Center">BPO & Call Center</option>
+        <option value="Construction">Construction</option>
+        <option value="Finance & Banking">Finance & Banking</option>
+        <option value="Education">Education</option>
+        <option value="Healthcare">Healthcare</option>
+        <option value="Logistics & Transport">Logistics & Transport</option>
+        <option value="Security Services">Security Services</option>
+        <option value="Legal & Consulting">Legal & Consulting</option>
+        <option value="Marketing & Advertising">Marketing & Advertising</option>
+        <option value="Admin & Management">Admin & Management</option>
+        <option value="General Services">General Services</option>
+        <option value="Others">Others</option>
+      </select>
+      <div id="aspiring-industry-other-div" style="display:none; margin-top: 8px;">
+        <label>Please specify your interest</label>
+        <input type="text" id="aspiring-industry-other" placeholder="Specify your interest">
+      </div>
+    </div>
+
     <button onclick="register()">Register</button>
   </div>
 
@@ -117,6 +182,7 @@
 
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="login.js"></script>
 </body>
 </html>
