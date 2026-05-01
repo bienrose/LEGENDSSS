@@ -16,8 +16,15 @@ let searchHistory = [];
 const locSavedItems = new Set();
 
 function reportLogRead() {
-  try { return JSON.parse(localStorage.getItem('reportLogs') || '{"searchPins":[],"recommendations":[],"saved":[]}') || { searchPins: [], recommendations: [], saved: [] }; }
-  catch { return { searchPins: [], recommendations: [], saved: [] }; }
+  try {
+    return JSON.parse(localStorage.getItem('reportLogs') || '{"searchPins":[],"recommendations":[],"saved":[]}') || {
+      searchPins: [],
+      recommendations: [],
+      saved: []
+    };
+  } catch {
+    return { searchPins: [], recommendations: [], saved: [] };
+  }
 }
 
 function reportLogWrite(logs) {
@@ -31,6 +38,15 @@ function reportNow() {
 function reportPush(kind, payload) {
   const logs = reportLogRead();
   if (!logs[kind]) logs[kind] = [];
+
+  if (kind === 'searchPins') {
+    const key = `${payload.source || ''}::${(payload.locationName || '').trim().toLowerCase()}`;
+    logs[kind] = logs[kind].filter(x => {
+      const k2 = `${x.source || ''}::${(x.locationName || '').trim().toLowerCase()}`;
+      return k2 !== key;
+    });
+  }
+
   logs[kind].unshift(payload);
   logs[kind] = logs[kind].slice(0, 200);
   reportLogWrite(logs);
@@ -111,18 +127,9 @@ const pinRangeEl = document.getElementById('pin-range');
 const pinCountInput = document.getElementById('pin-count');
 const pinCountLabel = document.getElementById('pin-count-label');
 
-function showPinRange() {
-  pinRangeEl?.classList.add('show');
-}
-
-function hidePinRange() {
-  pinRangeEl?.classList.remove('show');
-}
-
-function setPinDefault() {
-  if (pinCountInput) pinCountInput.value = '5';
-  if (pinCountLabel) pinCountLabel.textContent = '5';
-}
+function showPinRange() { pinRangeEl?.classList.add('show'); }
+function hidePinRange() { pinRangeEl?.classList.remove('show'); }
+function setPinDefault() { if (pinCountInput) pinCountInput.value = '5'; if (pinCountLabel) pinCountLabel.textContent = '5'; }
 
 function getFilteredPinCount() {
   const v = Number(pinCountInput?.value ?? 5);
@@ -237,106 +244,30 @@ document.getElementById('saved-btn')?.addEventListener('click', function (e) {
 });
 
 const CODE_LABELS = {
-  'RES': 'Restaurant',
-  'RET': 'Retail',
-  'SER': 'Services',
-  'WSR': 'Wholesale',
-  'WSE': 'Wholesale',
-  'BSM': 'Manufacturing',
-  'SSM': 'Manufacturing',
-  'EX1': 'Export',
-  'EX2': 'Export',
-  'EX3': 'Export',
-  'FRX': 'Foreign Exchange',
-  'SBR': 'Stockbroker',
-  'PWN': 'Pawnshop',
-  'BNK': 'Bank',
-  'IN6': 'Insurance',
-  'PRT': 'Retail',
-  'APT': 'Apartment Rental',
-  'EDU': 'Educational Institution',
-  'HOS': 'Hospital',
-  'DEN': 'Dental Clinic',
-  'DRG': 'Drug Store',
-  'MED': 'Medical Clinic',
-  'MOT': 'Motel',
-  'SCA': 'Security Agency',
-  'AMD': 'Amusement',
-  'AMN': 'Amusement',
-  'TA': 'Travel Agency',
-  'PRN': 'Printing Services',
-  'FTX': 'Franchise',
-  'CAT': 'Catering',
-  'ADM': 'Admin',
-  'LAB': 'Laboratory'
+  'RES': 'Restaurant','RET': 'Retail','SER': 'Services','WSR': 'Wholesale','WSE': 'Wholesale',
+  'BSM': 'Manufacturing','SSM': 'Manufacturing','EX1': 'Export','EX2': 'Export','EX3': 'Export',
+  'FRX': 'Foreign Exchange','SBR': 'Stockbroker','PWN': 'Pawnshop','BNK': 'Bank','IN6': 'Insurance',
+  'PRT': 'Retail','APT': 'Apartment Rental','EDU': 'Educational Institution','HOS': 'Hospital','DEN': 'Dental Clinic',
+  'DRG': 'Drug Store','MED': 'Medical Clinic','MOT': 'Motel','SCA': 'Security Agency','AMD': 'Amusement','AMN': 'Amusement',
+  'TA': 'Travel Agency','PRN': 'Printing Services','FTX': 'Franchise','CAT': 'Catering','ADM': 'Admin','LAB': 'Laboratory'
 };
 
 const KEYWORD_LABELS = [
-  ['SARI SARI', 'Sari-Sari Store'],
-  ['GROCERY', 'Grocery'],
-  ['BAKERY', 'Bakery'],
-  ['BAKESHOP', 'Bakeshop'],
-  ['RESTAURANT', 'Restaurant'],
-  ['FAST FOOD', 'Fast Food'],
-  ['COFFEE SHOP', 'Coffee Shop'],
-  ['CANTEEN', 'Canteen'],
-  ['EATERY', 'Eatery'],
-  ['PANCITERIA', 'Panciteria'],
-  ['CATERING', 'Catering'],
-  ['PHARMACY', 'Pharmacy'],
-  ['DRUG STORE', 'Drug Store'],
-  ['CLINIC', 'Clinic'],
-  ['DENTAL', 'Dental Clinic'],
-  ['HOSPITAL', 'Hospital'],
-  ['LABORATORY', 'Laboratory'],
-  ['PAWNSHOP', 'Pawnshop'],
-  ['BANK', 'Bank'],
-  ['INSURANCE', 'Insurance'],
-  ['LENDING', 'Lending'],
-  ['HARDWARE', 'Hardware Store'],
-  ['CELLPHONE', 'Cellphone Store'],
-  ['APPLIANCES', 'Appliance Store'],
-  ['OPTICAL', 'Optical Shop'],
-  ['SALON', 'Salon'],
-  ['BARBER', 'Barbershop'],
-  ['SPA', 'Spa'],
-  ['MASSAGE', 'Massage'],
-  ['LAUNDRY', 'Laundry Shop'],
-  ['CAR WASH', 'Car Wash'],
-  ['GYM', 'Gym'],
-  ['SCHOOL', 'School'],
-  ['TUTORIAL', 'Tutorial Center'],
-  ['TRAINING', 'Training Center'],
-  ['TRAVEL', 'Travel Agency'],
-  ['HOTEL', 'Hotel'],
-  ['MOTEL', 'Motel'],
-  ['FUNERAL', 'Funeral Services'],
-  ['PRINTING', 'Printing Services'],
-  ['ADVERTISING', 'Advertising'],
-  ['CONSTRUCTION', 'Construction'],
-  ['TRUCKING', 'Trucking'],
-  ['LOGISTICS', 'Logistics'],
-  ['SECURITY', 'Security Agency'],
-  ['CONSULTANCY', 'Consultancy'],
-  ['CONSULTING', 'Consulting'],
-  ['ACCOUNTING', 'Accounting'],
-  ['LAW', 'Law Firm'],
-  ['REAL ESTATE', 'Real Estate'],
-  ['TRADING', 'Trading'],
-  ['RETAILER', 'Retail'],
-  ['WHOLESALER', 'Wholesale'],
-  ['MANUFACTURER', 'Manufacturing'],
-  ['WAREHOUSE', 'Warehouse'],
-  ['WATER REFILLING', 'Water Refilling Station'],
-  ['GAS STATION', 'Gas Station'],
-  ['LPG', 'LPG Dealer'],
-  ['INTERNET', 'Internet Services'],
-  ['SOFTWARE', 'Software Company'],
-  ['BPO', 'BPO'],
-  ['CALL CENTER', 'Call Center'],
-  ['REMITTANCE', 'Money Remittance'],
-  ['COOPERATIVE', 'Cooperative'],
-  ['FOUNDATION', 'Foundation']
+  ['SARI SARI','Sari-Sari Store'],['GROCERY','Grocery'],['BAKERY','Bakery'],['BAKESHOP','Bakeshop'],
+  ['RESTAURANT','Restaurant'],['FAST FOOD','Fast Food'],['COFFEE SHOP','Coffee Shop'],['CANTEEN','Canteen'],
+  ['EATERY','Eatery'],['PANCITERIA','Panciteria'],['CATERING','Catering'],['PHARMACY','Pharmacy'],
+  ['DRUG STORE','Drug Store'],['CLINIC','Clinic'],['DENTAL','Dental Clinic'],['HOSPITAL','Hospital'],
+  ['LABORATORY','Laboratory'],['PAWNSHOP','Pawnshop'],['BANK','Bank'],['INSURANCE','Insurance'],
+  ['LENDING','Lending'],['HARDWARE','Hardware Store'],['CELLPHONE','Cellphone Store'],['APPLIANCES','Appliance Store'],
+  ['OPTICAL','Optical Shop'],['SALON','Salon'],['BARBER','Barbershop'],['SPA','Spa'],['MASSAGE','Massage'],
+  ['LAUNDRY','Laundry Shop'],['CAR WASH','Car Wash'],['GYM','Gym'],['SCHOOL','School'],['TUTORIAL','Tutorial Center'],
+  ['TRAINING','Training Center'],['TRAVEL','Travel Agency'],['HOTEL','Hotel'],['MOTEL','Motel'],['FUNERAL','Funeral Services'],
+  ['PRINTING','Printing Services'],['ADVERTISING','Advertising'],['CONSTRUCTION','Construction'],['TRUCKING','Trucking'],
+  ['LOGISTICS','Logistics'],['SECURITY','Security Agency'],['CONSULTANCY','Consultancy'],['CONSULTING','Consulting'],
+  ['ACCOUNTING','Accounting'],['LAW','Law Firm'],['REAL ESTATE','Real Estate'],['TRADING','Trading'],['RETAILER','Retail'],
+  ['WHOLESALER','Wholesale'],['MANUFACTURER','Manufacturing'],['WAREHOUSE','Warehouse'],['WATER REFILLING','Water Refilling Station'],
+  ['GAS STATION','Gas Station'],['LPG','LPG Dealer'],['INTERNET','Internet Services'],['SOFTWARE','Software Company'],
+  ['BPO','BPO'],['CALL CENTER','Call Center'],['REMITTANCE','Money Remittance'],['COOPERATIVE','Cooperative'],['FOUNDATION','Foundation']
 ];
 
 function formatBizName(s) {
@@ -613,59 +544,19 @@ async function renderIdeasAndPins({ type, barangay, prefs, allowPins }) {
 }
 
 const barangayMap = {
-  'b-bagong-ilog': 'Bagong Ilog',
-  'b-bagong-katipunan': 'Bagong Katipunan',
-  'b-bambang': 'Bambang',
-  'b-buting': 'Buting',
-  'b-caniogan': 'Caniogan',
-  'b-dela-paz': 'Dela Paz',
-  'b-kalawaan': 'Kalawaan',
-  'b-kapasigan': 'Kapasigan',
-  'b-kapitolyo': 'Kapitolyo',
-  'b-malinao': 'Malinao',
-  'b-manggahan': 'Manggahan',
-  'b-maybunga': 'Maybunga',
-  'b-oranbo': 'Oranbo',
-  'b-palatiw': 'Palatiw',
-  'b-pinagbuhatan': 'Pinagbuhatan',
-  'b-pineda': 'Pineda',
-  'b-rosario': 'Rosario',
-  'b-sagad': 'Sagad',
-  'b-san-antonio': 'San Antonio',
-  'b-san-joaquin': 'San Joaquin',
-  'b-san-jose': 'San Jose',
-  'b-san-miguel': 'San Miguel',
-  'b-san-nicolas': 'San Nicolas',
-  'b-santa-lucia': 'Santa Lucia',
-  'b-santa-rosa': 'Santa Rosa',
-  'b-santolan': 'Santolan',
-  'b-sumilang': 'Sumilang',
-  'b-ugong': 'Ugong',
-  'b-vargas': 'F. Vargas',
-  'b-wack-wack': 'Wack-Wack'
+  'b-bagong-ilog': 'Bagong Ilog','b-bagong-katipunan': 'Bagong Katipunan','b-bambang': 'Bambang','b-buting': 'Buting',
+  'b-caniogan': 'Caniogan','b-dela-paz': 'Dela Paz','b-kalawaan': 'Kalawaan','b-kapasigan': 'Kapasigan','b-kapitolyo': 'Kapitolyo',
+  'b-malinao': 'Malinao','b-manggahan': 'Manggahan','b-maybunga': 'Maybunga','b-oranbo': 'Oranbo','b-palatiw': 'Palatiw',
+  'b-pinagbuhatan': 'Pinagbuhatan','b-pineda': 'Pineda','b-rosario': 'Rosario','b-sagad': 'Sagad','b-san-antonio': 'San Antonio',
+  'b-san-joaquin': 'San Joaquin','b-san-jose': 'San Jose','b-san-miguel': 'San Miguel','b-san-nicolas': 'San Nicolas','b-santa-lucia': 'Santa Lucia',
+  'b-santa-rosa': 'Santa Rosa','b-santolan': 'Santolan','b-sumilang': 'Sumilang','b-ugong': 'Ugong','b-vargas': 'F. Vargas','b-wack-wack': 'Wack-Wack'
 };
 
 const typeMap = {
-  'f-food': 'FOOD',
-  'f-retail': 'RETAIL',
-  'f-personal': 'PERSONAL',
-  'f-tech': 'TECH',
-  'f-wholesale': 'WHOLESALE',
-  'f-manufacturing': 'MANUFACTURING',
-  'f-it': 'IT',
-  'f-bpo': 'BPO',
-  'f-construction': 'CONSTRUCTION',
-  'f-finance': 'FINANCE',
-  'f-education': 'EDUCATION',
-  'f-healthcare': 'HEALTHCARE',
-  'f-energy': 'ENERGY',
-  'f-logistics': 'LOGISTICS',
-  'f-hospitality': 'HOSPITALITY',
-  'f-security': 'SECURITY',
-  'f-legal': 'LEGAL',
-  'f-marketing': 'MARKETING',
-  'f-admin': 'ADMIN',
-  'f-general': 'GENERAL'
+  'f-food': 'FOOD','f-retail': 'RETAIL','f-personal': 'PERSONAL','f-tech': 'TECH','f-wholesale': 'WHOLESALE',
+  'f-manufacturing': 'MANUFACTURING','f-it': 'IT','f-bpo': 'BPO','f-construction': 'CONSTRUCTION','f-finance': 'FINANCE',
+  'f-education': 'EDUCATION','f-healthcare': 'HEALTHCARE','f-energy': 'ENERGY','f-logistics': 'LOGISTICS','f-hospitality': 'HOSPITALITY',
+  'f-security': 'SECURITY','f-legal': 'LEGAL','f-marketing': 'MARKETING','f-admin': 'ADMIN','f-general': 'GENERAL'
 };
 
 document.getElementById('done-btn')?.addEventListener('click', async () => {
@@ -750,30 +641,28 @@ async function handleLocationSelect(lat, lon, source = 'map') {
     await handleLocationSelect(p.lat, p.lng, 'drag');
   });
 
- const svDiv = document.getElementById('street-view');
-if (svDiv) {
-  const latQ = encodeURIComponent(currentClickLat);
-  const lonQ = encodeURIComponent(currentClickLng);
-
-  svDiv.style.display = 'block';
-  svDiv.innerHTML = `
-    <div style="padding:10px;font-size:13px;color:#1a3a5c;">
-      <div style="font-weight:700;margin-bottom:8px;">Street View</div>
-      <iframe
-        title="Mapillary"
-        loading="lazy"
-        referrerpolicy="no-referrer"
-        src="https://www.mapillary.com/embed?map_style=Mapillary%20light&lat=${latQ}&lng=${lonQ}&z=17"
-        style="width:100%;height:100%;min-height:240px;border:none;border-radius:12px;background:#fff;"
-      ></iframe>
-
-      <div style="margin-top:8px;">
-        If Mapillary fails to load, open:
-        <a href="https://www.google.com/maps?q=${latQ},${lonQ}" target="_blank" rel="noreferrer">Google Maps</a>
+  const svDiv = document.getElementById('street-view');
+  if (svDiv) {
+    const latQ = encodeURIComponent(currentClickLat);
+    const lonQ = encodeURIComponent(currentClickLng);
+    svDiv.style.display = 'block';
+    svDiv.innerHTML = `
+      <div style="padding:10px;font-size:13px;color:#1a3a5c;">
+        <div style="font-weight:700;margin-bottom:8px;">Street View</div>
+        <iframe
+          title="Mapillary"
+          loading="lazy"
+          referrerpolicy="no-referrer"
+          src="https://www.mapillary.com/embed?map_style=Mapillary%20light&lat=${latQ}&lng=${lonQ}&z=17"
+          style="width:100%;height:100%;min-height:240px;border:none;border-radius:12px;background:#fff;"
+        ></iframe>
+        <div style="margin-top:8px;">
+          If Mapillary fails to load, open:
+          <a href="https://www.google.com/maps?q=${latQ},${lonQ}" target="_blank" rel="noreferrer">Google Maps</a>
+        </div>
       </div>
-    </div>
-  `;
-}
+    `;
+  }
 
   filterPanel.classList.remove('open');
   savedPanel.classList.remove('open');
@@ -801,12 +690,14 @@ if (svDiv) {
     if (badge) badge.textContent = `📍 ${currentClickLat}, ${currentClickLng}`;
   }
 
-  reportLogSearchOrPin({
-    source,
-    locationName: currentLocShortName,
-    lat: currentClickLat,
-    lon: currentClickLng
-  });
+  if (source !== 'search') {
+    reportLogSearchOrPin({
+      source,
+      locationName: currentLocShortName,
+      lat: currentClickLat,
+      lon: currentClickLng
+    });
+  }
 
   const typeCheckboxes = document.querySelectorAll('[id^="f-"]:checked');
   const selectedTypes = [...typeCheckboxes].map(cb => typeMap[cb.id]).filter(Boolean);
@@ -816,7 +707,6 @@ if (svDiv) {
   const ideasRes = await fetch(`/api/ideas-by-point?lat=${currentClickLat}&lon=${currentClickLng}&category=${type || ''}&prefs=${prefs.join(',')}`);
   const ideasData = await ideasRes.json();
   const listEl = document.getElementById('rec-list');
-
   if (!listEl) return;
 
   loadAreaDemographics(currentBarangayName);
@@ -873,16 +763,6 @@ async function doSearch(query) {
     const lonNum = Number(data[0].lon);
 
     if (!Number.isFinite(latNum) || !Number.isFinite(lonNum) || !isInPasig(latNum, lonNum)) {
-      showPasigToast('Location not found in Pasig.');
-      return;
-    }
-
-    const rev = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latNum}&lon=${lonNum}&format=json`);
-    const revData = await rev.json();
-    const addr = revData.address || {};
-    const city = (addr.city || addr.municipality || addr.town || addr.county || '').toLowerCase();
-
-    if (!city.includes('pasig')) {
       showPasigToast('Location not found in Pasig.');
       return;
     }
@@ -1173,6 +1053,7 @@ function toggleCollapse(key) {
   body.classList.toggle('open', !isOpen);
   arrow.classList.toggle('rotated', !isOpen);
 }
+
 function parseJumpTarget(){
   try{
     const raw = localStorage.getItem('mapJumpTarget');
@@ -1190,14 +1071,14 @@ function parseJumpTarget(){
 document.addEventListener('DOMContentLoaded', async () => {
   fetchSavedRecommendations();
 
-  try {
-    const jump = parseJumpTarget();
-    if (jump) {
+  try{
+    const jump=parseJumpTarget();
+    if(jump){
       localStorage.removeItem('mapJumpTarget');
       map.setView([jump.lat, jump.lon], 16);
       await handleLocationSelect(jump.lat, jump.lon, jump.source);
     }
-  } catch (e) {
+  }catch(e){
     console.warn('Jump-to-map failed:', e);
   }
 

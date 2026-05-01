@@ -19,6 +19,15 @@ let isEditing=false;
 let originalData={};
 let currentUserRole=null;
 
+function hasSwal(){
+  return typeof window.Swal === 'function' || (window.Swal && typeof window.Swal.fire === 'function');
+}
+
+function swalFire(opts){
+  if (window.Swal?.fire) return window.Swal.fire(opts);
+  return Promise.resolve();
+}
+
 async function loadUserData(){
   try{
     const response=await fetch('/api/user-profile',{method:'GET',credentials:'include',headers:{'Accept':'application/json'}});
@@ -34,10 +43,12 @@ async function loadUserData(){
       currentUserRole=user.role||'user';
       originalData={fullname:user.fullname||'',email:user.email||'',username:user.username||'',affiliation:user.affiliation||'',role:user.role||'user'};
     }else{
-      alert('Error: '+(data.message||'Failed to load profile'));
+      if (hasSwal()) await swalFire({icon:'error',title:'Error',text:(data.message||'Failed to load profile')});
+      else alert('Error: '+(data.message||'Failed to load profile'));
     }
   }catch(err){
-    alert('Error loading profile: '+err.message);
+    if (hasSwal()) await swalFire({icon:'error',title:'Error',text:('Error loading profile: '+err.message)});
+    else alert('Error loading profile: '+err.message);
   }
 }
 
@@ -77,19 +88,45 @@ function disableEditing(){
 
 async function saveUserData(){
   try{
-    const userData={fullname:fullnameInput.value.trim(),email:emailInput.value.trim(),username:usernameInput.value.trim(),password:passwordInput.value,affiliation:affiliationSelect.value,role:currentUserRole};
-    if(!userData.fullname||!userData.email||!userData.username||!userData.affiliation){alert('Please fill in all required fields');return;}
-    const response=await fetch('/api/user-profile',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(userData)});
+    const userData={
+      fullname:fullnameInput.value.trim(),
+      email:emailInput.value.trim(),
+      username:usernameInput.value.trim(),
+      password:passwordInput.value,
+      affiliation:affiliationSelect.value,
+      role:currentUserRole
+    };
+
+    if(!userData.fullname||!userData.email||!userData.username||!userData.affiliation){
+      if (hasSwal()) await swalFire({icon:'warning',title:'Missing fields',text:'Please fill in all required fields.'});
+      else alert('Please fill in all required fields');
+      return;
+    }
+
+    const response=await fetch('/api/user-profile',{
+      method:'POST',
+      credentials:'include',
+      headers:{'Content-Type':'application/json','Accept':'application/json'},
+      body:JSON.stringify(userData)
+    });
+
     const data=await response.json();
+
     if(data.success){
-      alert('Profile updated successfully!');
+      if (hasSwal()) {
+        await swalFire({icon:'success',title:'Saved!',text:'Profile updated successfully.',timer:1400,showConfirmButton:false});
+      } else {
+        alert('Profile updated successfully!');
+      }
       disableEditing();
       await loadUserData();
     }else{
-      alert('Error: '+(data.message||'Failed to update profile'));
+      if (hasSwal()) await swalFire({icon:'error',title:'Save failed',text:(data.message||'Failed to update profile')});
+      else alert('Error: '+(data.message||'Failed to update profile'));
     }
   }catch(err){
-    alert('Error saving profile: '+err.message);
+    if (hasSwal()) await swalFire({icon:'error',title:'Error',text:('Error saving profile: '+err.message)});
+    else alert('Error saving profile: '+err.message);
   }
 }
 
