@@ -1557,6 +1557,7 @@ app.get("/api/admin/report/saved", requireAdmin, async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 });
+
 app.use(express.static(frontendPath));
 app.use("/dashboard", express.static(dashboardPath));
 app.use("/admin", express.static(adminDashboardPath));

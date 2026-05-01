@@ -1,10 +1,10 @@
 :root {
     --navy:       #1a3a5c;
     --navy-dark:  #122840;
-    --sidebar-bg: #d6e4f0;
+    --sidebar-bg: #dce5ef;
     --content-bg: #ffffff;
-    --card-bg:    #dce8f2;
-    --card-bg2:   #c8daea;
+    --card-bg:    #dce5ef;
+    --card-bg2:    #dce5ef;
     --btn-bg:     #cfdde9;
     --btn-hover:  #b8cfe0;
     --text-main:  #1a3a5c;
@@ -22,7 +22,7 @@
 }
 
 body {
-    font-family: 'Arial', sans-serif;
+    font-family: 'Public Sans', sans-serif;
     background: var(--content-bg);
     color: var(--text-main);
     height: 100vh;
