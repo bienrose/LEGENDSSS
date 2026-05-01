@@ -62,13 +62,15 @@ function reportLogSearchOrPin({ source, locationName, lat, lon }) {
   });
 }
 
-function reportLogRecommendation({ idea, area, pinCount }) {
+function reportLogRecommendation({ idea, area, pinCount, lat, lon }) {
   const f = reportCurrentFiltersSnapshot();
   reportPush('recommendations', {
     at: reportNow(),
     idea,
     area: area || null,
     pinCount: pinCount ?? null,
+    lat: lat ?? null,
+    lon: lon ?? null,
     filters: f
   });
 }
@@ -457,8 +459,8 @@ async function saveRecommendationToDB(business_type, barangay, lat, lon) {
         business_type,
         barangay: barangay || null,
         suitability_score: null,
-        lat: lat ? parseFloat(lat) : null,   // ensure float
-        lon: lon ? parseFloat(lon) : null    // ensure float
+        lat: lat ? parseFloat(lat) : null,
+        lon: lon ? parseFloat(lon) : null
       })
     });
     const data = await res.json();
@@ -483,7 +485,6 @@ async function deleteSavedRecommendationFromDB(dbId) {
 function markSavedInCurrentList() {
   document.querySelectorAll('#rec-list .save-row').forEach(row => {
     const name = row.dataset.name;
-    // Fix: same fallback logic as saveRowClickHandler
     const barangay = row.dataset.barangay || currentBarangayName || '';
     const isSaved = savedLocations.some(
       l => l.businesses[0] === name && l.locationName === barangay
@@ -499,7 +500,6 @@ function markSavedInCurrentList() {
   });
 }
 
-
 function attachSaveRowListeners() {
   document.querySelectorAll('#rec-list .save-row').forEach(row => {
     row.removeEventListener('click', saveRowClickHandler);
@@ -513,7 +513,6 @@ async function saveRowClickHandler(e) {
   const row = e.currentTarget;
 
   const bizName = row.dataset.name;
-  // Fix: always fall back to currentBarangayName if data-barangay is empty
   const barangay = row.dataset.barangay || currentBarangayName || '';
   const label = row.querySelector('span');
   const saveKey = `${bizName}:${barangay}`;
@@ -525,7 +524,6 @@ async function saveRowClickHandler(e) {
     if (msg) msg.textContent = `Remove "${formatBizName(bizName)}" from saved?`;
 
     unsavePendingCallback = async () => {
-      // Fix: match by business_type AND locationName (barangay)
       const savedLoc = savedLocations.find(
         l => l.businesses[0] === bizName && l.locationName === barangay
       );
@@ -535,28 +533,18 @@ async function saveRowClickHandler(e) {
       row.classList.remove('saved');
       if (label) label.textContent = 'Save';
       locSavedItems.delete(saveKey);
-      await fetchSavedRecommendations(); // refresh saved list
-      reportLogSaved({ 
-        action: 'removed', 
-        business_type: bizName, 
-        barangay, 
-        lat: currentClickLat, 
-        lon: currentClickLng 
-      });
+      await fetchSavedRecommendations();
+      reportLogSaved({ action: 'removed', business_type: bizName, barangay, lat: currentClickLat, lon: currentClickLng });
     };
 
     document.getElementById('unsave-modal')?.classList.add('open');
     return;
   }
 
-  // Fix: grab lat/lon at click time before any async gap
   const lat = currentClickLat;
   const lon = currentClickLng;
 
-  if (!lat || !lon) {
-    console.warn('No location selected, cannot save');
-    return;
-  }
+  if (!lat || !lon) return;
 
   const result = await saveRecommendationToDB(bizName, barangay, lat, lon);
 
@@ -565,15 +553,7 @@ async function saveRowClickHandler(e) {
     if (label) label.textContent = 'Saved';
     locSavedItems.add(saveKey);
     await fetchSavedRecommendations();
-    reportLogSaved({ 
-      action: 'saved', 
-      business_type: bizName, 
-      barangay, 
-      lat, 
-      lon 
-    });
-  } else {
-    console.error('Save failed:', result.message);
+    reportLogSaved({ action: 'saved', business_type: bizName, barangay, lat, lon });
   }
 }
 
@@ -608,7 +588,9 @@ async function renderIdeasAndPins({ type, barangay, prefs, allowPins }) {
       reportLogRecommendation({
         idea,
         area: barangay || currentBarangayName || currentLocShortName,
-        pinCount
+        pinCount,
+        lat: currentClickLat,
+        lon: currentClickLng
       });
 
       loadAreaDemographics(barangay || currentBarangayName, idea);
@@ -768,11 +750,30 @@ async function handleLocationSelect(lat, lon, source = 'map') {
     await handleLocationSelect(p.lat, p.lng, 'drag');
   });
 
-  const svDiv = document.getElementById('street-view');
-  if (svDiv) {
-    svDiv.innerHTML = `<iframe src="https://www.mapillary.com/embed?map_style=Mapillary%20light&lat=${currentClickLat}&lng=${currentClickLng}&z=17" style="width:100%;height:100%;border:none;"></iframe>`;
-    svDiv.style.display = 'block';
-  }
+ const svDiv = document.getElementById('street-view');
+if (svDiv) {
+  const latQ = encodeURIComponent(currentClickLat);
+  const lonQ = encodeURIComponent(currentClickLng);
+
+  svDiv.style.display = 'block';
+  svDiv.innerHTML = `
+    <div style="padding:10px;font-size:13px;color:#1a3a5c;">
+      <div style="font-weight:700;margin-bottom:8px;">Street View</div>
+      <iframe
+        title="Mapillary"
+        loading="lazy"
+        referrerpolicy="no-referrer"
+        src="https://www.mapillary.com/embed?map_style=Mapillary%20light&lat=${latQ}&lng=${lonQ}&z=17"
+        style="width:100%;height:100%;min-height:240px;border:none;border-radius:12px;background:#fff;"
+      ></iframe>
+
+      <div style="margin-top:8px;">
+        If Mapillary fails to load, open:
+        <a href="https://www.google.com/maps?q=${latQ},${lonQ}" target="_blank" rel="noreferrer">Google Maps</a>
+      </div>
+    </div>
+  `;
+}
 
   filterPanel.classList.remove('open');
   savedPanel.classList.remove('open');
@@ -1172,9 +1173,33 @@ function toggleCollapse(key) {
   body.classList.toggle('open', !isOpen);
   arrow.classList.toggle('rotated', !isOpen);
 }
+function parseJumpTarget(){
+  try{
+    const raw = localStorage.getItem('mapJumpTarget');
+    if(!raw) return null;
+    const j = JSON.parse(raw);
+    const lat = Number(j?.lat);
+    const lon = Number(j?.lon);
+    if(!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+    return { lat, lon, source: j?.source || 'report_jump' };
+  }catch{
+    return null;
+  }
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
   fetchSavedRecommendations();
+
+  try {
+    const jump = parseJumpTarget();
+    if (jump) {
+      localStorage.removeItem('mapJumpTarget');
+      map.setView([jump.lat, jump.lon], 16);
+      await handleLocationSelect(jump.lat, jump.lon, jump.source);
+    }
+  } catch (e) {
+    console.warn('Jump-to-map failed:', e);
+  }
 
   try {
     const res = await fetch('/api/me');
@@ -1182,18 +1207,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const affiliation = (data.affiliation || '').toLowerCase().trim();
 
     if (affiliation === 'entrepreneur') {
-      document.querySelectorAll('.entrepreneur-only').forEach(el => {
-        el.style.display = '';
-      });
+      document.querySelectorAll('.entrepreneur-only').forEach(el => { el.style.display = ''; });
     } else {
-      document.querySelectorAll('.entrepreneur-only').forEach(el => {
-        el.style.display = 'none';
-      });
+      document.querySelectorAll('.entrepreneur-only').forEach(el => { el.style.display = 'none'; });
     }
   } catch (err) {
     console.error('Failed to fetch user info:', err);
-    document.querySelectorAll('.entrepreneur-only').forEach(el => {
-      el.style.display = 'none';
-    });
+    document.querySelectorAll('.entrepreneur-only').forEach(el => { el.style.display = 'none'; });
   }
 });

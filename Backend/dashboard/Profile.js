@@ -126,9 +126,6 @@ cancelBtn?.addEventListener('click',cancelEditing);
 navProfile?.addEventListener('click',()=>showSection('profile'));
 navReports?.addEventListener('click',()=>showSection('reports'));
 
-logoutBtn?.addEventListener('click',async()=>{
-  try{await fetch('/logout',{method:'GET',credentials:'include'});}catch{}
-  window.location.href='dashboard.html';
-});
+logoutBtn?.addEventListener('click',()=>{window.location.href='/dashboard/dashboard.html';});
 
 document.addEventListener('DOMContentLoaded',async()=>{await loadUserData();showSection('profile');});

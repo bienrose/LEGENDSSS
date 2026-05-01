@@ -28,27 +28,6 @@ body {
   gap: 18px
 }
 
-.sidebar-top {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  margin-top: 10px
-}
-
-.avatar {
-  width: 96px;
-  height: 96px;
-  border-radius: 50%;
-  background: #143a5c
-}
-
-.role-label {
-  font-weight: 900;
-  color: #143a5c;
-  font-size: 20px
-}
-
 .nav {
   display: flex;
   flex-direction: column;
@@ -62,7 +41,7 @@ body {
   border-radius: 12px;
   border: none;
   cursor: pointer;
-  background: rgb(255, 255, 255);
+  background: #fff;
   font-weight: 900;
   color: #143a5c;
   text-align: left
@@ -85,12 +64,13 @@ body {
   background: rgba(255, 255, 255, .75);
   font-weight: 900;
   color: #143a5c;
-  text-align: center;
+  text-align: center
 }
+
 .logout-btn:hover {
-  background:  rgba(175, 224, 255, 0.9);
+  background: rgba(175, 224, 255, .9);
   color: #1e344a;
-  transition: background 0.3s, color 0.3s;
+  transition: background .3s, color .3s
 }
 
 .main {
@@ -211,6 +191,18 @@ body {
   cursor: pointer
 }
 
+.cancel-btn:hover {
+  background: rgba(175, 224, 255, .9);
+  color: #143a5c;
+  transition: background .3s, color .3s
+}
+
+.edit-btn:hover,
+.save-btn:hover {
+  background: rgba(20, 58, 92, .8);
+  transition: background .3s
+}
+
 .reports-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -229,6 +221,12 @@ body {
   font-weight: 900;
   color: #143a5c;
   margin-bottom: 10px
+}
+
+.report-list {
+  max-height: 360px;
+  overflow: auto;
+  padding-right: 6px
 }
 
 .report-row {
@@ -289,7 +287,8 @@ body {
 
   .nav {
     flex: 1;
-    flex-direction: row
+    flex-direction: row;
+    margin-top: 0
   }
 
   .sidebar-bottom {
@@ -321,3 +320,5 @@ body {
   background: rgba(20, 58, 92, .8);
   transition: background 0.3s;
 }
+.report-row-click{cursor:pointer}
+.report-row-click:hover{border-color:rgba(20,58,92,.35);box-shadow:0 4px 12px rgba(0,0,0,.06)}
