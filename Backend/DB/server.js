@@ -80,6 +80,44 @@ function ageScore(ageGroup) {
   return good.includes(ageGroup) ? 1 : 0;
 }
 
+async function isSubCategorySaturated(barangay, subCategory) {
+  if (!subCategory || !barangay) return false;
+  
+    const stopWords = [
+    'place', 'restaurant', 'owner', 'shop', 'store', 'business', 'service',
+    'company', 'center', 'centre', 'hub', 'spot', 'joint', 'house', 'bar',
+    'cafe', 'diner', 'grill', 'bistro', 'parlor', 'parlour', 'salon',
+    'the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had',
+    'her', 'was', 'one', 'our', 'out', 'has', 'have', 'their', 'its',
+    'firm', 'office', 'agency', 'studio', 'workshop', 'clinic', 'lab',
+    'branch', 'outlet', 'depot', 'warehouse', 'factory', 'plant', 'mill',
+    'facility', 'station', 'terminal', 'garage', 'yard', 'lot', 'site',
+    'group', 'enterprise', 'venture', 'operation', 'establishment',
+    'provider', 'supplier', 'dealer', 'distributor', 'trader', 'vendor',
+    'retailer', 'wholesaler', 'merchant', 'franchise', 'chain',
+    'consultancy', 'consulting', 'solutions', 'management', 'holdings',
+    'inc', 'llc', 'ltd', 'corp', 'co', 'corporation', 'limited',
+    'associates', 'partners'
+  ];
+  const keywords = subCategory.toLowerCase().trim().split(/\s+/).filter(w => w.length > 2 && !stopWords.includes(w));
+  if (keywords.length === 0) return false;
+  
+  let sql = `SELECT COUNT(*) AS cnt FROM businesses 
+             WHERE LOWER(TRIM(barangay)) = LOWER(TRIM(?)) AND (`;
+  const params = [barangay];
+  
+  const conditions = keywords.map(() => `(LOWER(line_of_business) LIKE ? OR LOWER(business_trade_name) LIKE ?)`);
+  sql += conditions.join(' OR ') + ')';
+  
+  keywords.forEach(kw => {
+    params.push(`%${kw}%`, `%${kw}%`);
+  });
+  
+  const [rows] = await geoDB.query(sql, params);
+  const count = rows[0]?.cnt || 0;
+  return count >= 2;
+}
+
 function dedupeByLatLon(rows, precision = 5) {
   const seen = new Set();
   return rows.filter(r => {
@@ -159,7 +197,7 @@ app.get("/", (req, res) => {
 
 app.post("/register", async (req, res) => {
   try {
-    const { fullname, email, username, password, affiliation } = req.body;
+    const { fullname, email, username, password, affiliation, industry, industry_specific } = req.body;
     const [existing] = await legendDB.query("SELECT id FROM users WHERE email = ? OR username = ?", [email, username]);
     if (existing.length > 0) return res.status(400).json({ success: false, message: "Email or username already exists" });
 
@@ -170,7 +208,7 @@ app.post("/register", async (req, res) => {
     const tempId = crypto.randomBytes(16).toString("hex");
 
     pendingVerifications.set(tempId, {
-      fullname, email, username, hashedPassword: hashed, affiliation, code, codeExpiresAt: expiry
+      fullname, email, username, hashedPassword: hashed, affiliation, industry: industry || null, industry_specific: industry_specific || null, code, codeExpiresAt: expiry
     });
 
     await sendVerificationCode(email, username, code);
@@ -194,9 +232,9 @@ app.post("/verify-code", async (req, res) => {
     if (data.code !== code) return res.status(400).json({ success: false, message: "Invalid code" });
 
     await legendDB.query(
-      `INSERT INTO users (fullname, email, username, password, is_verified, verified_at, registered_at, affiliation, role)
-       VALUES (?, ?, ?, ?, 1, NOW(), NOW(), ?, 'user')`,
-      [data.fullname, data.email, data.username, data.hashedPassword, data.affiliation]
+      `INSERT INTO users (fullname, email, username, password, is_verified, verified_at, registered_at, affiliation, industry, industry_specific, role)
+       VALUES (?, ?, ?, ?, 1, NOW(), NOW(), ?, ?, ?, 'user')`,
+      [data.fullname, data.email, data.username, data.hashedPassword, data.affiliation, data.industry || null, data.industry_specific || null]
     );
 
     pendingVerifications.delete(tempUserId);
@@ -224,6 +262,8 @@ app.post("/login", async (req, res) => {
       email: user.email,
       username: user.username,
       affiliation: user.affiliation,
+      industry: user.industry || '',
+      industry_specific: user.industry_specific || '',
       role: user.role || "user"
     };
 
@@ -314,11 +354,24 @@ app.get("/admin", requireAdminPage, (req, res) => {
   res.sendFile(path.join(adminDashboardPath, "admindb.html"));
 });
 
-app.get("/api/me", requireAuth, (req, res) => {
-  res.json({
-    success: true,
-    affiliation: req.session.user.affiliation || ''
-  });
+app.get("/api/me", requireAuth, async (req, res) => {
+  try {
+    const [rows] = await legendDB.query(
+      "SELECT affiliation, industry, industry_specific FROM users WHERE id = ?",
+      [req.session.user.id]
+    );
+    if (rows.length === 0) {
+      return res.json({ success: true, affiliation: '', industry: '', industry_specific: '' });
+    }
+    res.json({
+      success: true,
+      affiliation: rows[0].affiliation || '',
+      industry: rows[0].industry || '',
+      industry_specific: rows[0].industry_specific || ''
+    });
+  } catch (err) {
+    res.json({ success: true, affiliation: '', industry: '', industry_specific: '' });
+  }
 });
 
 app.get("/api/user-profile", requireAuth, async (req, res) => {
@@ -847,12 +900,53 @@ app.get("/api/ideas", requireAuth, async (req, res) => {
     const [ideaRows] = await geoDB.query(sql, params);
     if (!ideaRows.length) return res.json({ success: true, data: [] });
 
-    if (!prefList.length) {
-      return res.json({ success: true, data: ideaRows.slice(0, parseInt(top)).map(r => r.name) });
+    // ── Sub-category saturation check ──────────────────────────────────
+    const userSubCategory = (req.session.user?.industry_specific || '').trim();
+    const ownBarangay = barangay || '';
+    let userSubCategoryIdea = null;
+    let filteredIdeaRows = ideaRows;
+
+    if (userSubCategory && ownBarangay) {
+      const saturated = await isSubCategorySaturated(ownBarangay, userSubCategory);
+      const subKw = userSubCategory.toLowerCase();
+      const keywords = subKw.split(/\s+/).filter(w => w.length > 2);
+            if (!saturated) {
+        userSubCategoryIdea = ideaRows.find(row => {
+          const name = (row.name || '').toLowerCase();
+          return keywords.some(kw => name.includes(kw));
+        });
+        if (userSubCategoryIdea) {
+          filteredIdeaRows = ideaRows.filter(row => row !== userSubCategoryIdea);
+        } else {
+          // No match in DB but not saturated — create synthetic idea
+          userSubCategoryIdea = { name: userSubCategory };
+        }
+      } else {
+        filteredIdeaRows = ideaRows.filter(row => {
+          const name = (row.name || '').toLowerCase();
+          return !keywords.some(kw => name.includes(kw));
+        });
+      }
     }
 
-    const ideas = ideaRows.map(r => r.name);
+    if (!filteredIdeaRows.length && !userSubCategoryIdea) {
+      return res.json({ success: true, data: [] });
+    }
 
+    if (!prefList.length) {
+      let result = [];
+      if (userSubCategoryIdea) {
+        result.push(userSubCategoryIdea.name);
+      }
+      const remaining = filteredIdeaRows.slice(0, parseInt(top) - result.length).map(r => r.name);
+      result = result.concat(remaining);
+      return res.json({ success: true, data: result.slice(0, parseInt(top)) });
+    }
+
+    const ideas = filteredIdeaRows.map(r => r.name);
+    if (userSubCategoryIdea && !ideas.includes(userSubCategoryIdea.name)) {
+      ideas.unshift(userSubCategoryIdea.name);
+    }
     const [allBiz] = await geoDB.query(
       `SELECT barangay, line_of_business, CAST(lat AS DECIMAL(10,7)) AS lat, CAST(lon AS DECIMAL(10,7)) AS lon
        FROM businesses
@@ -1015,9 +1109,72 @@ app.get("/api/ideas-by-point", requireAuth, async (req, res) => {
     sql += " GROUP BY line_of_business ORDER BY cnt DESC";
 
     const [ideaRows] = await geoDB.query(sql, params);
-    if (!ideaRows.length) return res.json({ success: true, data: [] });
 
-    const ideas = ideaRows.map(r => r.name);
+    // ── Sub-category saturation check ──────────────────────────────────
+    const userSubCategory = (req.session.user?.industry_specific || '').trim();
+    let userSubCategoryIdea = null;
+    let filteredIdeaRows = ideaRows;
+
+    if (userSubCategory) {
+      const nearestBrgy = await (async () => {
+        try {
+          const [barangays] = await geoDB.query(
+            `SELECT barangay_name, center_lat, center_lon 
+             FROM demographic_pasig 
+             WHERE center_lat IS NOT NULL AND center_lon IS NOT NULL`
+          );
+          let nearest = null;
+          let minDist = Infinity;
+          barangays.forEach(row => {
+            const dist = haversineMeters(latNum, lonNum, Number(row.center_lat), Number(row.center_lon));
+            if (dist < minDist) { minDist = dist; nearest = row.barangay_name; }
+          });
+          return nearest || '';
+        } catch { return ''; }
+      })();
+
+      if (nearestBrgy) {
+        const saturated = await isSubCategorySaturated(nearestBrgy, userSubCategory);
+        const subKw = userSubCategory.toLowerCase();
+        const keywords = subKw.split(/\s+/).filter(w => w.length > 2);
+        if (!saturated) {
+          userSubCategoryIdea = ideaRows.find(row => {
+            const name = (row.name || '').toLowerCase();
+            return keywords.some(kw => name.includes(kw));
+          });
+          if (userSubCategoryIdea) {
+            filteredIdeaRows = ideaRows.filter(row => row !== userSubCategoryIdea);
+          } else {
+            // No match in DB but not saturated — create synthetic idea
+            userSubCategoryIdea = { name: userSubCategory };
+          }
+        } else {
+          filteredIdeaRows = ideaRows.filter(row => {
+            const name = (row.name || '').toLowerCase();
+            return !keywords.some(kw => name.includes(kw));
+          });
+        }
+      }
+    }
+
+    if (!filteredIdeaRows.length && !userSubCategoryIdea) {
+      return res.json({ success: true, data: [] });
+    }
+
+    if (!prefList.length) {
+      let result = [];
+      if (userSubCategoryIdea) {
+        result.push(userSubCategoryIdea.name);
+      }
+      const remaining = filteredIdeaRows.slice(0, parseInt(top) - result.length).map(r => r.name);
+      result = result.concat(remaining);
+      return res.json({ success: true, data: result.slice(0, parseInt(top)) });
+    }
+
+    const ideas = filteredIdeaRows.map(r => r.name);
+    if (userSubCategoryIdea && !ideas.includes(userSubCategoryIdea.name)) {
+      ideas.unshift(userSubCategoryIdea.name);
+    }
 
     const [allBiz] = await geoDB.query(
       `SELECT barangay, line_of_business, CAST(lat AS DECIMAL(10,7)) AS lat, CAST(lon AS DECIMAL(10,7)) AS lon

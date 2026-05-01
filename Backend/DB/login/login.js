@@ -146,7 +146,6 @@ function handleAspiringRecChange() {
 
 /* =========================
    INDUSTRY VALUE RESOLVER
-   Resolves the final industry value, handling the "Others" case
 ========================= */
 
 function resolveIndustry() {
@@ -230,10 +229,8 @@ async function register() {
   passwordInput.classList.remove("input-error");
   requirementsBox.style.display = "none";
 
-  // Resolve industry — uses the "Others" typed value if applicable
   const industry = resolveIndustry();
 
-  // Resolve industry_specific (sub-category) and recommendation preference
   let industry_specific = "";
   let industryRecommendations = true;
 
@@ -262,8 +259,8 @@ async function register() {
       deviceId: getDeviceId(),
       userAgent: navigator.userAgent,
       affiliation,
-      industry,              // → saved to users.industry
-      industry_specific,     // → saved to users.industry_specific
+      industry,
+      industry_specific,
       industryRecommendations
     })
   });
@@ -288,5 +285,177 @@ async function register() {
       text: data.message || "Registration failed",
       icon: "error"
     });
+  }
+}
+
+async function verifyCode() {
+  const code = document.getElementById("verification-code-input").value.trim();
+  const tempUserId = localStorage.getItem("tempUserId");
+
+  if (!tempUserId) {
+    SwalFixed.fire({ title: "Error", text: "Session expired. Please register again.", icon: "error" });
+    showRegister();
+    return;
+  }
+
+  if (!code || code.length !== 6) {
+    SwalFixed.fire({ title: "Error", text: "Please enter the 6-digit code.", icon: "error" });
+    return;
+  }
+
+  SwalFixed.fire({
+    title: "Verifying...",
+    allowOutsideClick: false,
+    didOpen: () => SwalFixed.showLoading()
+  });
+
+  const res = await fetch("/verify-code", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ tempUserId, code })
+  });
+
+  const data = await res.json();
+
+  if (res.ok && data.success) {
+    localStorage.removeItem("tempUserId");
+    SwalFixed.fire({
+      title: "Success",
+      text: "Account verified! You can now log in.",
+      icon: "success"
+    }).then(() => {
+      showLogin();
+    });
+  } else {
+    SwalFixed.fire({
+      title: "Error",
+      text: data.message || "Verification failed",
+      icon: "error"
+    });
+  }
+}
+
+async function resendVerificationCode() {
+  SwalFixed.fire({
+    title: "Info",
+    text: "Please check your email for the verification code. If you don't see it, check your spam folder.",
+    icon: "info"
+  });
+}
+
+async function sendForgotCode() {
+  const email = document.getElementById("forgot-email").value.trim();
+
+  if (!email) {
+    SwalFixed.fire({ title: "Error", text: "Please enter your email.", icon: "error" });
+    return;
+  }
+
+  SwalFixed.fire({
+    title: "Sending...",
+    allowOutsideClick: false,
+    didOpen: () => SwalFixed.showLoading()
+  });
+
+  const res = await fetch("/forgot-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email })
+  });
+
+  const data = await res.json();
+
+  if (res.ok && data.success) {
+    forgotPendingEmail = email;
+    document.getElementById("forgot-password-section").style.display = "none";
+    document.getElementById("forgot-verification-section").style.display = "block";
+    SwalFixed.fire({ title: "Success", text: "Reset code sent to your email.", icon: "success" });
+  } else {
+    SwalFixed.fire({ title: "Error", text: data.message || "Failed to send code", icon: "error" });
+  }
+}
+
+async function verifyForgotCode() {
+  const code = document.getElementById("forgot-code-input").value.trim();
+
+  if (!forgotPendingEmail) {
+    SwalFixed.fire({ title: "Error", text: "Session expired. Please try again.", icon: "error" });
+    showForgotPassword();
+    return;
+  }
+
+  if (!code || code.length !== 6) {
+    SwalFixed.fire({ title: "Error", text: "Please enter the 6-digit code.", icon: "error" });
+    return;
+  }
+
+  SwalFixed.fire({
+    title: "Verifying...",
+    allowOutsideClick: false,
+    didOpen: () => SwalFixed.showLoading()
+  });
+
+  const res = await fetch("/verify-forgot-code", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: forgotPendingEmail, code })
+  });
+
+  const data = await res.json();
+
+  if (res.ok && data.success) {
+    document.getElementById("forgot-verification-section").style.display = "none";
+    document.getElementById("reset-password-section").style.display = "block";
+  } else {
+    SwalFixed.fire({ title: "Error", text: data.message || "Invalid code", icon: "error" });
+  }
+}
+
+async function resetPassword() {
+  const newPassword = document.getElementById("new-password").value;
+  const confirmPassword = document.getElementById("confirm-password").value;
+
+  if (newPassword !== confirmPassword) {
+    SwalFixed.fire({ title: "Error", text: "Passwords do not match.", icon: "error" });
+    return;
+  }
+
+  const checks = validatePassword(newPassword);
+  if (!checks.length || !checks.upper || !checks.lower || !checks.number) {
+    SwalFixed.fire({ title: "Error", text: "Password does not meet requirements.", icon: "error" });
+    return;
+  }
+
+  if (!forgotPendingEmail) {
+    SwalFixed.fire({ title: "Error", text: "Session expired. Please try again.", icon: "error" });
+    showForgotPassword();
+    return;
+  }
+
+  SwalFixed.fire({
+    title: "Resetting...",
+    allowOutsideClick: false,
+    didOpen: () => SwalFixed.showLoading()
+  });
+
+  const res = await fetch("/reset-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: forgotPendingEmail, newPassword })
+  });
+
+  const data = await res.json();
+
+  if (res.ok && data.success) {
+    forgotPendingEmail = null;
+    SwalFixed.fire({
+      title: "Success",
+      text: "Password reset successfully. You can now log in.",
+      icon: "success"
+    }).then(() => {
+      showLogin();
+    });
+  } else {
+    SwalFixed.fire({ title: "Error", text: data.message || "Reset failed", icon: "error" });
   }
 }
