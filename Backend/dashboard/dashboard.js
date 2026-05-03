@@ -15,15 +15,11 @@ let lastFilteredPrefs = null;
 let searchHistory = [];
 const locSavedItems = new Set();
 
-// Populated on DOMContentLoaded from /api/me — used to auto-pass category
-// to the ideas-by-point API so recommendations match the user's industry
+// Populated on DOMContentLoaded from /api/me
 let userIndustry = '';
 let userIndustrySpecific = '';
 
 // ─── INDUSTRY → FILTER CHECKBOX MAP ─────────────────────────────────────────
-// Maps the user's industry (from DB, lowercased) to the matching checkbox id.
-// Add more entries here as needed to cover new industries.
-
 const INDUSTRY_FILTER_MAP = {
   'food and beverages': 'f-food',
   'food & beverages': 'f-food',
@@ -92,12 +88,11 @@ const INDUSTRY_FILTER_MAP = {
   'general': 'f-general'
 };
 
+// ─── REPORT LOGGING ───────────────────────────────────────────────────────────
 function reportLogRead() {
   try {
     return JSON.parse(localStorage.getItem('reportLogs') || '{"searchPins":[],"recommendations":[],"saved":[]}') || {
-      searchPins: [],
-      recommendations: [],
-      saved: []
+      searchPins: [], recommendations: [], saved: []
     };
   } catch {
     return { searchPins: [], recommendations: [], saved: [] };
@@ -115,7 +110,6 @@ function reportNow() {
 function reportPush(kind, payload) {
   const logs = reportLogRead();
   if (!logs[kind]) logs[kind] = [];
-
   if (kind === 'searchPins') {
     const key = `${payload.source || ''}::${(payload.locationName || '').trim().toLowerCase()}`;
     logs[kind] = logs[kind].filter(x => {
@@ -123,7 +117,6 @@ function reportPush(kind, payload) {
       return k2 !== key;
     });
   }
-
   logs[kind].unshift(payload);
   logs[kind] = logs[kind].slice(0, 200);
   reportLogWrite(logs);
@@ -143,111 +136,67 @@ function reportCurrentFiltersSnapshot() {
   };
 }
 
-// ─── REPORT LOGGING (localStorage + DB) ─────────────────────────────────────
-
 async function reportLogSearchOrPin({ source, locationName, lat, lon }) {
   const f = reportCurrentFiltersSnapshot();
   reportPush('searchPins', {
-    at: reportNow(),
-    source,
+    at: reportNow(), source,
     locationName: locationName || null,
-    lat: lat ?? null,
-    lon: lon ?? null,
-    filters: f
+    lat: lat ?? null, lon: lon ?? null, filters: f
   });
-
   try {
     await fetch('/api/report/search-pin', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        query: locationName || null,
-        source: source || 'map',
-        lat: lat ?? null,
-        lon: lon ?? null
-      })
+      body: JSON.stringify({ query: locationName || null, source: source || 'map', lat: lat ?? null, lon: lon ?? null })
     });
-  } catch (e) {
-    console.warn('DB report search-pin failed:', e);
-  }
+  } catch (e) { console.warn('DB report search-pin failed:', e); }
 }
 
 async function reportLogRecommendation({ idea, area, pinCount, lat, lon }) {
   const f = reportCurrentFiltersSnapshot();
   reportPush('recommendations', {
-    at: reportNow(),
-    idea,
-    area: area || null,
-    pinCount: pinCount ?? null,
-    lat: lat ?? null,
-    lon: lon ?? null,
-    filters: f
+    at: reportNow(), idea, area: area || null,
+    pinCount: pinCount ?? null, lat: lat ?? null, lon: lon ?? null, filters: f
   });
-
   try {
     await fetch('/api/report/recommendation', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        idea: idea || null,
-        area: area || null,
-        lat: lat ?? null,
-        lon: lon ?? null
-      })
+      body: JSON.stringify({ idea: idea || null, area: area || null, lat: lat ?? null, lon: lon ?? null })
     });
-  } catch (e) {
-    console.warn('DB report recommendation failed:', e);
-  }
+  } catch (e) { console.warn('DB report recommendation failed:', e); }
 }
 
 async function reportLogSaved({ action, business_type, barangay, lat, lon }) {
   reportPush('saved', {
-    at: reportNow(),
-    action,
-    business_type,
-    barangay: barangay || null,
-    lat: lat ?? null,
-    lon: lon ?? null
+    at: reportNow(), action, business_type,
+    barangay: barangay || null, lat: lat ?? null, lon: lon ?? null
   });
-
   try {
     await fetch('/api/report/saved', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        action: action || 'saved',
-        business_type: business_type || null,
-        barangay: barangay || null,
-        lat: lat ?? null,
-        lon: lon ?? null
+        action: action || 'saved', business_type: business_type || null,
+        barangay: barangay || null, lat: lat ?? null, lon: lon ?? null
       })
     });
-  } catch (e) {
-    console.warn('DB report saved failed:', e);
-  }
+  } catch (e) { console.warn('DB report saved failed:', e); }
 }
 
 // ─── MAP SETUP ───────────────────────────────────────────────────────────────
-
 const map = L.map('map').setView([14.5764, 121.0851], 15);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '© OpenStreetMap contributors', maxZoom: 19
 }).addTo(map);
 
 const PASIG_BOUNDS = {
-  minLat: 14.5200,
-  maxLat: 14.6400,
-  minLon: 121.0400,
-  maxLon: 121.1300
+  minLat: 14.5200, maxLat: 14.6400, minLon: 121.0400, maxLon: 121.1300
 };
 
 function isInPasig(lat, lon) {
-  return (
-    lat >= PASIG_BOUNDS.minLat &&
-    lat <= PASIG_BOUNDS.maxLat &&
-    lon >= PASIG_BOUNDS.minLon &&
-    lon <= PASIG_BOUNDS.maxLon
-  );
+  return lat >= PASIG_BOUNDS.minLat && lat <= PASIG_BOUNDS.maxLat &&
+         lon >= PASIG_BOUNDS.minLon && lon <= PASIG_BOUNDS.maxLon;
 }
 
 const pinRangeEl = document.getElementById('pin-range');
@@ -280,10 +229,7 @@ async function replotFilteredPins() {
   const requestId = ++activeRequestId;
   const top = getFilteredPinCount();
   const recs = await fetchIdeaLocations({
-    idea: lastFilteredIdea,
-    barangay: lastFilteredBarangay,
-    top,
-    prefs: lastFilteredPrefs
+    idea: lastFilteredIdea, barangay: lastFilteredBarangay, top, prefs: lastFilteredPrefs
   });
   if (!isFilterMode || requestId !== activeRequestId) return;
   plotLocations(recs);
@@ -291,18 +237,15 @@ async function replotFilteredPins() {
 
 if (pinCountInput && pinCountLabel) {
   setPinDefault();
-
   pinCountInput.addEventListener('input', () => {
     if (!isFilterMode) return;
     pinCountLabel.textContent = String(getFilteredPinCount());
   });
-
   const fireSlider = async () => {
     if (!isFilterMode) return;
     pinCountLabel.textContent = String(getFilteredPinCount());
     await replotFilteredPins();
   };
-
   pinCountInput.addEventListener('change', fireSlider);
   pinCountInput.addEventListener('pointerup', fireSlider);
   pinCountInput.addEventListener('mouseup', fireSlider);
@@ -401,38 +344,23 @@ function formatBizName(s) {
   const raw = (s || '').toString().trim();
   if (!raw) return '';
   const upper = raw.toUpperCase();
-
   for (const [code, label] of Object.entries(CODE_LABELS)) {
     const pattern = new RegExp(`^${code}[\\s\\-\\.]+`, 'i');
     if (pattern.test(raw)) {
       const remainder = raw.replace(pattern, '').trim();
       const remainderUpper = remainder.toUpperCase();
-
       for (const [kw, kwLabel] of KEYWORD_LABELS) {
         if (remainderUpper.includes(kw)) return kwLabel;
       }
-
       if (!remainder) return label;
-
-      const titled = remainder
-        .toLowerCase()
-        .split(/\s+/)
-        .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-        .join(' ');
-
+      const titled = remainder.toLowerCase().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
       return `${label} - ${titled}`;
     }
   }
-
   for (const [kw, kwLabel] of KEYWORD_LABELS) {
     if (upper.includes(kw)) return kwLabel;
   }
-
-  return raw
-    .toLowerCase()
-    .split(/\s+/)
-    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(' ');
+  return raw.toLowerCase().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 }
 
 function escapeHtml(str) {
@@ -441,26 +369,18 @@ function escapeHtml(str) {
 
 function plotLocations(recs) {
   if (!isFilterMode && !allowIdeaPins) return;
-
   clearBusinessMarkers();
-
   const bounds = L.latLngBounds();
-
   recs.forEach((rec) => {
     if (!rec.lat || !rec.lon) return;
-
     const lat = Number(rec.lat);
     const lon = Number(rec.lon);
     const brgy = rec.barangay_name || '';
-
-    const marker = L.marker([lat, lon])
-      .addTo(map)
+    const marker = L.marker([lat, lon]).addTo(map)
       .bindPopup(`<b>${escapeHtml(brgy)}</b><br>${lat.toFixed(6)}, ${lon.toFixed(6)}`);
-
     businessMarkers.push(marker);
     bounds.extend(marker.getLatLng());
   });
-
   if (bounds.isValid()) map.fitBounds(bounds.pad(0.2));
 }
 
@@ -514,15 +434,11 @@ async function saveRecommendationToDB(business_type, barangay, lat, lon) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        business_type,
-        barangay: barangay || null,
-        suitability_score: null,
-        lat: lat ? parseFloat(lat) : null,
-        lon: lon ? parseFloat(lon) : null
+        business_type, barangay: barangay || null, suitability_score: null,
+        lat: lat ? parseFloat(lat) : null, lon: lon ? parseFloat(lon) : null
       })
     });
-    const data = await res.json();
-    return data;
+    return await res.json();
   } catch (err) {
     console.error('Error saving recommendation:', err);
     return { success: false, message: err.message };
@@ -532,8 +448,7 @@ async function saveRecommendationToDB(business_type, barangay, lat, lon) {
 async function deleteSavedRecommendationFromDB(dbId) {
   try {
     const res = await fetch(`/api/saved-recommendations/${dbId}`, { method: 'DELETE' });
-    const data = await res.json();
-    return data;
+    return await res.json();
   } catch (err) {
     console.error('Error deleting recommendation:', err);
     return { success: false };
@@ -544,9 +459,7 @@ function markSavedInCurrentList() {
   document.querySelectorAll('#rec-list .save-row').forEach(row => {
     const name = row.dataset.name;
     const barangay = row.dataset.barangay || currentBarangayName || '';
-    const isSaved = savedLocations.some(
-      l => l.businesses[0] === name && l.locationName === barangay
-    );
+    const isSaved = savedLocations.some(l => l.businesses[0] === name && l.locationName === barangay);
     const span = row.querySelector('span');
     if (isSaved) {
       row.classList.add('saved');
@@ -569,41 +482,31 @@ async function saveRowClickHandler(e) {
   e.stopPropagation();
   e.preventDefault();
   const row = e.currentTarget;
-
   const bizName = row.dataset.name;
   const barangay = row.dataset.barangay || currentBarangayName || '';
   const label = row.querySelector('span');
   const saveKey = `${bizName}:${barangay}`;
-
   const isCurrentlySaved = row.classList.contains('saved');
 
   if (isCurrentlySaved) {
     const msg = document.getElementById('unsave-msg');
     if (msg) msg.textContent = `Remove "${formatBizName(bizName)}" from saved?`;
-
     unsavePendingCallback = async () => {
-      const savedLoc = savedLocations.find(
-        l => l.businesses[0] === bizName && l.locationName === barangay
-      );
-      if (savedLoc && savedLoc.dbId) {
-        await deleteSavedRecommendationFromDB(savedLoc.dbId);
-      }
+      const savedLoc = savedLocations.find(l => l.businesses[0] === bizName && l.locationName === barangay);
+      if (savedLoc && savedLoc.dbId) await deleteSavedRecommendationFromDB(savedLoc.dbId);
       row.classList.remove('saved');
       if (label) label.textContent = 'Save';
       locSavedItems.delete(saveKey);
       await fetchSavedRecommendations();
       await reportLogSaved({ action: 'removed', business_type: bizName, barangay, lat: currentClickLat, lon: currentClickLng });
     };
-
     document.getElementById('unsave-modal')?.classList.add('open');
     return;
   }
 
   const lat = currentClickLat || null;
   const lon = currentClickLng || null;
-
   const result = await saveRecommendationToDB(bizName, barangay, lat, lon);
-
   if (result.success || result.message === 'Already saved') {
     row.classList.add('saved');
     if (label) label.textContent = 'Saved';
@@ -613,18 +516,28 @@ async function saveRowClickHandler(e) {
   }
 }
 
-async function renderIdeasAndPins({ type, barangay, prefs, allowPins }) {
-  const ideas = await fetchIdeas({ type, barangay, prefs });
+// ─── RENDER IDEAS AND PINS ────────────────────────────────────────────────────
+// Used by both filter mode and location click mode.
+// In filter mode (isFilterMode=true): clicking a rec-item shows pins on map.
+// Smart chip selection merges with type filter so top 3 reflect chip choice.
+async function renderIdeasAndPins({ type, barangay, prefs, allowPins, chipLabel }) {
+  // If a smart chip was selected, override the type with the chip's mapped category
+  const effectiveType = chipLabel ? resolveChipToCategory(chipLabel) || type : type;
+
+  const ideas = await fetchIdeas({ type: effectiveType, barangay, prefs });
   const listEl = document.getElementById('rec-list');
   if (!listEl) return;
 
   if (!ideas.length) {
-    listEl.innerHTML = '';
+    listEl.innerHTML = '<div class="rec-item" style="color:#888;font-size:13px;">No recommendations found.</div>';
     return;
   }
 
-  listEl.innerHTML = ideas.map((name, i) => `
-    <div class="rec-item" data-idx="${i}" data-idea="${escapeHtml(name)}">
+  // Show top 3 only — each item is clickable to show pins
+  const top3 = ideas.slice(0, 3);
+
+  listEl.innerHTML = top3.map((name, i) => `
+    <div class="rec-item" data-idx="${i}" data-idea="${escapeHtml(name)}" style="cursor:pointer;">
       <span class="rec-item-num">${i + 1}.</span>
       <span class="rec-item-name">${escapeHtml(formatBizName(name))}</span>
       <div class="save-row" data-name="${escapeHtml(name)}" data-barangay="${escapeHtml(barangay || '')}">
@@ -636,22 +549,21 @@ async function renderIdeasAndPins({ type, barangay, prefs, allowPins }) {
   attachSaveRowListeners();
 
   listEl.querySelectorAll('.rec-item').forEach(el => {
-    el.addEventListener('click', async () => {
+    el.addEventListener('click', async (e) => {
+      // Don't trigger pin if save button was clicked
+      if (e.target.closest('.save-row')) return;
       if (!allowPins) return;
-      const idea = el.dataset.idea;
 
+      const idea = el.dataset.idea;
       const pinCount = isFilterMode ? getFilteredPinCount() : 5;
+
       await reportLogRecommendation({
-        idea,
-        area: barangay || currentBarangayName || currentLocShortName,
-        pinCount,
-        lat: currentClickLat,
-        lon: currentClickLng
+        idea, area: barangay || currentBarangayName || currentLocShortName,
+        pinCount, lat: currentClickLat, lon: currentClickLng
       });
 
       loadAreaDemographics(barangay || currentBarangayName, idea);
 
-      const top = pinCount;
       if (isFilterMode) {
         lastFilteredIdea = idea;
         lastFilteredBarangay = barangay || null;
@@ -660,28 +572,102 @@ async function renderIdeasAndPins({ type, barangay, prefs, allowPins }) {
       } else {
         hidePinRange();
       }
+
+      const top = pinCount;
       const recs = await fetchIdeaLocations({ idea, barangay, top, prefs });
       plotLocations(recs);
+
+      // Highlight selected item
+      listEl.querySelectorAll('.rec-item').forEach(r => r.classList.remove('active'));
+      el.classList.add('active');
     });
   });
 
   markSavedInCurrentList();
 }
 
+// ─── RESOLVE CHIP LABEL → API CATEGORY ───────────────────────────────────────
+// Maps a smart chip label to the closest API category string.
+// Extend this map to match your /api/ideas ?category= values.
+function resolveChipToCategory(chipLabel) {
+  if (!chipLabel) return null;
+  const lower = chipLabel.toLowerCase();
+
+  const chipCategoryMap = {
+    // Food
+    'restaurant': 'FOOD', 'pizza restaurant': 'FOOD', 'coffee shop': 'FOOD',
+    'bakery': 'FOOD', 'fast food': 'FOOD', 'catering': 'FOOD', 'eatery': 'FOOD',
+    'grocery': 'FOOD', 'sari-sari store': 'FOOD', 'panciteria': 'FOOD',
+    'canteen': 'FOOD', 'water refilling station': 'FOOD', 'food cart': 'FOOD',
+    'milk tea shop': 'FOOD', 'juice bar': 'FOOD', 'ice cream shop': 'FOOD',
+    'burger joint': 'FOOD', 'ramen shop': 'FOOD', 'sushi restaurant': 'FOOD',
+    'bbq restaurant': 'FOOD', 'buffet restaurant': 'FOOD', 'seafood restaurant': 'FOOD',
+    'bakeshop': 'FOOD', 'pastry shop': 'FOOD', 'cake shop': 'FOOD',
+    'smoothie bar': 'FOOD', 'health food restaurant': 'FOOD', 'vegan restaurant': 'FOOD',
+    'turo-turo': 'FOOD', 'ihawan': 'FOOD', 'grill restaurant': 'FOOD',
+    'pares house': 'FOOD', 'tapsilugan': 'FOOD', 'silog restaurant': 'FOOD',
+    'lugawan': 'FOOD', 'mami house': 'FOOD', 'halo-halo shop': 'FOOD',
+    'lechon restaurant': 'FOOD',
+    // Retail
+    'sari-sari store': 'RETAIL', 'cellphone store': 'RETAIL', 'hardware store': 'RETAIL',
+    'appliance store': 'RETAIL', 'clothing store': 'RETAIL', 'bookstore': 'RETAIL',
+    'toy store': 'RETAIL', 'pharmacy': 'RETAIL', 'drug store': 'RETAIL',
+    'optical shop': 'RETAIL', 'pet shop': 'RETAIL', 'fish shop': 'RETAIL',
+    'meat shop': 'RETAIL', 'vegetable stall': 'RETAIL', 'market stall': 'RETAIL',
+    'gadget store': 'RETAIL', 'ukay-ukay': 'RETAIL', 'thrift store': 'RETAIL',
+    'mini mart': 'RETAIL', 'convenience store': 'RETAIL',
+    // Personal / Services
+    'salon': 'PERSONAL', 'barbershop': 'PERSONAL', 'spa': 'PERSONAL',
+    'massage': 'PERSONAL', 'laundry shop': 'PERSONAL', 'nail salon': 'PERSONAL',
+    'tattoo studio': 'PERSONAL', 'gym': 'PERSONAL', 'yoga studio': 'PERSONAL',
+    'car wash': 'PERSONAL', 'tailoring shop': 'PERSONAL',
+    // Healthcare
+    'medical clinic': 'HEALTHCARE', 'dental clinic': 'HEALTHCARE',
+    'laboratory': 'HEALTHCARE', 'veterinary clinic': 'HEALTHCARE',
+    // Finance
+    'pawnshop': 'FINANCE', 'lending': 'FINANCE', 'money remittance': 'FINANCE',
+    'insurance': 'FINANCE', 'cooperative': 'FINANCE',
+    // Education
+    'tutorial center': 'EDUCATION', 'review center': 'EDUCATION',
+    'school': 'EDUCATION', 'training center': 'EDUCATION', 'driving school': 'EDUCATION',
+    // Tech / IT
+    'internet café': 'TECH', 'software company': 'TECH', 'printing services': 'TECH',
+    'photography studio': 'TECH',
+    // Logistics
+    'trucking': 'LOGISTICS', 'courier service': 'LOGISTICS',
+    'delivery service': 'LOGISTICS', 'warehouse': 'LOGISTICS',
+    // Hospitality
+    'hotel': 'HOSPITALITY', 'pension house': 'HOSPITALITY', 'event venue': 'HOSPITALITY',
+    // Energy
+    'gas station': 'ENERGY', 'lpg dealer': 'ENERGY', 'water refilling station': 'ENERGY',
+    // Security
+    'security agency': 'SECURITY', 'manpower agency': 'SECURITY',
+    // Legal
+    'consultancy': 'LEGAL', 'law firm': 'LEGAL',
+    // General
+    'real estate': 'GENERAL', 'travel agency': 'GENERAL', 'funeral services': 'GENERAL'
+  };
+
+  return chipCategoryMap[lower] || null;
+}
+
+// ─── DONE BUTTON — SMART FILTER CHIP AWARE ───────────────────────────────────
 const barangayMap = {
   'b-bagong-ilog': 'Bagong Ilog','b-bagong-katipunan': 'Bagong Katipunan','b-bambang': 'Bambang','b-buting': 'Buting',
   'b-caniogan': 'Caniogan','b-dela-paz': 'Dela Paz','b-kalawaan': 'Kalawaan','b-kapasigan': 'Kapasigan','b-kapitolyo': 'Kapitolyo',
   'b-malinao': 'Malinao','b-manggahan': 'Manggahan','b-maybunga': 'Maybunga','b-oranbo': 'Oranbo','b-palatiw': 'Palatiw',
   'b-pinagbuhatan': 'Pinagbuhatan','b-pineda': 'Pineda','b-rosario': 'Rosario','b-sagad': 'Sagad','b-san-antonio': 'San Antonio',
-  'b-san-joaquin': 'San Joaquin','b-san-jose': 'San Jose','b-san-miguel': 'San Miguel','b-san-nicolas': 'San Nicolas','b-santa-lucia': 'Santa Lucia',
-  'b-santa-rosa': 'Santa Rosa','b-santolan': 'Santolan','b-sumilang': 'Sumilang','b-ugong': 'Ugong','b-vargas': 'F. Vargas','b-wack-wack': 'Wack-Wack'
+  'b-san-joaquin': 'San Joaquin','b-san-jose': 'San Jose','b-san-miguel': 'San Miguel','b-san-nicolas': 'San Nicolas',
+  'b-santa-lucia': 'Santa Lucia','b-santa-rosa': 'Santa Rosa','b-santolan': 'Santolan','b-sumilang': 'Sumilang','b-ugong': 'Ugong',
+  'b-vargas': 'F. Vargas','b-wack-wack': 'Wack-Wack'
 };
 
 const typeMap = {
   'f-food': 'FOOD','f-retail': 'RETAIL','f-personal': 'PERSONAL','f-tech': 'TECH','f-wholesale': 'WHOLESALE',
   'f-manufacturing': 'MANUFACTURING','f-it': 'IT','f-bpo': 'BPO','f-construction': 'CONSTRUCTION','f-finance': 'FINANCE',
-  'f-education': 'EDUCATION','f-healthcare': 'HEALTHCARE','f-energy': 'ENERGY','f-logistics': 'LOGISTICS','f-hospitality': 'HOSPITALITY',
-  'f-security': 'SECURITY','f-legal': 'LEGAL','f-marketing': 'MARKETING','f-admin': 'ADMIN','f-general': 'GENERAL'
+  'f-education': 'EDUCATION','f-healthcare': 'HEALTHCARE','f-energy': 'ENERGY','f-logistics': 'LOGISTICS',
+  'f-hospitality': 'HOSPITALITY','f-security': 'SECURITY','f-legal': 'LEGAL','f-marketing': 'MARKETING',
+  'f-admin': 'ADMIN','f-general': 'GENERAL'
 };
 
 document.getElementById('done-btn')?.addEventListener('click', async () => {
@@ -696,27 +682,45 @@ document.getElementById('done-btn')?.addEventListener('click', async () => {
 
   const barangayCheckboxes = document.querySelectorAll('[id^="b-"]:checked');
   const typeCheckboxes = document.querySelectorAll('[id^="f-"]:checked');
-
   const selectedBarangays = [...barangayCheckboxes].map(cb => barangayMap[cb.id]).filter(Boolean);
   const selectedTypes = [...typeCheckboxes].map(cb => typeMap[cb.id]).filter(Boolean);
 
   clearBusinessMarkers();
 
   const barangay = selectedBarangays[0] || null;
-  const type = selectedTypes[0] || null;
   const prefs = getPrefs();
 
-  if (!barangay && !type && !prefs.length) return;
+  // ── Smart chip: get the first selected chip label (if any) ──
+  const selectedChipEl = document.querySelector('.filter-chip.selected');
+  const selectedChipLabel = selectedChipEl ? (selectedChipEl.dataset.chip || '') : '';
 
+  // Determine type: chip takes priority → checkbox → null
+  const chipCategory = selectedChipLabel ? resolveChipToCategory(selectedChipLabel) : null;
+  const type = chipCategory || selectedTypes[0] || null;
+
+  if (!barangay && !type && !prefs.length && !selectedChipLabel) return;
   if (barangay) loadAreaDemographics(barangay);
 
   const titleEl = document.getElementById('loc-panel-title');
   const badgeEl = document.getElementById('loc-badge');
-  if (titleEl) titleEl.textContent = barangay ? `Recommended Businesses in ${barangay}` : `Recommended Businesses`;
+
+  // Show chip label in title if chip was selected
+  const businessLabel = selectedChipLabel
+    ? formatBizName(selectedChipLabel)
+    : (type ? type.charAt(0) + type.slice(1).toLowerCase() : 'Recommended');
+
+  if (titleEl) titleEl.textContent = barangay
+    ? `Top ${businessLabel} in ${barangay}`
+    : `Top ${businessLabel} — All Barangays`;
   if (badgeEl) badgeEl.textContent = barangay ? `📍 ${barangay}` : `📍 All Barangays`;
 
   locPanel.classList.add('open');
-  await renderIdeasAndPins({ type, barangay, prefs, allowPins: true });
+
+  // Show loading state
+  const listEl = document.getElementById('rec-list');
+  if (listEl) listEl.innerHTML = '<div class="rec-item" style="color:#888;font-size:13px;">Loading recommendations…</div>';
+
+  await renderIdeasAndPins({ type, barangay, prefs, allowPins: true, chipLabel: selectedChipLabel });
 });
 
 function showPasigToast(msg) {
@@ -744,23 +748,18 @@ async function handleLocationSelect(lat, lon, source = 'map') {
 
   currentClickLat = latN.toFixed(6);
   currentClickLng = lonN.toFixed(6);
-
   allowIdeaPins = false;
   clearBusinessMarkers();
-
   clearClickedMarker();
-  clickedMarker = L.marker([latN, lonN], { draggable: true })
-    .addTo(map)
-    .bindPopup(`Selected location<br>${currentClickLat}, ${currentClickLng}`)
-    .openPopup();
+
+  clickedMarker = L.marker([latN, lonN], { draggable: true }).addTo(map)
+    .bindPopup(`Selected location<br>${currentClickLat}, ${currentClickLng}`).openPopup();
 
   clickedMarker.on('popupclose', () => clearClickedMarker());
-
   clickedMarker.on('drag', (ev) => {
     const p = ev.target.getLatLng();
     ev.target.setPopupContent(`Selected location<br>${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}`);
   });
-
   clickedMarker.on('dragend', async (ev) => {
     const p = ev.target.getLatLng();
     await handleLocationSelect(p.lat, p.lng, 'drag');
@@ -774,25 +773,18 @@ async function handleLocationSelect(lat, lon, source = 'map') {
     svDiv.innerHTML = `
       <div style="padding:10px;font-size:13px;color:#1a3a5c;">
         <div style="font-weight:700;margin-bottom:8px;">Street View</div>
-        <iframe
-          title="Mapillary"
-          loading="lazy"
-          referrerpolicy="no-referrer"
+        <iframe title="Mapillary" loading="lazy" referrerpolicy="no-referrer"
           src="https://www.mapillary.com/embed?map_style=Mapillary%20light&lat=${latQ}&lng=${lonQ}&z=17"
-          style="width:100%;height:100%;min-height:240px;border:none;border-radius:12px;background:#fff;"
-        ></iframe>
-        <div style="margin-top:8px;">
-          If Mapillary fails to load, open:
+          style="width:100%;height:100%;min-height:240px;border:none;border-radius:12px;background:#fff;"></iframe>
+        <div style="margin-top:8px;">If Mapillary fails to load, open:
           <a href="https://www.google.com/maps?q=${latQ},${lonQ}" target="_blank" rel="noreferrer">Google Maps</a>
         </div>
-      </div>
-    `;
+      </div>`;
   }
 
   filterPanel.classList.remove('open');
   savedPanel.classList.remove('open');
   locPanel.classList.add('open');
-
   locSavedItems.clear();
 
   const badge = document.getElementById('loc-badge');
@@ -817,17 +809,12 @@ async function handleLocationSelect(lat, lon, source = 'map') {
 
   if (source !== 'search') {
     await reportLogSearchOrPin({
-      source,
-      locationName: currentLocShortName,
-      lat: currentClickLat,
-      lon: currentClickLng
+      source, locationName: currentLocShortName, lat: currentClickLat, lon: currentClickLng
     });
   }
 
   const typeCheckboxes = document.querySelectorAll('[id^="f-"]:checked');
   const selectedTypes = [...typeCheckboxes].map(cb => typeMap[cb.id]).filter(Boolean);
-  // If no manual type filter is checked, fall back to the industry-derived category
-  // so that clicking the map always scopes recommendations to the user's industry
   const industryCheckboxId = userIndustry ? INDUSTRY_FILTER_MAP[userIndustry.toLowerCase().trim()] : null;
   const industryDerivedType = industryCheckboxId ? typeMap[industryCheckboxId] : null;
   const type = selectedTypes[0] || industryDerivedType || null;
@@ -845,8 +832,11 @@ async function handleLocationSelect(lat, lon, source = 'map') {
     return;
   }
 
-  listEl.innerHTML = ideasData.data.map((name, i) => `
-    <div class="rec-item" data-idx="${i}" data-idea="${escapeHtml(name)}">
+  // Show top 3 and make each clickable to plot pins
+  const top3 = ideasData.data.slice(0, 3);
+
+  listEl.innerHTML = top3.map((name, i) => `
+    <div class="rec-item" data-idx="${i}" data-idea="${escapeHtml(name)}" style="cursor:pointer;">
       <span class="rec-item-num">${i + 1}.</span>
       <span class="rec-item-name">${escapeHtml(formatBizName(name))}</span>
       <div class="save-row" data-name="${escapeHtml(name)}" data-barangay="${escapeHtml(currentBarangayName)}">
@@ -856,13 +846,35 @@ async function handleLocationSelect(lat, lon, source = 'map') {
   `).join('');
 
   attachSaveRowListeners();
+
+  listEl.querySelectorAll('.rec-item').forEach(el => {
+    el.addEventListener('click', async (e) => {
+      if (e.target.closest('.save-row')) return;
+      if (!allowIdeaPins) {
+        allowIdeaPins = true;
+      }
+      const idea = el.dataset.idea;
+      await reportLogRecommendation({
+        idea, area: currentBarangayName || currentLocShortName,
+        pinCount: 5, lat: currentClickLat, lon: currentClickLng
+      });
+      loadAreaDemographics(currentBarangayName, idea);
+      hidePinRange();
+      const recs = await fetchIdeaLocations({ idea, barangay: currentBarangayName, top: 5, prefs });
+      plotLocations(recs);
+
+      // Highlight selected item
+      listEl.querySelectorAll('.rec-item').forEach(r => r.classList.remove('active'));
+      el.classList.add('active');
+    });
+  });
+
   markSavedInCurrentList();
 }
 
 map.on('click', async function (e) {
   hidePinRange();
   isFilterMode = false;
-
   const lat = Number(e.latlng.lat);
   const lon = Number(e.latlng.lng);
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || !isInPasig(lat, lon)) {
@@ -883,26 +895,16 @@ async function doSearch(query) {
     const viewbox = `${PASIG_BOUNDS.minLon},${PASIG_BOUNDS.maxLat},${PASIG_BOUNDS.maxLon},${PASIG_BOUNDS.minLat}`;
     const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&bounded=1&viewbox=${viewbox}`);
     const data = await res.json();
-    if (!data.length) {
-      showPasigToast('Location not found in Pasig.');
-      return;
-    }
+    if (!data.length) { showPasigToast('Location not found in Pasig.'); return; }
 
     const latNum = Number(data[0].lat);
     const lonNum = Number(data[0].lon);
-
     if (!Number.isFinite(latNum) || !Number.isFinite(lonNum) || !isInPasig(latNum, lonNum)) {
       showPasigToast('Location not found in Pasig.');
       return;
     }
 
-    await reportLogSearchOrPin({
-      source: 'search',
-      locationName: query,
-      lat: latNum.toFixed(6),
-      lon: lonNum.toFixed(6)
-    });
-
+    await reportLogSearchOrPin({ source: 'search', locationName: query, lat: latNum.toFixed(6), lon: lonNum.toFixed(6) });
     map.setView([latNum, lonNum], 16);
     await handleLocationSelect(latNum, lonNum, 'search');
   } catch (err) {
@@ -914,11 +916,7 @@ async function doSearch(query) {
 function renderHistory() {
   const container = document.getElementById('search-history');
   if (!container) return;
-
-  if (!searchHistory.length) {
-    container.classList.remove('open');
-    return;
-  }
+  if (!searchHistory.length) { container.classList.remove('open'); return; }
 
   container.innerHTML = searchHistory.map((item, i) => `
     <div class="history-item" data-idx="${i}">
@@ -948,19 +946,15 @@ function renderHistory() {
 }
 
 const searchInput = document.getElementById('search-input');
-
 searchInput?.addEventListener('focus', () => { if (searchHistory.length) renderHistory(); });
-
 searchInput?.addEventListener('input', function () {
   if (!this.value.trim() && searchHistory.length) renderHistory();
   else document.getElementById('search-history')?.classList.remove('open');
 });
-
 document.addEventListener('click', function (e) {
   const wrapper = document.getElementById('search-wrapper');
   if (wrapper && !wrapper.contains(e.target)) document.getElementById('search-history')?.classList.remove('open');
 });
-
 searchInput?.addEventListener('keydown', async function (e) {
   if (e.key !== 'Enter') return;
   const query = searchInput.value.trim();
@@ -973,12 +967,10 @@ searchInput?.addEventListener('keydown', async function (e) {
 function renderSavedPanel() {
   const body = document.getElementById('saved-panel-body');
   if (!body) return;
-
   if (!savedLocations.length) {
     body.innerHTML = '<p style="font-size:13px;color:#aaa;margin-top:10px;">No saved locations yet.</p>';
     return;
   }
-
   body.innerHTML = savedLocations.map(loc => `
     <div class="saved-location-card" id="saved-card-${loc.id}">
       <div class="saved-card-header">
@@ -1004,16 +996,14 @@ function renderSavedPanel() {
 function focusSavedLocation(id) {
   hidePinRange();
   isFilterMode = false;
-
   const loc = savedLocations.find(l => l.id === id);
   if (!loc || !loc.lat || !loc.lon) return;
-
   const lat = Number(loc.lat);
   const lon = Number(loc.lon);
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
-
   clearClickedMarker();
-  clickedMarker = L.marker([lat, lon]).addTo(map).bindPopup(`${escapeHtml(loc.locationName)}<br>${loc.lat}, ${loc.lon}`).openPopup();
+  clickedMarker = L.marker([lat, lon]).addTo(map)
+    .bindPopup(`${escapeHtml(loc.locationName)}<br>${loc.lat}, ${loc.lon}`).openPopup();
   clickedMarker.on('popupclose', () => clearClickedMarker());
   map.setView([lat, lon], 16);
 }
@@ -1044,12 +1034,8 @@ document.getElementById('cancel-unsave')?.addEventListener('click', () => {
   unsavePendingCallback = null;
   document.getElementById('unsave-modal')?.classList.remove('open');
 });
-
 document.getElementById('confirm-unsave')?.addEventListener('click', async () => {
-  if (unsavePendingCallback) {
-    await unsavePendingCallback();
-    unsavePendingCallback = null;
-  }
+  if (unsavePendingCallback) { await unsavePendingCallback(); unsavePendingCallback = null; }
   document.getElementById('unsave-modal')?.classList.remove('open');
 });
 
@@ -1061,42 +1047,35 @@ profileBtn?.addEventListener('click', function (e) {
   e.stopPropagation();
   profilePopup?.classList.toggle('open');
 });
-
 document.addEventListener('click', function (e) {
-  if (profilePopup && profileBtn && !profilePopup.contains(e.target) && e.target !== profileBtn) profilePopup.classList.remove('open');
+  if (profilePopup && profileBtn && !profilePopup.contains(e.target) && e.target !== profileBtn)
+    profilePopup.classList.remove('open');
 });
-
 document.getElementById('logout-btn')?.addEventListener('click', () => {
   profilePopup?.classList.remove('open');
   window.location.href = '/logout';
 });
-
 document.getElementById('profile-link-btn')?.addEventListener('click', () => {
   profilePopup?.classList.remove('open');
   profileModal?.classList.add('open');
 });
-
 document.getElementById('cancel-profile')?.addEventListener('click', () => {
   profileModal?.classList.remove('open');
 });
-
 document.getElementById('confirm-profile')?.addEventListener('click', () => {
   profileModal?.classList.remove('open');
   window.location.href = '/dashboard/Profile.html';
 });
-
 profileModal?.addEventListener('click', (e) => {
   if (e.target === profileModal) profileModal.classList.remove('open');
 });
 
 async function loadAreaDemographics(barangay, businessLine) {
   if (!barangay) return;
-
   try {
     const params = new URLSearchParams();
     params.append('barangay', barangay);
     if (businessLine) params.append('line_of_business', businessLine);
-
     const res = await fetch(`/api/area-demographics?${params.toString()}`);
     const data = await res.json();
     if (!data.success) return;
@@ -1108,26 +1087,20 @@ async function loadAreaDemographics(barangay, businessLine) {
     const demoBody = document.getElementById('demo-body');
     if (demoBody) {
       let demoHTML = '<ul>';
-
       if (demo) {
         demoHTML += `<li><strong>Population:</strong> ${demo.population ? demo.population.toLocaleString() : 'N/A'}</li>`;
         demoHTML += `<li><strong>Population Density:</strong> ${demo.population_density ? demo.population_density.toLocaleString() + ' per km²' : 'N/A'}</li>`;
         demoHTML += `<li><strong>Dominant Age Group:</strong> ${demo.highest_age_group || 'N/A'}</li>`;
-
         const incomeMin = demo.avg_income_min ? '₱' + demo.avg_income_min.toLocaleString() : 'N/A';
         const incomeMax = demo.avg_income_max ? '₱' + demo.avg_income_max.toLocaleString() : 'N/A';
         const incomeRange = (demo.avg_income_min || demo.avg_income_max) ? `${incomeMin} – ${incomeMax}` : 'N/A';
         demoHTML += `<li><strong>Average Income Range:</strong> ${incomeRange}</li>`;
         demoHTML += `<li><strong>Gender Distribution:</strong> ${demo.gender_distribution || 'N/A'}</li>`;
         demoHTML += `<li><strong>Total Businesses in Area:</strong> ${totalBiz.toLocaleString()}</li>`;
-
-        if (businessLine) {
-          demoHTML += `<li><strong>Same Line of Business Count:</strong> ${sameLineCount.toLocaleString()}</li>`;
-        }
+        if (businessLine) demoHTML += `<li><strong>Same Line of Business Count:</strong> ${sameLineCount.toLocaleString()}</li>`;
       } else {
         demoHTML += '<li>No demographic data available for this area.</li>';
       }
-
       demoHTML += '</ul>';
       demoBody.innerHTML = demoHTML;
     }
@@ -1135,25 +1108,22 @@ async function loadAreaDemographics(barangay, businessLine) {
     const summaryBody = document.getElementById('summary-body');
     if (summaryBody) {
       let summary = '';
-
       if (!demo) {
-        summary = `<p>No demographic data available for <strong>${escapeHtml(barangay)}</strong>. A detailed area summary cannot be generated at this time.</p>`;
+        summary = `<p>No demographic data available for <strong>${escapeHtml(barangay)}</strong>.</p>`;
       } else {
         const densityLabel = demo.population && demo.population_density
           ? (demo.population_density > 30000 ? 'densely populated' : demo.population_density > 15000 ? 'moderately populated' : 'sparsely populated')
           : 'populated';
-
         const ageLabel = demo.highest_age_group || 'all ages';
-
         let incomeLabel = 'with varied income levels';
         if (demo.avg_income_max) {
           if (demo.avg_income_max > 50000) incomeLabel = 'with high purchasing power';
           else if (demo.avg_income_max > 25000) incomeLabel = 'with moderate-to-high purchasing power';
           else incomeLabel = 'with modest income levels';
         }
-
-        const genderLabel = demo.gender_distribution ? `a predominantly ${demo.gender_distribution.toLowerCase()} population` : 'a balanced gender distribution';
-
+        const genderLabel = demo.gender_distribution
+          ? `a predominantly ${demo.gender_distribution.toLowerCase()} population`
+          : 'a balanced gender distribution';
         summary = `<p>
           <strong>${escapeHtml(demo.barangay_name || barangay)}</strong> is a ${densityLabel} barangay in Pasig
           with a total population of <strong>${demo.population ? demo.population.toLocaleString() : 'N/A'}</strong>
@@ -1163,10 +1133,9 @@ async function loadAreaDemographics(barangay, businessLine) {
           <strong>${demo.avg_income_min ? '₱' + demo.avg_income_min.toLocaleString() : 'N/A'} – ${demo.avg_income_max ? '₱' + demo.avg_income_max.toLocaleString() : 'N/A'}</strong>,
           making it an area ${incomeLabel}.
           There are <strong>${totalBiz.toLocaleString()}</strong> registered businesses operating in the area${businessLine ? `, <strong>${sameLineCount.toLocaleString()}</strong> of which are in the same line of business` : ''}.
-          This barangay is well-suited for businesses targeting the <strong>${ageLabel}</strong> age group with offerings that match the local income profile.
+          This barangay is well-suited for businesses targeting the <strong>${ageLabel}</strong> age group.
         </p>`;
       }
-
       summaryBody.innerHTML = summary;
     }
   } catch (err) {
@@ -1183,76 +1152,390 @@ function toggleCollapse(key) {
   arrow.classList.toggle('rotated', !isOpen);
 }
 
-function parseJumpTarget(){
-  try{
+function parseJumpTarget() {
+  try {
     const raw = localStorage.getItem('mapJumpTarget');
-    if(!raw) return null;
+    if (!raw) return null;
     const j = JSON.parse(raw);
     const lat = Number(j?.lat);
     const lon = Number(j?.lon);
-    if(!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
     return { lat, lon, source: j?.source || 'report_jump' };
-  }catch{
-    return null;
-  }
+  } catch { return null; }
 }
 
-// ─── APPLY INDUSTRY PERSONALIZATION ─────────────────────────────────────────
-// Called once on DOMContentLoaded with the data returned from /api/me.
-// 1. Pre-checks the filter checkbox that matches the user's industry.
-// 2. Shows a tip banner inside the filter panel so users know it's personalized.
+// ══════════════════════════════════════════════════════════════════════════════
+// SMART FILTER PERSONALIZATION SYSTEM
+// ══════════════════════════════════════════════════════════════════════════════
 
-function applyIndustryPersonalization(industry, industrySpecific) {
-  if (!industry) return;
+const INDUSTRY_CHIP_MAP = {
+  'food and beverages': {
+    suggested: ['Restaurant', 'Coffee Shop', 'Bakery', 'Fast Food', 'Catering', 'Eatery'],
+    full: ['Grocery', 'Sari-Sari Store', 'Panciteria', 'Canteen', 'Water Refilling Station', 'Food Cart', 'Ice Cream Shop', 'Juice Bar', 'Milk Tea Shop']
+  },
+  'food & beverages': {
+    suggested: ['Restaurant', 'Coffee Shop', 'Bakery', 'Fast Food', 'Catering', 'Eatery'],
+    full: ['Grocery', 'Sari-Sari Store', 'Panciteria', 'Canteen', 'Water Refilling Station', 'Food Cart', 'Milk Tea Shop']
+  },
+  'retail': {
+    suggested: ['Sari-Sari Store', 'Grocery', 'Cellphone Store', 'Hardware Store', 'Appliance Store'],
+    full: ['Clothing Store', 'Bookstore', 'Toy Store', 'Pharmacy', 'Drug Store', 'Optical Shop', 'Pet Shop', 'Trading']
+  },
+  'retail & trading': {
+    suggested: ['Sari-Sari Store', 'Grocery', 'Cellphone Store', 'Hardware Store', 'Appliance Store'],
+    full: ['Clothing Store', 'Bookstore', 'Toy Store', 'Pharmacy', 'Drug Store', 'Optical Shop', 'Trading']
+  },
+  'personal care and services': {
+    suggested: ['Salon', 'Barbershop', 'Spa', 'Laundry Shop', 'Massage'],
+    full: ['Nail Salon', 'Tattoo Studio', 'Car Wash', 'Tailoring', 'Repair Shop', 'Printing Services']
+  },
+  'beauty & wellness': {
+    suggested: ['Salon', 'Spa', 'Massage', 'Barbershop', 'Nail Salon'],
+    full: ['Gym', 'Yoga Studio', 'Skincare Clinic', 'Tattoo Studio', 'Laundry Shop']
+  },
+  'technology digital service': {
+    suggested: ['Internet Café', 'Tech Repair', 'Software Company', 'IT Services'],
+    full: ['Printing Services', 'Photography', 'Digital Printing', 'E-commerce', 'Gadget Store']
+  },
+  'it & software': {
+    suggested: ['Software Company', 'IT Services', 'Tech Repair', 'Internet Café'],
+    full: ['Web Development', 'App Development', 'Digital Printing', 'Gadget Store']
+  },
+  'healthcare': {
+    suggested: ['Medical Clinic', 'Dental Clinic', 'Pharmacy', 'Laboratory'],
+    full: ['Hospital', 'Optical Shop', 'Physical Therapy', 'Veterinary Clinic', 'Drug Store']
+  },
+  'logistics & transport': {
+    suggested: ['Trucking', 'Courier Service', 'Warehouse', 'Cargo'],
+    full: ['Car Rental', 'Motorcycle Delivery', 'Freight Forwarding', 'Cold Storage']
+  },
+  'hospitality': {
+    suggested: ['Hotel', 'Pension House', 'Catering', 'Event Venue'],
+    full: ['Motel', 'Bed & Breakfast', 'Restaurant', 'Travel Agency']
+  },
+  'education': {
+    suggested: ['Tutorial Center', 'Training Center', 'School', 'Review Center'],
+    full: ['Daycare', 'Music School', 'Driving School', 'Language Center', 'Library']
+  },
+  'finance & banking': {
+    suggested: ['Lending', 'Pawnshop', 'Remittance', 'Insurance'],
+    full: ['Bank', 'Cooperative', 'Foreign Exchange', 'Microfinance', 'Stockbroker']
+  },
+  'wholesale & import': {
+    suggested: ['Wholesaler', 'Trading', 'Distributor', 'Warehouse'],
+    full: ['Importer', 'Export', 'Cold Storage', 'Cooperative']
+  },
+  'construction': {
+    suggested: ['Hardware Store', 'Construction', 'Contractor', 'Supplies'],
+    full: ['Real Estate', 'Architecture', 'Interior Design', 'Landscaping']
+  },
+  'bpo & call center': {
+    suggested: ['BPO', 'Call Center', 'Outsourcing'],
+    full: ['Data Entry', 'Customer Service', 'IT Support', 'Back Office']
+  },
+  'energy & fuel': {
+    suggested: ['Gas Station', 'LPG Dealer', 'Solar Energy'],
+    full: ['Water Station', 'Electric Supply', 'Generator Rental']
+  },
+  'security services': {
+    suggested: ['Security Agency', 'CCTV Installation', 'Alarm Systems'],
+    full: ['Janitorial Services', 'Manpower Agency', 'Investigations']
+  },
+  'legal & consulting': {
+    suggested: ['Law Firm', 'Consultancy', 'Accounting'],
+    full: ['Notary', 'HR Consulting', 'Tax Services', 'Business Registration']
+  },
+  'marketing & advertising': {
+    suggested: ['Advertising Agency', 'Printing Services', 'Events'],
+    full: ['Digital Marketing', 'PR Agency', 'Photography', 'Videography', 'Signage']
+  },
+  'manufacturing': {
+    suggested: ['Manufacturing', 'Production', 'Fabrication'],
+    full: ['Food Processing', 'Garments', 'Furniture', 'Metal Works', 'Plastics']
+  }
+};
 
-  const key = industry.toLowerCase().trim();
-  const matchedId = INDUSTRY_FILTER_MAP[key];
+const GLOBAL_KEYWORD_MAP = {
+  'pizza': 'Pizza Restaurant', 'burger': 'Burger Joint', 'ramen': 'Ramen Shop',
+  'sushi': 'Sushi Restaurant', 'bbq': 'BBQ Restaurant', 'barbecue': 'BBQ Restaurant',
+  'cafe': 'Coffee Shop', 'coffee': 'Coffee Shop', 'milk tea': 'Milk Tea Shop',
+  'boba': 'Milk Tea Shop', 'bakery': 'Bakery', 'bakeshop': 'Bakeshop',
+  'pastry': 'Pastry Shop', 'cake': 'Cake Shop', 'lechon': 'Lechon Restaurant',
+  'seafood': 'Seafood Restaurant', 'buffet': 'Buffet Restaurant', 'catering': 'Catering',
+  'food cart': 'Food Cart', 'lugawan': 'Lugawan', 'mami': 'Mami House',
+  'halo-halo': 'Halo-Halo Shop', 'ice cream': 'Ice Cream Shop', 'juice': 'Juice Bar',
+  'smoothie': 'Smoothie Bar', 'health food': 'Health Food Restaurant', 'vegan': 'Vegan Restaurant',
+  'canteen': 'Canteen', 'eatery': 'Eatery', 'turo-turo': 'Turo-Turo',
+  'ihawan': 'Ihawan', 'grill': 'Grill Restaurant', 'pares': 'Pares House',
+  'tapsi': 'Tapsilugan', 'silog': 'Silog Restaurant',
+  'sari-sari': 'Sari-Sari Store', 'sarisari': 'Sari-Sari Store', 'grocery': 'Grocery',
+  'minimart': 'Mini Mart', 'mini mart': 'Mini Mart', 'convenience': 'Convenience Store',
+  'hardware': 'Hardware Store', 'cellphone': 'Cellphone Store', 'gadget': 'Gadget Store',
+  'clothing': 'Clothing Store', 'ukay': 'Ukay-Ukay', 'thrift': 'Thrift Store',
+  'pharmacy': 'Pharmacy', 'drugstore': 'Drug Store', 'drug store': 'Drug Store',
+  'optical': 'Optical Shop', 'bookstore': 'Bookstore', 'toy': 'Toy Store',
+  'pet shop': 'Pet Shop', 'fish': 'Fish Shop', 'meat': 'Meat Shop',
+  'vegetables': 'Vegetable Stall', 'palengke': 'Market Stall',
+  'salon': 'Salon', 'barbershop': 'Barbershop', 'barber': 'Barbershop',
+  'spa': 'Spa', 'massage': 'Massage', 'laundry': 'Laundry Shop',
+  'nail': 'Nail Salon', 'tattoo': 'Tattoo Studio', 'gym': 'Gym',
+  'yoga': 'Yoga Studio', 'car wash': 'Car Wash', 'tailoring': 'Tailoring Shop',
+  'clinic': 'Medical Clinic', 'dental': 'Dental Clinic', 'dentist': 'Dental Clinic',
+  'laboratory': 'Laboratory', 'vet': 'Veterinary Clinic', 'veterinary': 'Veterinary Clinic',
+  'internet': 'Internet Café', 'internet cafe': 'Internet Café',
+  'printing': 'Printing Services', 'photography': 'Photography Studio',
+  'pawnshop': 'Pawnshop', 'lending': 'Lending', 'remittance': 'Money Remittance',
+  'insurance': 'Insurance', 'tutorial': 'Tutorial Center', 'review': 'Review Center',
+  'school': 'School', 'training': 'Training Center', 'driving': 'Driving School',
+  'trucking': 'Trucking', 'courier': 'Courier Service', 'delivery': 'Delivery Service',
+  'warehouse': 'Warehouse', 'hotel': 'Hotel', 'pension': 'Pension House',
+  'event': 'Event Venue', 'water refilling': 'Water Refilling Station',
+  'water': 'Water Refilling Station', 'gasoline': 'Gas Station',
+  'gas station': 'Gas Station', 'lpg': 'LPG Dealer', 'security': 'Security Agency',
+  'manpower': 'Manpower Agency', 'real estate': 'Real Estate',
+  'travel': 'Travel Agency', 'funeral': 'Funeral Services', 'cooperative': 'Cooperative'
+};
 
-  // Pre-check the matching category checkbox
-  if (matchedId) {
-    const cb = document.getElementById(matchedId);
-    if (cb) cb.checked = true;
+const activeCustomChips = new Set();
+
+function normalizeIndustryKey(industry) {
+  return (industry || '').toLowerCase().trim();
+}
+
+function getIndustryChips(industry) {
+  const key = normalizeIndustryKey(industry);
+  return INDUSTRY_CHIP_MAP[key] || { suggested: [], full: [] };
+}
+
+function getCrossIndustryMatches(subcategoryText) {
+  if (!subcategoryText) return [];
+  const lower = subcategoryText.toLowerCase();
+  const matches = [];
+  for (const [keyword, chipLabel] of Object.entries(GLOBAL_KEYWORD_MAP)) {
+    if (lower.includes(keyword) && !matches.includes(chipLabel)) {
+      matches.push(chipLabel);
+    }
+  }
+  return matches;
+}
+
+function chipMatchesSubcategory(chipLabel, subcategoryText) {
+  if (!subcategoryText || !chipLabel) return false;
+  const subcatWords = subcategoryText.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+  const labelLower = chipLabel.toLowerCase();
+  return subcatWords.some(word => labelLower.includes(word));
+}
+
+function buildFilterChips(industry, subcategory) {
+  const chipSection = document.getElementById('smart-chip-section');
+  const chipContainer = document.getElementById('chip-container');
+  const crossNote = document.getElementById('cross-industry-note');
+
+  if (!chipContainer) return;
+
+  const industryChips = getIndustryChips(industry);
+  const crossMatches = getCrossIndustryMatches(subcategory);
+
+  if (!crossMatches.length && !industryChips.suggested.length && !industryChips.full.length) {
+    if (chipSection) chipSection.style.display = 'none';
+    if (crossNote) crossNote.style.display = 'none';
+    return;
   }
 
-  // Build tip banner text
-  const tipEl = document.getElementById('industry-tip');
-  if (!tipEl) return;
+  const boostedChips = industryChips.suggested.filter(chip => chipMatchesSubcategory(chip, subcategory));
+  const regularChips = industryChips.suggested.filter(chip => !chipMatchesSubcategory(chip, subcategory));
 
-  const displayIndustry = industry.trim();
-  const displaySpecific = (industrySpecific || '').trim();
+  const allIndustryLabels = [
+    ...industryChips.suggested.map(c => c.toLowerCase()),
+    ...industryChips.full.map(c => c.toLowerCase())
+  ];
+  const trulyCrossIndustry = crossMatches.filter(chip => !allIndustryLabels.includes(chip.toLowerCase()));
 
-  let tipHTML = `<strong>Personalized for you:</strong> `;
-
-  if (displaySpecific) {
-    // e.g.  "Pizza resto · Food and Beverages"
-    tipHTML += `${escapeHtml(displaySpecific)} &nbsp;·&nbsp; ${escapeHtml(displayIndustry)}`;
-  } else {
-    tipHTML += escapeHtml(displayIndustry);
-  }
-
-  if (matchedId) {
-    // Tell the user which filter was auto-selected
-    const label = document.querySelector(`label[for="${matchedId}"]`);
-    if (label) {
-      tipHTML += `<br><span style="opacity:0.8;">The <em>${escapeHtml(label.textContent.trim())}</em> category has been pre-selected for you.</span>`;
+  if (crossNote) {
+    if (trulyCrossIndustry.length && subcategory) {
+      crossNote.style.display = 'block';
+      crossNote.textContent = `"${subcategory}" matched outside your industry — showing relevant suggestions too.`;
+    } else {
+      crossNote.style.display = 'none';
     }
   }
 
-  tipEl.innerHTML = tipHTML;
-  tipEl.style.display = 'block';
+  let html = '';
+
+  if (trulyCrossIndustry.length) {
+    html += `<div class="chip-group-label">Matched to your business</div><div class="chip-row">`;
+    trulyCrossIndustry.forEach(label => {
+      html += `<span class="filter-chip filter-chip--cross" data-chip="${escapeHtml(label)}">${escapeHtml(label)}</span>`;
+    });
+    html += `</div>`;
+  }
+
+  if (boostedChips.length) {
+    html += `<div class="chip-group-label">Top matches for your industry</div><div class="chip-row">`;
+    boostedChips.forEach(label => {
+      html += `<span class="filter-chip filter-chip--boosted" data-chip="${escapeHtml(label)}">${escapeHtml(label)}</span>`;
+    });
+    html += `</div>`;
+  }
+
+  if (regularChips.length) {
+    const groupLabel = (boostedChips.length || trulyCrossIndustry.length) ? 'Other suggestions' : 'Suggested for your industry';
+    html += `<div class="chip-group-label">${groupLabel}</div><div class="chip-row">`;
+    regularChips.forEach(label => {
+      html += `<span class="filter-chip" data-chip="${escapeHtml(label)}">${escapeHtml(label)}</span>`;
+    });
+    html += `</div>`;
+  }
+
+  if (industryChips.full.length) {
+    html += `<div class="chip-divider">more</div><div class="chip-row">`;
+    industryChips.full.forEach(label => {
+      html += `<span class="filter-chip" data-chip="${escapeHtml(label)}">${escapeHtml(label)}</span>`;
+    });
+    html += `</div>`;
+  }
+
+  chipContainer.innerHTML = html;
+  if (chipSection) chipSection.style.display = 'block';
+
+  // ── Chip click: single-select (one active chip at a time) ──
+  chipContainer.querySelectorAll('.filter-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const wasSelected = chip.classList.contains('selected');
+      // Deselect all
+      chipContainer.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('selected'));
+      activeCustomChips.clear();
+      // Uncheck all type checkboxes that were synced from chips
+      document.querySelectorAll('.filter-option input[type="checkbox"]').forEach(cb => {
+        if (cb.dataset.chipSynced) cb.checked = false;
+      });
+      if (!wasSelected) {
+        chip.classList.add('selected');
+        syncChipToCheckbox(chip.dataset.chip || '', true);
+      }
+    });
+  });
 }
 
+function syncChipToCheckbox(chipLabel, isSelected) {
+  const lower = chipLabel.toLowerCase();
+  let matched = false;
+  document.querySelectorAll('.filter-option input[type="checkbox"]').forEach(cb => {
+    const lbl = document.querySelector(`label[for="${cb.id}"]`);
+    if (lbl && lbl.textContent.toLowerCase().includes(lower)) {
+      cb.checked = isSelected;
+      cb.dataset.chipSynced = isSelected ? '1' : '';
+      matched = true;
+    }
+  });
+  if (!matched) {
+    if (isSelected) activeCustomChips.add(chipLabel);
+    else activeCustomChips.delete(chipLabel);
+  }
+}
+
+function clearChipSelections() {
+  document.querySelectorAll('.filter-chip.selected').forEach(c => c.classList.remove('selected'));
+  activeCustomChips.clear();
+}
+
+function renderPersonalizationBanner(industry, subcategory) {
+  const banner = document.getElementById('personalization-banner');
+  const bannerTags = document.getElementById('banner-tags');
+  if (!banner || !bannerTags) return;
+  if (!industry && !subcategory) { banner.style.display = 'none'; return; }
+
+  let tagsHTML = '';
+  if (subcategory) tagsHTML += `<span class="profile-tag profile-tag--subcat">${escapeHtml(subcategory)}</span>`;
+  if (industry) tagsHTML += `<span class="profile-tag profile-tag--industry">${escapeHtml(industry)}</span>`;
+  bannerTags.innerHTML = tagsHTML;
+  banner.style.display = 'block';
+}
+
+function showFilterRebuildToast() {
+  const toast = document.getElementById('filter-rebuild-toast');
+  if (!toast) return;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2800);
+}
+
+function onProfileSaved(industry, industrySpecific) {
+  userIndustry = industry;
+  userIndustrySpecific = industrySpecific;
+
+  document.querySelectorAll('.filter-panel-body input[type="checkbox"]').forEach(cb => { cb.checked = false; });
+  clearChipSelections();
+
+  if (industry) {
+    const key = (industry || '').toLowerCase().trim();
+    const matchedId = INDUSTRY_FILTER_MAP[key];
+    if (matchedId) {
+      const cb = document.getElementById(matchedId);
+      if (cb) cb.checked = true;
+    }
+  }
+
+  renderPersonalizationBanner(industry, industrySpecific);
+  buildFilterChips(industry, industrySpecific);
+  showFilterRebuildToast();
+}
+
+window.addEventListener('storage', (e) => {
+  if (e.key === 'spotProfileUpdated' && e.newValue) {
+    try {
+      const updated = JSON.parse(e.newValue);
+      onProfileSaved(updated.industry || '', updated.industry_specific || '');
+    } catch {}
+  }
+});
+
+(function patchFetchForProfileSave() {
+  const _orig = window.fetch.bind(window);
+  window.fetch = async function (input, init) {
+    const url = typeof input === 'string' ? input : (input?.url || '');
+    const method = (init?.method || 'GET').toUpperCase();
+    const response = await _orig(input, init);
+    if (method === 'PUT' && url.includes('/api/user-profile')) {
+      try {
+        const data = await response.clone().json();
+        if (data.success && data.user) {
+          onProfileSaved(data.user.industry || '', data.user.industry_specific || '');
+        }
+      } catch {}
+    }
+    return response;
+  };
+})();
+
+function applyIndustryPersonalization(industry, industrySpecific) {
+  if (industry) {
+    const key = (industry || '').toLowerCase().trim();
+    const matchedId = INDUSTRY_FILTER_MAP[key];
+    if (matchedId) {
+      const cb = document.getElementById(matchedId);
+      if (cb) cb.checked = true;
+    }
+  }
+
+  const oldTip = document.getElementById('industry-tip');
+  if (oldTip) oldTip.style.display = 'none';
+
+  renderPersonalizationBanner(industry, industrySpecific);
+  buildFilterChips(industry, industrySpecific);
+}
+
+// ─── DOM CONTENT LOADED ───────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
   fetchSavedRecommendations();
 
-  try{
-    const jump=parseJumpTarget();
-    if(jump){
+  try {
+    const jump = parseJumpTarget();
+    if (jump) {
       localStorage.removeItem('mapJumpTarget');
       map.setView([jump.lat, jump.lon], 16);
       await handleLocationSelect(jump.lat, jump.lon, jump.source);
     }
-  }catch(e){
+  } catch (e) {
     console.warn('Jump-to-map failed:', e);
   }
 
@@ -1263,18 +1546,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     const industry = (data.industry || '').trim();
     const industrySpecific = (data.industry_specific || '').trim();
 
-    // Store globally so handleLocationSelect can always pass the right category
     userIndustry = industry;
     userIndustrySpecific = industrySpecific;
 
-    // Show/hide entrepreneur-only filter options
     if (affiliation === 'entrepreneur') {
       document.querySelectorAll('.entrepreneur-only').forEach(el => { el.style.display = ''; });
     } else {
       document.querySelectorAll('.entrepreneur-only').forEach(el => { el.style.display = 'none'; });
     }
 
-    // Pre-select filter + show personalization banner
     applyIndustryPersonalization(industry, industrySpecific);
 
   } catch (err) {
