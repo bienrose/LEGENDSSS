@@ -426,36 +426,258 @@ app.get("/api/smart-chips", requireAuth, async (req, res) => {
     const normalizedCategory = normalizeCategoryInput(category);
 
     if (!normalizedCategory) {
-      return res.json({ success: true, data: { suggested: [], full: [], cross: [] } });
+      return res.json({
+        success: true,
+        data: { suggested: [], full: [], cross: [] }
+      });
     }
 
+    // ===============================
+    // CATEGORY MAP (MASTER CONTROL)
+    // ===============================
+    const CATEGORY_MAP = {
+      "Food and Beverages": [
+        "Restaurant",
+        "Coffee Shop",
+        "Milk Tea Shop",
+        "Pizza Shop",
+        "Burger Restaurant",
+        "Fried Chicken Restaurant",
+        "Bakery",
+        "Fast Food Restaurant",
+        "Cafe"
+      ],
+
+      "Retail": [
+        "Convenience Store",
+        "Sari-Sari Store",
+        "Grocery / Supermarket",
+        "General Business"
+      ],
+
+      "Personal Care and Services": [
+        "Salon / Barbershop",
+        "Spa & Massage",
+        "Laundry Shop",
+        "Repair Shop"
+      ],
+
+      "Technology": [
+        "Internet Cafe",
+        "Computer Shop",
+        "IT Services"
+      ],
+
+      "Digital Service": [
+        "Printing Shop",
+        "Online Services",
+        "Digital Marketing"
+      ],
+
+      "Wholesale & Import": [
+        "Wholesale Store",
+        "Importer",
+        "Trading Business"
+      ],
+
+      "Manufacturing": [
+        "Factory",
+        "Production",
+        "Industrial Business"
+      ],
+
+      "IT & Software": [
+        "Software Company",
+        "IT Services",
+        "System Developer"
+      ],
+
+      "BPO & Call Center": [
+        "Call Center",
+        "BPO Services"
+      ],
+
+      "Construction": [
+        "Construction Company",
+        "Contractor"
+      ],
+
+      "Finance & Banking": [
+        "Bank",
+        "Lending Company",
+        "Financial Services"
+      ],
+
+      "Education": [
+        "School",
+        "Training Center",
+        "Tutorial Center"
+      ],
+
+      "Healthcare": [
+        "Clinic",
+        "Hospital",
+        "Pharmacy"
+      ],
+
+      "Energy and Fuel": [
+        "Gas Station",
+        "Fuel Supplier"
+      ],
+
+      "Logistics & Transport": [
+        "Delivery Service",
+        "Transport Service",
+        "Logistics Company"
+      ],
+
+      "Hospitality": [
+        "Hotel",
+        "Resort",
+        "Lodging"
+      ],
+
+      "Security Services": [
+        "Security Agency"
+      ],
+
+      "Legal & Consulting": [
+        "Law Firm",
+        "Consulting Firm"
+      ],
+
+      "Marketing & Advertising": [
+        "Marketing Agency",
+        "Advertising Agency"
+      ],
+
+      "Admin & Management": [
+        "Office Services",
+        "Admin Services"
+      ],
+
+      "General Services": [
+        "General Business"
+      ]
+    };
+
+    const allowed = CATEGORY_MAP[normalizedCategory] || [];
+
+    // ===============================
+    // FETCH DATA
+    // ===============================
     const [rows] = await geoDB.query(
       `SELECT business_trade_name, category, COUNT(*) AS cnt
        FROM businesses
        WHERE category = ?
          AND business_trade_name IS NOT NULL
          AND business_trade_name <> ''
-       GROUP BY business_trade_name, category
-       ORDER BY cnt DESC`,
+       GROUP BY business_trade_name, category`,
       [normalizedCategory]
     );
 
-    const seen = new Set();
-    const all = [];
+    // ===============================
+    // GENERIC TYPE DETECTOR
+    // ===============================
+    function toGenericType(name) {
+      const str = (name || "").toLowerCase();
+
+      // FOOD
+      if (/coffee|cafe|brew|starbucks/.test(str)) return "Coffee Shop";
+      if (/milk.?tea|boba|gong cha|chatime/.test(str)) return "Milk Tea Shop";
+      if (/pizza|pizzeria/.test(str)) return "Pizza Shop";
+      if (/burger|jollibee|mcdo|mcdonald/.test(str)) return "Burger Restaurant";
+      if (/chicken|fried chicken|bonchon/.test(str)) return "Fried Chicken Restaurant";
+      if (/bakery|bakeshop|tinapay/.test(str)) return "Bakery";
+      if (/fast.?food/.test(str)) return "Fast Food Restaurant";
+      if (/restaurant|eatery|diner/.test(str)) return "Restaurant";
+      if (/cafe/.test(str)) return "Cafe";
+
+      // RETAIL
+      if (/grocery|supermarket|palengke/.test(str)) return "Grocery / Supermarket";
+      if (/sari.?sari/.test(str)) return "Sari-Sari Store";
+      if (/convenience|7.?eleven|minimart/.test(str)) return "Convenience Store";
+
+      // SERVICES
+      if (/laundry|washing/.test(str)) return "Laundry Shop";
+      if (/salon|barber/.test(str)) return "Salon / Barbershop";
+      if (/spa|massage/.test(str)) return "Spa & Massage";
+      if (/repair|vulcanizing/.test(str)) return "Repair Shop";
+
+      // TECH
+      if (/internet|computer/.test(str)) return "Internet Cafe";
+      if (/printing|photocopy/.test(str)) return "Printing Shop";
+
+      // HEALTH
+      if (/clinic/.test(str)) return "Clinic";
+      if (/hospital/.test(str)) return "Hospital";
+      if (/pharmacy|drugstore/.test(str)) return "Pharmacy";
+
+      // FINANCE
+      if (/bank/.test(str)) return "Bank";
+
+      return "General Business";
+    }
+
+    // ===============================
+    // GROUP DATA
+    // ===============================
+    const map = new Map();
+
     rows.forEach((r) => {
-      const label = (r.business_trade_name || "").trim();
-      if (!label) return;
-      const key = label.toLowerCase();
-      if (seen.has(key)) return;
-      seen.add(key);
-      all.push({ label, category: r.category || normalizedCategory });
+      const generic = toGenericType(r.business_trade_name);
+
+      if (!map.has(generic)) {
+        map.set(generic, {
+          label: generic,
+          category: r.category || normalizedCategory,
+          cnt: 0
+        });
+      }
+
+      map.get(generic).cnt += r.cnt;
     });
 
-    const suggested = all.slice(0, 6);
-    const full = all.slice(6, 18);
+    const all = [...map.values()].sort((a, b) => b.cnt - a.cnt);
 
+    // ===============================
+    // FILTER MAIN RESULTS
+    // ===============================
+    let filtered = all;
+
+    if (allowed.length > 0) {
+      filtered = all.filter(item => allowed.includes(item.label));
+    }
+
+    // ===============================
+    // FALLBACK (ENSURE MIN 6)
+    // ===============================
+    if (filtered.length < 6) {
+      const existing = new Set(filtered.map(x => x.label));
+
+      allowed.forEach(label => {
+        if (!existing.has(label)) {
+          filtered.push({
+            label,
+            category: normalizedCategory,
+            cnt: 0
+          });
+        }
+      });
+    }
+
+    // ===============================
+    // SPLIT
+    // ===============================
+    let suggested = filtered.slice(0, 6);
+    let full = filtered.slice(6, 18);
+
+    // ===============================
+    // CROSS INDUSTRY (NOW FILTERED TOO)
+    // ===============================
     let cross = [];
     const sub = (subcategory || "").toString().trim();
+
     if (sub) {
       const [crossRows] = await geoDB.query(
         `SELECT business_trade_name, category, COUNT(*) AS cnt
@@ -464,26 +686,67 @@ app.get("/api/smart-chips", requireAuth, async (req, res) => {
            AND category <> ?
            AND business_trade_name IS NOT NULL
            AND business_trade_name <> ''
-         GROUP BY business_trade_name, category
-         ORDER BY cnt DESC
-         LIMIT 10`,
+         GROUP BY business_trade_name, category`,
         [`%${sub.toLowerCase()}%`, normalizedCategory]
       );
 
-      const crossSeen = new Set();
+      const crossMap = new Map();
+
       crossRows.forEach((r) => {
-        const label = (r.business_trade_name || "").trim();
-        if (!label) return;
-        const key = `${label.toLowerCase()}|${(r.category || "").toLowerCase()}`;
-        if (crossSeen.has(key)) return;
-        crossSeen.add(key);
-        cross.push({ label, category: r.category || "" });
+        const generic = toGenericType(r.business_trade_name);
+
+        if (!crossMap.has(generic)) {
+          crossMap.set(generic, {
+            label: generic,
+            category: r.category || "",
+            cnt: 0
+          });
+        }
+
+        crossMap.get(generic).cnt += r.cnt;
       });
+
+      cross = [...crossMap.values()]
+        .sort((a, b) => b.cnt - a.cnt)
+        .slice(0, 10);
+
+      // 🔥 FILTER CROSS ALSO
+      if (allowed.length > 0) {
+        cross = cross.filter(item => allowed.includes(item.label));
+      }
     }
 
-    return res.json({ success: true, data: { suggested, full, cross } });
+    // ===============================
+    // FINAL SAFETY FILTER (NO LEAK EVER)
+    // ===============================
+    function enforce(list) {
+      if (allowed.length === 0) return list;
+      return list.filter(item => allowed.includes(item.label));
+    }
+
+    suggested = enforce(suggested);
+    full = enforce(full);
+    cross = enforce(cross);
+
+    // ===============================
+    // RESPONSE
+    // ===============================
+    return res.json({
+      success: true,
+      data: {
+        suggested,
+        full,
+        cross
+      }
+    });
+
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("[smart-chips error]", err);
+
+    return res.status(500).json({
+      success: false,
+      message: err.message
+    });
   }
 });
 
