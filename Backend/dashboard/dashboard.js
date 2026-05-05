@@ -520,9 +520,9 @@ async function saveRowClickHandler(e) {
 // Used by both filter mode and location click mode.
 // In filter mode (isFilterMode=true): clicking a rec-item shows pins on map.
 // Smart chip selection merges with type filter so top 3 reflect chip choice.
-async function renderIdeasAndPins({ type, barangay, prefs, allowPins, chipLabel }) {
-  // If a smart chip was selected, override the type with the chip's mapped category
-  const effectiveType = chipLabel ? resolveChipToCategory(chipLabel) || type : type;
+async function renderIdeasAndPins({ type, barangay, prefs, allowPins, chipLabel, chipCategory }) {
+  // If a smart chip was selected, use the chip's DB category as the effective type
+  const effectiveType = chipCategory || (chipLabel ? resolveChipToCategory(chipLabel) || type : type);
 
   const ideas = await fetchIdeas({ type: effectiveType, barangay, prefs });
   const listEl = document.getElementById('rec-list');
@@ -693,10 +693,10 @@ document.getElementById('done-btn')?.addEventListener('click', async () => {
   // ── Smart chip: get the first selected chip label (if any) ──
   const selectedChipEl = document.querySelector('.filter-chip.selected');
   const selectedChipLabel = selectedChipEl ? (selectedChipEl.dataset.chip || '') : '';
+  const selectedChipCategory = selectedChipEl ? (selectedChipEl.dataset.category || '') : '';
 
-  // Determine type: chip takes priority → checkbox → null
-  const chipCategory = selectedChipLabel ? resolveChipToCategory(selectedChipLabel) : null;
-  const type = chipCategory || selectedTypes[0] || null;
+  // Determine type: chip category takes priority → checkbox → null
+  const type = selectedChipCategory || selectedTypes[0] || null;
 
   if (!barangay && !type && !prefs.length && !selectedChipLabel) return;
   if (barangay) loadAreaDemographics(barangay);
@@ -720,7 +720,7 @@ document.getElementById('done-btn')?.addEventListener('click', async () => {
   const listEl = document.getElementById('rec-list');
   if (listEl) listEl.innerHTML = '<div class="rec-item" style="color:#888;font-size:13px;">Loading recommendations…</div>';
 
-  await renderIdeasAndPins({ type, barangay, prefs, allowPins: true, chipLabel: selectedChipLabel });
+  await renderIdeasAndPins({ type, barangay, prefs, allowPins: true, chipLabel: selectedChipLabel, chipCategory: selectedChipCategory });
 });
 
 function showPasigToast(msg) {
@@ -1168,155 +1168,17 @@ function parseJumpTarget() {
 // SMART FILTER PERSONALIZATION SYSTEM
 // ══════════════════════════════════════════════════════════════════════════════
 
-const INDUSTRY_CHIP_MAP = {
-  'food and beverages': {
-    suggested: ['Restaurant', 'Coffee Shop', 'Bakery', 'Fast Food', 'Catering', 'Eatery'],
-    full: ['Grocery', 'Sari-Sari Store', 'Panciteria', 'Canteen', 'Water Refilling Station', 'Food Cart', 'Ice Cream Shop', 'Juice Bar', 'Milk Tea Shop']
-  },
-  'food & beverages': {
-    suggested: ['Restaurant', 'Coffee Shop', 'Bakery', 'Fast Food', 'Catering', 'Eatery'],
-    full: ['Grocery', 'Sari-Sari Store', 'Panciteria', 'Canteen', 'Water Refilling Station', 'Food Cart', 'Milk Tea Shop']
-  },
-  'retail': {
-    suggested: ['Sari-Sari Store', 'Grocery', 'Cellphone Store', 'Hardware Store', 'Appliance Store'],
-    full: ['Clothing Store', 'Bookstore', 'Toy Store', 'Pharmacy', 'Drug Store', 'Optical Shop', 'Pet Shop', 'Trading']
-  },
-  'retail & trading': {
-    suggested: ['Sari-Sari Store', 'Grocery', 'Cellphone Store', 'Hardware Store', 'Appliance Store'],
-    full: ['Clothing Store', 'Bookstore', 'Toy Store', 'Pharmacy', 'Drug Store', 'Optical Shop', 'Trading']
-  },
-  'personal care and services': {
-    suggested: ['Salon', 'Barbershop', 'Spa', 'Laundry Shop', 'Massage'],
-    full: ['Nail Salon', 'Tattoo Studio', 'Car Wash', 'Tailoring', 'Repair Shop', 'Printing Services']
-  },
-  'beauty & wellness': {
-    suggested: ['Salon', 'Spa', 'Massage', 'Barbershop', 'Nail Salon'],
-    full: ['Gym', 'Yoga Studio', 'Skincare Clinic', 'Tattoo Studio', 'Laundry Shop']
-  },
-  'technology digital service': {
-    suggested: ['Internet Café', 'Tech Repair', 'Software Company', 'IT Services'],
-    full: ['Printing Services', 'Photography', 'Digital Printing', 'E-commerce', 'Gadget Store']
-  },
-  'it & software': {
-    suggested: ['Software Company', 'IT Services', 'Tech Repair', 'Internet Café'],
-    full: ['Web Development', 'App Development', 'Digital Printing', 'Gadget Store']
-  },
-  'healthcare': {
-    suggested: ['Medical Clinic', 'Dental Clinic', 'Pharmacy', 'Laboratory'],
-    full: ['Hospital', 'Optical Shop', 'Physical Therapy', 'Veterinary Clinic', 'Drug Store']
-  },
-  'logistics & transport': {
-    suggested: ['Trucking', 'Courier Service', 'Warehouse', 'Cargo'],
-    full: ['Car Rental', 'Motorcycle Delivery', 'Freight Forwarding', 'Cold Storage']
-  },
-  'hospitality': {
-    suggested: ['Hotel', 'Pension House', 'Catering', 'Event Venue'],
-    full: ['Motel', 'Bed & Breakfast', 'Restaurant', 'Travel Agency']
-  },
-  'education': {
-    suggested: ['Tutorial Center', 'Training Center', 'School', 'Review Center'],
-    full: ['Daycare', 'Music School', 'Driving School', 'Language Center', 'Library']
-  },
-  'finance & banking': {
-    suggested: ['Lending', 'Pawnshop', 'Remittance', 'Insurance'],
-    full: ['Bank', 'Cooperative', 'Foreign Exchange', 'Microfinance', 'Stockbroker']
-  },
-  'wholesale & import': {
-    suggested: ['Wholesaler', 'Trading', 'Distributor', 'Warehouse'],
-    full: ['Importer', 'Export', 'Cold Storage', 'Cooperative']
-  },
-  'construction': {
-    suggested: ['Hardware Store', 'Construction', 'Contractor', 'Supplies'],
-    full: ['Real Estate', 'Architecture', 'Interior Design', 'Landscaping']
-  },
-  'bpo & call center': {
-    suggested: ['BPO', 'Call Center', 'Outsourcing'],
-    full: ['Data Entry', 'Customer Service', 'IT Support', 'Back Office']
-  },
-  'energy & fuel': {
-    suggested: ['Gas Station', 'LPG Dealer', 'Solar Energy'],
-    full: ['Water Station', 'Electric Supply', 'Generator Rental']
-  },
-  'security services': {
-    suggested: ['Security Agency', 'CCTV Installation', 'Alarm Systems'],
-    full: ['Janitorial Services', 'Manpower Agency', 'Investigations']
-  },
-  'legal & consulting': {
-    suggested: ['Law Firm', 'Consultancy', 'Accounting'],
-    full: ['Notary', 'HR Consulting', 'Tax Services', 'Business Registration']
-  },
-  'marketing & advertising': {
-    suggested: ['Advertising Agency', 'Printing Services', 'Events'],
-    full: ['Digital Marketing', 'PR Agency', 'Photography', 'Videography', 'Signage']
-  },
-  'manufacturing': {
-    suggested: ['Manufacturing', 'Production', 'Fabrication'],
-    full: ['Food Processing', 'Garments', 'Furniture', 'Metal Works', 'Plastics']
-  }
-};
+let smartChipRequestId = 0;
 
-const GLOBAL_KEYWORD_MAP = {
-  'pizza': 'Pizza Restaurant', 'burger': 'Burger Joint', 'ramen': 'Ramen Shop',
-  'sushi': 'Sushi Restaurant', 'bbq': 'BBQ Restaurant', 'barbecue': 'BBQ Restaurant',
-  'cafe': 'Coffee Shop', 'coffee': 'Coffee Shop', 'milk tea': 'Milk Tea Shop',
-  'boba': 'Milk Tea Shop', 'bakery': 'Bakery', 'bakeshop': 'Bakeshop',
-  'pastry': 'Pastry Shop', 'cake': 'Cake Shop', 'lechon': 'Lechon Restaurant',
-  'seafood': 'Seafood Restaurant', 'buffet': 'Buffet Restaurant', 'catering': 'Catering',
-  'food cart': 'Food Cart', 'lugawan': 'Lugawan', 'mami': 'Mami House',
-  'halo-halo': 'Halo-Halo Shop', 'ice cream': 'Ice Cream Shop', 'juice': 'Juice Bar',
-  'smoothie': 'Smoothie Bar', 'health food': 'Health Food Restaurant', 'vegan': 'Vegan Restaurant',
-  'canteen': 'Canteen', 'eatery': 'Eatery', 'turo-turo': 'Turo-Turo',
-  'ihawan': 'Ihawan', 'grill': 'Grill Restaurant', 'pares': 'Pares House',
-  'tapsi': 'Tapsilugan', 'silog': 'Silog Restaurant',
-  'sari-sari': 'Sari-Sari Store', 'sarisari': 'Sari-Sari Store', 'grocery': 'Grocery',
-  'minimart': 'Mini Mart', 'mini mart': 'Mini Mart', 'convenience': 'Convenience Store',
-  'hardware': 'Hardware Store', 'cellphone': 'Cellphone Store', 'gadget': 'Gadget Store',
-  'clothing': 'Clothing Store', 'ukay': 'Ukay-Ukay', 'thrift': 'Thrift Store',
-  'pharmacy': 'Pharmacy', 'drugstore': 'Drug Store', 'drug store': 'Drug Store',
-  'optical': 'Optical Shop', 'bookstore': 'Bookstore', 'toy': 'Toy Store',
-  'pet shop': 'Pet Shop', 'fish': 'Fish Shop', 'meat': 'Meat Shop',
-  'vegetables': 'Vegetable Stall', 'palengke': 'Market Stall',
-  'salon': 'Salon', 'barbershop': 'Barbershop', 'barber': 'Barbershop',
-  'spa': 'Spa', 'massage': 'Massage', 'laundry': 'Laundry Shop',
-  'nail': 'Nail Salon', 'tattoo': 'Tattoo Studio', 'gym': 'Gym',
-  'yoga': 'Yoga Studio', 'car wash': 'Car Wash', 'tailoring': 'Tailoring Shop',
-  'clinic': 'Medical Clinic', 'dental': 'Dental Clinic', 'dentist': 'Dental Clinic',
-  'laboratory': 'Laboratory', 'vet': 'Veterinary Clinic', 'veterinary': 'Veterinary Clinic',
-  'internet': 'Internet Café', 'internet cafe': 'Internet Café',
-  'printing': 'Printing Services', 'photography': 'Photography Studio',
-  'pawnshop': 'Pawnshop', 'lending': 'Lending', 'remittance': 'Money Remittance',
-  'insurance': 'Insurance', 'tutorial': 'Tutorial Center', 'review': 'Review Center',
-  'school': 'School', 'training': 'Training Center', 'driving': 'Driving School',
-  'trucking': 'Trucking', 'courier': 'Courier Service', 'delivery': 'Delivery Service',
-  'warehouse': 'Warehouse', 'hotel': 'Hotel', 'pension': 'Pension House',
-  'event': 'Event Venue', 'water refilling': 'Water Refilling Station',
-  'water': 'Water Refilling Station', 'gasoline': 'Gas Station',
-  'gas station': 'Gas Station', 'lpg': 'LPG Dealer', 'security': 'Security Agency',
-  'manpower': 'Manpower Agency', 'real estate': 'Real Estate',
-  'travel': 'Travel Agency', 'funeral': 'Funeral Services', 'cooperative': 'Cooperative'
-};
+async function fetchSmartChips(industry, subcategory) {
+  const params = new URLSearchParams();
+  if (industry) params.append("category", industry);
+  if (subcategory) params.append("subcategory", subcategory);
 
-const activeCustomChips = new Set();
-
-function normalizeIndustryKey(industry) {
-  return (industry || '').toLowerCase().trim();
-}
-
-function getIndustryChips(industry) {
-  const key = normalizeIndustryKey(industry);
-  return INDUSTRY_CHIP_MAP[key] || { suggested: [], full: [] };
-}
-
-function getCrossIndustryMatches(subcategoryText) {
-  if (!subcategoryText) return [];
-  const lower = subcategoryText.toLowerCase();
-  const matches = [];
-  for (const [keyword, chipLabel] of Object.entries(GLOBAL_KEYWORD_MAP)) {
-    if (lower.includes(keyword) && !matches.includes(chipLabel)) {
-      matches.push(chipLabel);
-    }
-  }
-  return matches;
+  const res = await fetch(`/api/smart-chips?${params.toString()}`);
+  const data = await res.json();
+  if (!data.success) return { suggested: [], full: [], cross: [] };
+  return data.data || { suggested: [], full: [], cross: [] };
 }
 
 function chipMatchesSubcategory(chipLabel, subcategoryText) {
@@ -1326,33 +1188,37 @@ function chipMatchesSubcategory(chipLabel, subcategoryText) {
   return subcatWords.some(word => labelLower.includes(word));
 }
 
-function buildFilterChips(industry, subcategory) {
+function renderChip(label, category, className = "") {
+  const display = formatBizName(label);
+  const escapedDisplay = escapeHtml(display).replace(/"/g, '&quot;');
+  const escapedCategory = escapeHtml(category || '').replace(/"/g, '&quot;');
+  return `<span class="filter-chip ${className}" data-chip="${escapedDisplay}" data-category="${escapedCategory}">
+    ${escapeHtml(display)}
+  </span>`;
+}
+
+function buildFilterChips(chips, subcategory) {
   const chipSection = document.getElementById('smart-chip-section');
   const chipContainer = document.getElementById('chip-container');
   const crossNote = document.getElementById('cross-industry-note');
 
   if (!chipContainer) return;
 
-  const industryChips = getIndustryChips(industry);
-  const crossMatches = getCrossIndustryMatches(subcategory);
+  const suggested = chips?.suggested || [];
+  const full = chips?.full || [];
+  const crossMatches = chips?.cross || [];
 
-  if (!crossMatches.length && !industryChips.suggested.length && !industryChips.full.length) {
+  if (!crossMatches.length && !suggested.length && !full.length) {
     if (chipSection) chipSection.style.display = 'none';
     if (crossNote) crossNote.style.display = 'none';
     return;
   }
 
-  const boostedChips = industryChips.suggested.filter(chip => chipMatchesSubcategory(chip, subcategory));
-  const regularChips = industryChips.suggested.filter(chip => !chipMatchesSubcategory(chip, subcategory));
-
-  const allIndustryLabels = [
-    ...industryChips.suggested.map(c => c.toLowerCase()),
-    ...industryChips.full.map(c => c.toLowerCase())
-  ];
-  const trulyCrossIndustry = crossMatches.filter(chip => !allIndustryLabels.includes(chip.toLowerCase()));
+  const boostedChips = suggested.filter(chip => chipMatchesSubcategory(chip.label, subcategory));
+  const regularChips = suggested.filter(chip => !chipMatchesSubcategory(chip.label, subcategory));
 
   if (crossNote) {
-    if (trulyCrossIndustry.length && subcategory) {
+    if (crossMatches.length && subcategory) {
       crossNote.style.display = 'block';
       crossNote.textContent = `"${subcategory}" matched outside your industry — showing relevant suggestions too.`;
     } else {
@@ -1362,35 +1228,35 @@ function buildFilterChips(industry, subcategory) {
 
   let html = '';
 
-  if (trulyCrossIndustry.length) {
+  if (crossMatches.length) {
     html += `<div class="chip-group-label">Matched to your business</div><div class="chip-row">`;
-    trulyCrossIndustry.forEach(label => {
-      html += `<span class="filter-chip filter-chip--cross" data-chip="${escapeHtml(label)}">${escapeHtml(label)}</span>`;
+    crossMatches.forEach(item => {
+      html += renderChip(item.label, item.category, "filter-chip--cross");
     });
     html += `</div>`;
   }
 
   if (boostedChips.length) {
     html += `<div class="chip-group-label">Top matches for your industry</div><div class="chip-row">`;
-    boostedChips.forEach(label => {
-      html += `<span class="filter-chip filter-chip--boosted" data-chip="${escapeHtml(label)}">${escapeHtml(label)}</span>`;
+    boostedChips.forEach(item => {
+      html += renderChip(item.label, item.category, "filter-chip--boosted");
     });
     html += `</div>`;
   }
 
   if (regularChips.length) {
-    const groupLabel = (boostedChips.length || trulyCrossIndustry.length) ? 'Other suggestions' : 'Suggested for your industry';
+    const groupLabel = (boostedChips.length || crossMatches.length) ? 'Other suggestions' : 'Suggested for your industry';
     html += `<div class="chip-group-label">${groupLabel}</div><div class="chip-row">`;
-    regularChips.forEach(label => {
-      html += `<span class="filter-chip" data-chip="${escapeHtml(label)}">${escapeHtml(label)}</span>`;
+    regularChips.forEach(item => {
+      html += renderChip(item.label, item.category);
     });
     html += `</div>`;
   }
 
-  if (industryChips.full.length) {
+  if (full.length) {
     html += `<div class="chip-divider">more</div><div class="chip-row">`;
-    industryChips.full.forEach(label => {
-      html += `<span class="filter-chip" data-chip="${escapeHtml(label)}">${escapeHtml(label)}</span>`;
+    full.forEach(item => {
+      html += renderChip(item.label, item.category);
     });
     html += `</div>`;
   }
@@ -1415,6 +1281,24 @@ function buildFilterChips(industry, subcategory) {
       }
     });
   });
+}
+
+async function loadSmartChips(industry, subcategory) {
+  const requestId = ++smartChipRequestId;
+  try {
+    const chips = await fetchSmartChips(industry, subcategory);
+    if (requestId !== smartChipRequestId) return;
+    buildFilterChips(chips, subcategory);
+  } catch (err) {
+    console.error('[loadSmartChips]', err);
+    buildFilterChips({ suggested: [], full: [], cross: [] }, subcategory);
+  }
+}
+
+const activeCustomChips = new Set();
+
+function normalizeIndustryKey(industry) {
+  return (industry || '').toLowerCase().trim();
 }
 
 function syncChipToCheckbox(chipLabel, isSelected) {
@@ -1476,7 +1360,7 @@ function onProfileSaved(industry, industrySpecific) {
   }
 
   renderPersonalizationBanner(industry, industrySpecific);
-  buildFilterChips(industry, industrySpecific);
+  loadSmartChips(industry, industrySpecific);
   showFilterRebuildToast();
 }
 
@@ -1521,7 +1405,7 @@ function applyIndustryPersonalization(industry, industrySpecific) {
   if (oldTip) oldTip.style.display = 'none';
 
   renderPersonalizationBanner(industry, industrySpecific);
-  buildFilterChips(industry, industrySpecific);
+  loadSmartChips(industry, industrySpecific);
 }
 
 // ─── DOM CONTENT LOADED ───────────────────────────────────────────────────────
