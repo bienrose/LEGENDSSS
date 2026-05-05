@@ -670,7 +670,7 @@ const typeMap = {
   'f-admin': 'ADMIN','f-general': 'GENERAL'
 };
 
-document.getElementById('done-btn')?.addEventListener('click', async () => {
+async function applyFiltersAndShowRecommendations() {
   filterPanel.classList.remove('open');
   allowIdeaPins = true;
   isFilterMode = true;
@@ -721,7 +721,9 @@ document.getElementById('done-btn')?.addEventListener('click', async () => {
   if (listEl) listEl.innerHTML = '<div class="rec-item" style="color:#888;font-size:13px;">Loading recommendations…</div>';
 
   await renderIdeasAndPins({ type, barangay, prefs, allowPins: true, chipLabel: selectedChipLabel, chipCategory: selectedChipCategory });
-});
+}
+
+document.getElementById('done-btn')?.addEventListener('click', async () => applyFiltersAndShowRecommendations());
 
 function showPasigToast(msg) {
   const el = document.getElementById('pasig-toast');
@@ -1169,6 +1171,7 @@ function parseJumpTarget() {
 // ══════════════════════════════════════════════════════════════════════════════
 
 let smartChipRequestId = 0;
+let chipApplyInProgress = false;
 
 async function fetchSmartChips(industry, subcategory) {
   const params = new URLSearchParams();
@@ -1206,35 +1209,19 @@ function buildFilterChips(chips, subcategory) {
 
   const suggested = chips?.suggested || [];
   const full = chips?.full || [];
-  const crossMatches = chips?.cross || [];
 
-  if (!crossMatches.length && !suggested.length && !full.length) {
+  // Always hide the cross-industry note — cross-industry section is not shown
+  if (crossNote) crossNote.style.display = 'none';
+
+  if (!suggested.length && !full.length) {
     if (chipSection) chipSection.style.display = 'none';
-    if (crossNote) crossNote.style.display = 'none';
     return;
   }
 
   const boostedChips = suggested.filter(chip => chipMatchesSubcategory(chip.label, subcategory));
   const regularChips = suggested.filter(chip => !chipMatchesSubcategory(chip.label, subcategory));
 
-  if (crossNote) {
-    if (crossMatches.length && subcategory) {
-      crossNote.style.display = 'block';
-      crossNote.textContent = `"${subcategory}" matched outside your industry — showing relevant suggestions too.`;
-    } else {
-      crossNote.style.display = 'none';
-    }
-  }
-
   let html = '';
-
-  if (crossMatches.length) {
-    html += `<div class="chip-group-label">Matched to your business</div><div class="chip-row">`;
-    crossMatches.forEach(item => {
-      html += renderChip(item.label, item.category, "filter-chip--cross");
-    });
-    html += `</div>`;
-  }
 
   if (boostedChips.length) {
     html += `<div class="chip-group-label">Top matches for your industry</div><div class="chip-row">`;
@@ -1245,7 +1232,7 @@ function buildFilterChips(chips, subcategory) {
   }
 
   if (regularChips.length) {
-    const groupLabel = (boostedChips.length || crossMatches.length) ? 'Other suggestions' : 'Suggested for your industry';
+    const groupLabel = boostedChips.length ? 'Other suggestions' : 'Suggested for your industry';
     html += `<div class="chip-group-label">${groupLabel}</div><div class="chip-row">`;
     regularChips.forEach(item => {
       html += renderChip(item.label, item.category);
@@ -1266,7 +1253,7 @@ function buildFilterChips(chips, subcategory) {
 
   // ── Chip click: single-select (one active chip at a time) ──
   chipContainer.querySelectorAll('.filter-chip').forEach(chip => {
-    chip.addEventListener('click', () => {
+    chip.addEventListener('click', async () => {
       const wasSelected = chip.classList.contains('selected');
       // Deselect all
       chipContainer.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('selected'));
@@ -1278,6 +1265,14 @@ function buildFilterChips(chips, subcategory) {
       if (!wasSelected) {
         chip.classList.add('selected');
         syncChipToCheckbox(chip.dataset.chip || '', true);
+        // Immediately apply the selection and show top 3 recommendations
+        if (chipApplyInProgress) return;
+        chipApplyInProgress = true;
+        try {
+          await applyFiltersAndShowRecommendations();
+        } finally {
+          chipApplyInProgress = false;
+        }
       }
     });
   });
