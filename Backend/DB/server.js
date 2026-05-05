@@ -191,6 +191,52 @@ const TYPE_TO_CATEGORY = {
   GENERAL: "General Services"
 };
 
+const CATEGORY_ALIASES = {
+  "food and beverages": "Food & Beverage",
+  "food & beverages": "Food & Beverage",
+  "food and beverage": "Food & Beverage",
+  "food & beverage": "Food & Beverage",
+  "retail": "Retail & Trading",
+  "retail & trading": "Retail & Trading",
+  "retail and trading": "Retail & Trading",
+  "personal care and services": "Beauty & Wellness",
+  "beauty & wellness": "Beauty & Wellness",
+  "beauty and wellness": "Beauty & Wellness",
+  "technology digital service": "IT & Software",
+  "it & software": "IT & Software",
+  "it and software": "IT & Software",
+  "healthcare": "Healthcare",
+  "logistics & transport": "Logistics & Transport",
+  "logistics and transport": "Logistics & Transport",
+  "hospitality": "Hospitality",
+  "education": "Education",
+  "finance & banking": "Finance & Banking",
+  "finance and banking": "Finance & Banking",
+  "wholesale & import": "Wholesale & Import",
+  "wholesale and import": "Wholesale & Import",
+  "construction": "Construction",
+  "bpo & call center": "BPO & Call Center",
+  "bpo and call center": "BPO & Call Center",
+  "energy & fuel": "Energy & Fuel",
+  "energy and fuel": "Energy & Fuel",
+  "security services": "Security",
+  "legal & consulting": "Legal & Consulting",
+  "legal and consulting": "Legal & Consulting",
+  "marketing & advertising": "Marketing & Advertising",
+  "marketing and advertising": "Marketing & Advertising",
+  "manufacturing": "Manufacturing",
+  "hr & manpower": "HR & Manpower",
+  "hr and manpower": "HR & Manpower",
+  "general services": "General Services"
+};
+
+function normalizeCategoryInput(value) {
+  const raw = (value || "").toString().trim();
+  if (!raw) return "";
+  const key = raw.toLowerCase();
+  return CATEGORY_ALIASES[key] || TYPE_TO_CATEGORY[raw] || raw;
+}
+
 app.get("/", (req, res) => {
   res.sendFile(path.join(frontendPath, "login.html"));
 });
@@ -371,6 +417,73 @@ app.get("/api/me", requireAuth, async (req, res) => {
     });
   } catch (err) {
     res.json({ success: true, affiliation: '', industry: '', industry_specific: '' });
+  }
+});
+
+app.get("/api/smart-chips", requireAuth, async (req, res) => {
+  try {
+    const { category = "", subcategory = "" } = req.query;
+    const normalizedCategory = normalizeCategoryInput(category);
+
+    if (!normalizedCategory) {
+      return res.json({ success: true, data: { suggested: [], full: [], cross: [] } });
+    }
+
+    const [rows] = await geoDB.query(
+      `SELECT business_trade_name, category, COUNT(*) AS cnt
+       FROM businesses
+       WHERE category = ?
+         AND business_trade_name IS NOT NULL
+         AND business_trade_name <> ''
+       GROUP BY business_trade_name, category
+       ORDER BY cnt DESC`,
+      [normalizedCategory]
+    );
+
+    const seen = new Set();
+    const all = [];
+    rows.forEach((r) => {
+      const label = (r.business_trade_name || "").trim();
+      if (!label) return;
+      const key = label.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      all.push({ label, category: r.category || normalizedCategory });
+    });
+
+    const suggested = all.slice(0, 6);
+    const full = all.slice(6, 18);
+
+    let cross = [];
+    const sub = (subcategory || "").toString().trim();
+    if (sub) {
+      const [crossRows] = await geoDB.query(
+        `SELECT business_trade_name, category, COUNT(*) AS cnt
+         FROM businesses
+         WHERE LOWER(business_trade_name) LIKE ?
+           AND category <> ?
+           AND business_trade_name IS NOT NULL
+           AND business_trade_name <> ''
+         GROUP BY business_trade_name, category
+         ORDER BY cnt DESC
+         LIMIT 10`,
+        [`%${sub.toLowerCase()}%`, normalizedCategory]
+      );
+
+      const crossSeen = new Set();
+      crossRows.forEach((r) => {
+        const label = (r.business_trade_name || "").trim();
+        if (!label) return;
+        const key = `${label.toLowerCase()}|${(r.category || "").toLowerCase()}`;
+        if (crossSeen.has(key)) return;
+        crossSeen.add(key);
+        cross.push({ label, category: r.category || "" });
+      });
+    }
+
+    return res.json({ success: true, data: { suggested, full, cross } });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
   }
 });
 
