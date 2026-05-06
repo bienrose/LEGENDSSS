@@ -1666,145 +1666,248 @@ app.get("/api/idea-locations", requireAuth, async (req, res) => {
     const prefList = prefs ? prefs.split(",").filter(Boolean) : [];
     const weights = prefWeights();
 
-    const [ideaRowsRaw] = await geoDB.query(
-      `SELECT barangay, CAST(lat AS DECIMAL(10,7)) AS lat, CAST(lon AS DECIMAL(10,7)) AS lon
+    const inPasig = (lat, lon) =>
+      lat >= PASIG_BOUNDS.minLat && lat <= PASIG_BOUNDS.maxLat &&
+      lon >= PASIG_BOUNDS.minLon && lon <= PASIG_BOUNDS.maxLon;
+
+    // 1. Fetch existing businesses of this type (real locations)
+    const [realBizRows] = await geoDB.query(
+      `SELECT id, barangay, CAST(lat AS DECIMAL(10,7)) AS lat, CAST(lon AS DECIMAL(10,7)) AS lon,
+              business_trade_name, line_of_business, category
        FROM businesses
-       WHERE line_of_business = ?
+       WHERE (line_of_business LIKE ? OR business_trade_name LIKE ? OR category = ?)
          AND lat IS NOT NULL AND lon IS NOT NULL
          AND lat <> 'null' AND lon <> 'null'`,
-      [idea]
+      [`%${idea}%`, `%${idea}%`, TYPE_TO_CATEGORY[idea.toUpperCase()] || null]
     );
 
-    let allSql = `
-      SELECT barangay, CAST(lat AS DECIMAL(10,7)) AS lat, CAST(lon AS DECIMAL(10,7)) AS lon
-      FROM businesses
-      WHERE lat IS NOT NULL AND lon IS NOT NULL
-        AND lat <> 'null' AND lon <> 'null'`;
-    const allParams = [];
+    let realLocations = realBizRows
+      .map(r => ({
+        id: r.id,
+        barangay_name: r.barangay,
+        lat: Number(r.lat),
+        lon: Number(r.lon),
+        business_name: r.business_trade_name,
+        is_predicted: false
+      }))
+      .filter(r => Number.isFinite(r.lat) && Number.isFinite(r.lon) && inPasig(r.lat, r.lon));
 
     if (barangay) {
-      allSql += ` AND LOWER(TRIM(barangay)) = LOWER(TRIM(?))`;
-      allParams.push(barangay);
+      realLocations = realLocations.filter(r => normalizeBarangay(r.barangay_name) === normalizeBarangay(barangay));
     }
 
-    const [allRowsRaw] = await geoDB.query(allSql, allParams);
+    // 2. Get all barangay centroids as prediction candidates
+    const [barangayCentroids] = await geoDB.query(
+      `SELECT barangay_name, center_lat AS lat, center_lon AS lon,
+              population, population_density, avg_income_max,
+              gender_distribution, highest_age_group
+       FROM demographic_pasig
+       WHERE center_lat IS NOT NULL AND center_lon IS NOT NULL`
+    );
 
-    const inPasig = (lat, lon) =>
-      lat >= PASIG_BOUNDS.minLat &&
-      lat <= PASIG_BOUNDS.maxLat &&
-      lon >= PASIG_BOUNDS.minLon &&
-      lon <= PASIG_BOUNDS.maxLon;
+    let candidates = barangayCentroids.map(b => ({
+      barangay_name: b.barangay_name,
+      lat: Number(b.lat),
+      lon: Number(b.lon),
+      population: Number(b.population) || 0,
+      density: Number(b.population_density) || 0,
+      income: Number(b.avg_income_max) || 0,
+      gender: (b.gender_distribution || "").toLowerCase(),
+      ageGroup: (b.highest_age_group || "").toLowerCase(),
+      is_predicted: true
+    }));
 
-    const ideaRows = ideaRowsRaw
-      .map(r => ({ barangay: r.barangay, lat: Number(r.lat), lon: Number(r.lon) }))
-      .filter(r => Number.isFinite(r.lat) && Number.isFinite(r.lon) && inPasig(r.lat, r.lon));
-
-    let candidates = allRowsRaw
-      .map(r => ({ barangay_name: r.barangay, lat: Number(r.lat), lon: Number(r.lon) }))
-      .filter(r => Number.isFinite(r.lat) && Number.isFinite(r.lon) && inPasig(r.lat, r.lon));
-
-    candidates = dedupeByLatLon(candidates, 5);
-
-    if (!candidates.length) {
-      return res.json({ success: true, data: [] });
+    if (barangay) {
+      candidates = candidates.filter(c => normalizeBarangay(c.barangay_name) === normalizeBarangay(barangay));
     }
 
-    const [demoRows] = await geoDB.query(
-      `SELECT barangay_name, population, population_density, avg_income_max, gender_distribution, highest_age_group
-       FROM demographic_pasig`
-    );
-    const demoMap = {};
-    demoRows.forEach(d => (demoMap[normalizeBarangay(d.barangay_name)] = d));
-
-    const [totBizRows] = await geoDB.query(
-      `SELECT barangay, COUNT(*) AS cnt FROM businesses GROUP BY barangay`
-    );
-    const totalBizMap = {};
-    totBizRows.forEach(r => (totalBizMap[normalizeBarangay(r.barangay)] = Number(r.cnt) || 0));
-
-    const radius = 500;
-
+    // 3. Score candidates using business profile
+    const profile = getBusinessProfile(idea);
     candidates.forEach(c => {
-      let cnt = 0;
-      ideaRows.forEach(b => {
-        const d = haversineMeters(c.lat, c.lon, b.lat, b.lon);
-        if (d <= radius) cnt += 1;
-      });
+      let score = 0;
+      let popScore = profile.prefersHighPopulation ? Math.min(c.population / 80000, 1) :
+                    profile.prefersMediumPopulation ? Math.min(c.population / 40000, 1) :
+                    Math.min(c.population / 20000, 1);
+      score += popScore * profile.populationWeight;
 
-      const drow = demoMap[normalizeBarangay(c.barangay_name)] || {};
-      c.competitors = cnt;
-      c.totalpop = Number(drow.population) || 0;
-      c.popdensity = Number(drow.population_density) || 0;
-      c.income = Number(drow.avg_income_max) || 0;
-      c.gender = drow.gender_distribution === "Female" ? 1 : 0;
-      c.agedist = ageScore(drow.highest_age_group);
+      let incScore = profile.prefersHighIncome ? Math.min(c.income / 120000, 1) :
+                     profile.prefersMediumIncome ? Math.min(c.income / 70000, 1) :
+                     Math.min(c.income / 35000, 1);
+      score += incScore * profile.incomeWeight;
 
-      const totalBiz = totalBizMap[normalizeBarangay(c.barangay_name)] || 0;
-      c.bizdensity = c.totalpop ? totalBiz / (c.totalpop / 1000) : 0;
-      c.bizcount = ideaRows.filter(
-        b => normalizeBarangay(b.barangay) === normalizeBarangay(c.barangay_name)
-      ).length;
+      let denScore = profile.prefersHighDensity ? Math.min(c.density / 25000, 1) :
+                     Math.min(c.density / 12000, 1);
+      score += denScore * profile.densityWeight;
+
+      let ageScore = profile.targetAgeGroups.some(age => c.ageGroup.includes(age)) ? 1 :
+                     (c.ageGroup.includes("25-54") || c.ageGroup.includes("18-35")) ? 0.7 : 0.3;
+      score += ageScore * profile.ageWeight;
+
+      let genScore = 0.5;
+      if (profile.preferredGender === "female" && c.gender.includes("female")) genScore = 1;
+      else if (profile.preferredGender === "male" && c.gender.includes("male")) genScore = 1;
+      else if (profile.preferredGender === "balanced" && !c.gender.includes("female") && !c.gender.includes("male")) genScore = 1;
+      else if (c.gender.includes("balanced")) genScore = 0.8;
+      score += genScore * profile.genderWeight;
+
+      c.suitabilityScore = Math.min(1, Math.max(0, score));
     });
 
-    if (!prefList.length) {
-      const values = candidates.map(c => Number(c.competitors) || 0);
-      const max = Math.max(...values);
-      const min = Math.min(...values);
-      candidates = candidates.map(c => {
-        const denom = (max - min) || 1;
-        const score = (max - c.competitors) / denom;
-        return { ...c, score };
-      });
-    }
+    // 4. Combine real + predicted, remove duplicate barangays (keep real)
+    let allPins = [...realLocations];
+    const existingBarangays = new Set(realLocations.map(l => normalizeBarangay(l.barangay_name)));
+    const predictedFiltered = candidates.filter(c => !existingBarangays.has(normalizeBarangay(c.barangay_name)));
+    allPins.push(...predictedFiltered);
 
-    let ranked = [];
-    if (!prefList.length) {
-      ranked = [...candidates].sort((a, b) => b.score - a.score);
-    } else {
-      const scoreArr = candidates.map(c => ({ ...c, score: 0 }));
-      prefList.forEach(pref => {
-        const values = scoreArr.map(i => Number(i[pref]) || 0);
-        const z = zscores(values);
-        z.forEach((val, idx) => {
-          scoreArr[idx].score += (weights[pref] || 0) * val;
-        });
-      });
-      ranked = scoreArr.sort((a, b) => b.score - a.score);
-    }
+    // Sort by suitability (real locations get a high default score)
+    allPins.forEach(p => { if (p.suitabilityScore === undefined) p.suitabilityScore = 0.8; });
+    allPins.sort((a,b) => b.suitabilityScore - a.suitabilityScore);
 
-    const minGapMeters = 120;
-    const chosen = [];
-    for (const p of ranked) {
-      const farEnough = chosen.every(c => haversineMeters(c.lat, c.lon, p.lat, p.lon) >= minGapMeters);
-      if (farEnough) chosen.push(p);
-      if (chosen.length >= topN) break;
+    // 5. Select pins with better spreading (prioritize different barangays first)
+    const minGapMeters = 500; // increased spacing
+    let selected = [];
+    
+    // First pass: try to pick one pin per barangay (if multiple barangays available)
+    const barangayGroups = new Map();
+    for (const pin of allPins) {
+      const key = normalizeBarangay(pin.barangay_name);
+      if (!barangayGroups.has(key)) barangayGroups.set(key, []);
+      barangayGroups.get(key).push(pin);
     }
-
-    if (chosen.length < topN) {
-      for (const p of ranked) {
-        const exists = chosen.some(c => c.lat === p.lat && c.lon === p.lon);
-        if (!exists) chosen.push(p);
-        if (chosen.length >= topN) break;
+    
+    // Pick the best pin from each barangay (sorted by score)
+    const barangayList = Array.from(barangayGroups.keys());
+    for (const bgy of barangayList) {
+      const bestInBarangay = barangayGroups.get(bgy).sort((a,b) => b.suitabilityScore - a.suitabilityScore)[0];
+      // Check distance to already selected pins
+      let farEnough = true;
+      for (const s of selected) {
+        if (haversineMeters(s.lat, s.lon, bestInBarangay.lat, bestInBarangay.lon) < minGapMeters) {
+          farEnough = false;
+          break;
+        }
+      }
+      if (farEnough) {
+        selected.push(bestInBarangay);
+        if (selected.length >= topN) break;
       }
     }
-
-    const jitterMeters = 35;
+    
+    // Second pass: if still need more, add next best pins (respecting distance)
+    if (selected.length < topN) {
+      for (const pin of allPins) {
+        if (selected.includes(pin)) continue;
+        let farEnough = true;
+        for (const s of selected) {
+          if (haversineMeters(s.lat, s.lon, pin.lat, pin.lon) < minGapMeters) {
+            farEnough = false;
+            break;
+          }
+        }
+        if (farEnough) {
+          selected.push(pin);
+          if (selected.length >= topN) break;
+        }
+      }
+    }
+    
+    // Third pass: if still not enough, add any remaining without distance check (but try to keep spread)
+    if (selected.length < topN) {
+      for (const pin of allPins) {
+        if (!selected.includes(pin)) {
+          selected.push(pin);
+          if (selected.length >= topN) break;
+        }
+      }
+    }
+    
+    // Final fallback: jitter duplicates to reach topN (but only if absolutely necessary)
+    const jitterMeters = 300;
     const jitterDegLat = jitterMeters / 111111;
     const jitterDegLon = jitterMeters / (111111 * Math.cos(14.58 * Math.PI / 180));
-
-    while (chosen.length < topN && chosen.length > 0) {
-      const base = chosen[chosen.length % chosen.length];
-      const lat = base.lat + (Math.random() * 2 - 1) * jitterDegLat;
-      const lon = base.lon + (Math.random() * 2 - 1) * jitterDegLon;
-      if (inPasig(lat, lon)) chosen.push({ ...base, lat, lon });
+    let attempts = 0;
+    while (selected.length < topN && attempts < 100) {
+      const base = selected.length ? selected[0] : allPins[0];
+      if (!base) break;
+      const newLat = base.lat + (Math.random() - 0.5) * jitterDegLat;
+      const newLon = base.lon + (Math.random() - 0.5) * jitterDegLon;
+      if (inPasig(newLat, newLon)) {
+        selected.push({
+          ...base,
+          lat: newLat,
+          lon: newLon,
+          barangay_name: base.barangay_name + " (area)",
+          is_predicted: true,
+          suitabilityScore: base.suitabilityScore * 0.9
+        });
+      }
+      attempts++;
     }
 
-    return res.json({ success: true, data: chosen.slice(0, topN) });
+    const result = selected.slice(0, topN).map(p => ({
+      lat: p.lat,
+      lon: p.lon,
+      barangay_name: p.barangay_name,
+      suitability_score: p.suitabilityScore,
+      business_type: idea,
+      is_predicted: p.is_predicted || false
+    }));
+
+    return res.json({ success: true, data: result });
   } catch (err) {
+    console.error("idea-locations error:", err);
     return res.status(500).json({ success: false, message: err.message });
   }
 });
-
+// Enhanced profile function that uses category if available
+function getBusinessProfile(businessType, category = null) {
+  const type = (businessType || "").toLowerCase();
+  // Use category if provided (more reliable)
+  if (category) {
+    const catLower = category.toLowerCase();
+    if (catLower.includes("food") || catLower.includes("restaurant")) {
+      return {
+        prefersHighPopulation: true, prefersMediumPopulation: false,
+        prefersHighIncome: true, prefersMediumIncome: false,
+        prefersHighDensity: true,
+        targetAgeGroups: ['25-54', '18-35', 'working'],
+        preferredGender: 'balanced',
+        populationWeight: 0.25, incomeWeight: 0.30, densityWeight: 0.20,
+        ageWeight: 0.15, genderWeight: 0.05
+      };
+    }
+    if (catLower.includes("retail")) {
+      return {
+        prefersHighPopulation: true, prefersMediumPopulation: false,
+        prefersHighIncome: false, prefersMediumIncome: true,
+        prefersHighDensity: true,
+        targetAgeGroups: ['all', 'family'],
+        preferredGender: 'balanced',
+        populationWeight: 0.35, incomeWeight: 0.15, densityWeight: 0.25,
+        ageWeight: 0.10, genderWeight: 0.05
+      };
+    }
+  }
+  // Fallback to keyword profiles
+  const profiles = {
+    'restaurant': { prefersHighPopulation: true, prefersMediumPopulation: false, prefersHighIncome: true, prefersMediumIncome: false, prefersHighDensity: true, targetAgeGroups: ['25-54', '18-35', 'working'], preferredGender: 'balanced', populationWeight: 0.25, incomeWeight: 0.30, densityWeight: 0.20, ageWeight: 0.15, genderWeight: 0.05 },
+    'bakery': { prefersHighPopulation: false, prefersMediumPopulation: true, prefersHighIncome: false, prefersMediumIncome: true, prefersHighDensity: false, targetAgeGroups: ['family', 'children', 'all'], preferredGender: 'balanced', populationWeight: 0.30, incomeWeight: 0.20, densityWeight: 0.15, ageWeight: 0.15, genderWeight: 0.10 },
+    'eatery': { prefersHighPopulation: false, prefersMediumPopulation: true, prefersHighIncome: false, prefersMediumIncome: true, prefersHighDensity: true, targetAgeGroups: ['all', 'working', '18-35'], preferredGender: 'balanced', populationWeight: 0.25, incomeWeight: 0.20, densityWeight: 0.25, ageWeight: 0.15, genderWeight: 0.05 },
+    'coffee shop': { prefersHighPopulation: false, prefersMediumPopulation: true, prefersHighIncome: true, prefersMediumIncome: false, prefersHighDensity: true, targetAgeGroups: ['18-35', 'young', 'professional'], preferredGender: 'balanced', populationWeight: 0.20, incomeWeight: 0.35, densityWeight: 0.25, ageWeight: 0.10, genderWeight: 0.05 }
+  };
+  for (const [key, prof] of Object.entries(profiles)) {
+    if (type.includes(key)) return prof;
+  }
+  // Default profile
+  return {
+    prefersHighPopulation: false, prefersMediumPopulation: true,
+    prefersHighIncome: false, prefersMediumIncome: true,
+    prefersHighDensity: false,
+    targetAgeGroups: ['all'], preferredGender: 'balanced',
+    populationWeight: 0.25, incomeWeight: 0.20, densityWeight: 0.20,
+    ageWeight: 0.15, genderWeight: 0.10
+  };
+}
 app.get("/geo-test", async (req, res) => {
   try {
     const [rows] = await geoDB.query("SELECT 1 AS test");

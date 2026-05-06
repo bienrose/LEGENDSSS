@@ -15,6 +15,12 @@ let lastFilteredPrefs = null;
 let searchHistory = [];
 const locSavedItems = new Set();
 
+// ─── ACTIVE IDEA STATE ────────────────────────────────────────────────────────
+let activeIdeaIdx = -1;
+let activeIdeaName = null;
+let activeIdeaBarangay = null;
+let activeIdeaPrefs = [];
+
 // Populated on DOMContentLoaded from /api/me
 let userIndustry = '';
 let userIndustrySpecific = '';
@@ -196,7 +202,7 @@ const PASIG_BOUNDS = {
 
 function isInPasig(lat, lon) {
   return lat >= PASIG_BOUNDS.minLat && lat <= PASIG_BOUNDS.maxLat &&
-         lon >= PASIG_BOUNDS.minLon && lon <= PASIG_BOUNDS.maxLon;
+    lon >= PASIG_BOUNDS.minLon && lon <= PASIG_BOUNDS.maxLon;
 }
 
 const pinRangeEl = document.getElementById('pin-range');
@@ -215,23 +221,35 @@ function getFilteredPinCount() {
 
 async function fetchIdeaLocations(filters = {}) {
   const params = new URLSearchParams();
-  if (filters.idea) params.append('idea', filters.idea);
+  if (filters.idea) params.append('idea', filters.idea.trim());
   if (filters.barangay) params.append('barangay', filters.barangay);
   if (filters.top) params.append('top', filters.top);
   if (filters.prefs?.length) params.append('prefs', filters.prefs.join(','));
+  if (filters._t) params.append('_t', filters._t);
   const res = await fetch(`/api/idea-locations?${params.toString()}`);
   const data = await res.json();
   return data.success ? data.data : [];
 }
 
+// ─── REPLOT: only replots the currently active idea with new pin count ────────
 async function replotFilteredPins() {
-  if (!isFilterMode || !lastFilteredIdea) return;
+  if (!isFilterMode) return;
+  if (activeIdeaIdx === -1 || !activeIdeaName) return;
+
   const requestId = ++activeRequestId;
   const top = getFilteredPinCount();
+
+  clearBusinessMarkers();
+
   const recs = await fetchIdeaLocations({
-    idea: lastFilteredIdea, barangay: lastFilteredBarangay, top, prefs: lastFilteredPrefs
+    idea: activeIdeaName,
+    barangay: activeIdeaBarangay,
+    top,
+    prefs: activeIdeaPrefs
   });
-  if (!isFilterMode || requestId !== activeRequestId) return;
+
+  if (requestId !== activeRequestId) return;
+
   plotLocations(recs);
 }
 
@@ -241,11 +259,13 @@ if (pinCountInput && pinCountLabel) {
     if (!isFilterMode) return;
     pinCountLabel.textContent = String(getFilteredPinCount());
   });
+
   const fireSlider = async () => {
     if (!isFilterMode) return;
     pinCountLabel.textContent = String(getFilteredPinCount());
     await replotFilteredPins();
   };
+
   pinCountInput.addEventListener('change', fireSlider);
   pinCountInput.addEventListener('pointerup', fireSlider);
   pinCountInput.addEventListener('mouseup', fireSlider);
@@ -288,6 +308,10 @@ document.getElementById('close-filter-panel')?.addEventListener('click', () => {
   lastFilteredIdea = null;
   lastFilteredBarangay = null;
   lastFilteredPrefs = null;
+  activeIdeaIdx = -1;
+  activeIdeaName = null;
+  activeIdeaBarangay = null;
+  activeIdeaPrefs = [];
   clearBusinessMarkers();
   clearClickedMarker();
   hidePinRange();
@@ -314,30 +338,30 @@ document.getElementById('saved-btn')?.addEventListener('click', function (e) {
 });
 
 const CODE_LABELS = {
-  'RES': 'Restaurant','RET': 'Retail','SER': 'Services','WSR': 'Wholesale','WSE': 'Wholesale',
-  'BSM': 'Manufacturing','SSM': 'Manufacturing','EX1': 'Export','EX2': 'Export','EX3': 'Export',
-  'FRX': 'Foreign Exchange','SBR': 'Stockbroker','PWN': 'Pawnshop','BNK': 'Bank','IN6': 'Insurance',
-  'PRT': 'Retail','APT': 'Apartment Rental','EDU': 'Educational Institution','HOS': 'Hospital','DEN': 'Dental Clinic',
-  'DRG': 'Drug Store','MED': 'Medical Clinic','MOT': 'Motel','SCA': 'Security Agency','AMD': 'Amusement','AMN': 'Amusement',
-  'TA': 'Travel Agency','PRN': 'Printing Services','FTX': 'Franchise','CAT': 'Catering','ADM': 'Admin','LAB': 'Laboratory'
+  'RES': 'Restaurant', 'RET': 'Retail', 'SER': 'Services', 'WSR': 'Wholesale', 'WSE': 'Wholesale',
+  'BSM': 'Manufacturing', 'SSM': 'Manufacturing', 'EX1': 'Export', 'EX2': 'Export', 'EX3': 'Export',
+  'FRX': 'Foreign Exchange', 'SBR': 'Stockbroker', 'PWN': 'Pawnshop', 'BNK': 'Bank', 'IN6': 'Insurance',
+  'PRT': 'Retail', 'APT': 'Apartment Rental', 'EDU': 'Educational Institution', 'HOS': 'Hospital', 'DEN': 'Dental Clinic',
+  'DRG': 'Drug Store', 'MED': 'Medical Clinic', 'MOT': 'Motel', 'SCA': 'Security Agency', 'AMD': 'Amusement', 'AMN': 'Amusement',
+  'TA': 'Travel Agency', 'PRN': 'Printing Services', 'FTX': 'Franchise', 'CAT': 'Catering', 'ADM': 'Admin', 'LAB': 'Laboratory'
 };
 
 const KEYWORD_LABELS = [
-  ['SARI SARI','Sari-Sari Store'],['GROCERY','Grocery'],['BAKERY','Bakery'],['BAKESHOP','Bakeshop'],
-  ['RESTAURANT','Restaurant'],['FAST FOOD','Fast Food'],['COFFEE SHOP','Coffee Shop'],['CANTEEN','Canteen'],
-  ['EATERY','Eatery'],['PANCITERIA','Panciteria'],['CATERING','Catering'],['PHARMACY','Pharmacy'],
-  ['DRUG STORE','Drug Store'],['CLINIC','Clinic'],['DENTAL','Dental Clinic'],['HOSPITAL','Hospital'],
-  ['LABORATORY','Laboratory'],['PAWNSHOP','Pawnshop'],['BANK','Bank'],['INSURANCE','Insurance'],
-  ['LENDING','Lending'],['HARDWARE','Hardware Store'],['CELLPHONE','Cellphone Store'],['APPLIANCES','Appliance Store'],
-  ['OPTICAL','Optical Shop'],['SALON','Salon'],['BARBER','Barbershop'],['SPA','Spa'],['MASSAGE','Massage'],
-  ['LAUNDRY','Laundry Shop'],['CAR WASH','Car Wash'],['GYM','Gym'],['SCHOOL','School'],['TUTORIAL','Tutorial Center'],
-  ['TRAINING','Training Center'],['TRAVEL','Travel Agency'],['HOTEL','Hotel'],['MOTEL','Motel'],['FUNERAL','Funeral Services'],
-  ['PRINTING','Printing Services'],['ADVERTISING','Advertising'],['CONSTRUCTION','Construction'],['TRUCKING','Trucking'],
-  ['LOGISTICS','Logistics'],['SECURITY','Security Agency'],['CONSULTANCY','Consultancy'],['CONSULTING','Consulting'],
-  ['ACCOUNTING','Accounting'],['LAW','Law Firm'],['REAL ESTATE','Real Estate'],['TRADING','Trading'],['RETAILER','Retail'],
-  ['WHOLESALER','Wholesale'],['MANUFACTURER','Manufacturing'],['WAREHOUSE','Warehouse'],['WATER REFILLING','Water Refilling Station'],
-  ['GAS STATION','Gas Station'],['LPG','LPG Dealer'],['INTERNET','Internet Services'],['SOFTWARE','Software Company'],
-  ['BPO','BPO'],['CALL CENTER','Call Center'],['REMITTANCE','Money Remittance'],['COOPERATIVE','Cooperative'],['FOUNDATION','Foundation']
+  ['SARI SARI', 'Sari-Sari Store'], ['GROCERY', 'Grocery'], ['BAKERY', 'Bakery'], ['BAKESHOP', 'Bakeshop'],
+  ['RESTAURANT', 'Restaurant'], ['FAST FOOD', 'Fast Food'], ['COFFEE SHOP', 'Coffee Shop'], ['CANTEEN', 'Canteen'],
+  ['EATERY', 'Eatery'], ['PANCITERIA', 'Panciteria'], ['CATERING', 'Catering'], ['PHARMACY', 'Pharmacy'],
+  ['DRUG STORE', 'Drug Store'], ['CLINIC', 'Clinic'], ['DENTAL', 'Dental Clinic'], ['HOSPITAL', 'Hospital'],
+  ['LABORATORY', 'Laboratory'], ['PAWNSHOP', 'Pawnshop'], ['BANK', 'Bank'], ['INSURANCE', 'Insurance'],
+  ['LENDING', 'Lending'], ['HARDWARE', 'Hardware Store'], ['CELLPHONE', 'Cellphone Store'], ['APPLIANCES', 'Appliance Store'],
+  ['OPTICAL', 'Optical Shop'], ['SALON', 'Salon'], ['BARBER', 'Barbershop'], ['SPA', 'Spa'], ['MASSAGE', 'Massage'],
+  ['LAUNDRY', 'Laundry Shop'], ['CAR WASH', 'Car Wash'], ['GYM', 'Gym'], ['SCHOOL', 'School'], ['TUTORIAL', 'Tutorial Center'],
+  ['TRAINING', 'Training Center'], ['TRAVEL', 'Travel Agency'], ['HOTEL', 'Hotel'], ['MOTEL', 'Motel'], ['FUNERAL', 'Funeral Services'],
+  ['PRINTING', 'Printing Services'], ['ADVERTISING', 'Advertising'], ['CONSTRUCTION', 'Construction'], ['TRUCKING', 'Trucking'],
+  ['LOGISTICS', 'Logistics'], ['SECURITY', 'Security Agency'], ['CONSULTANCY', 'Consultancy'], ['CONSULTING', 'Consulting'],
+  ['ACCOUNTING', 'Accounting'], ['LAW', 'Law Firm'], ['REAL ESTATE', 'Real Estate'], ['TRADING', 'Trading'], ['RETAILER', 'Retail'],
+  ['WHOLESALER', 'Wholesale'], ['MANUFACTURER', 'Manufacturing'], ['WAREHOUSE', 'Warehouse'], ['WATER REFILLING', 'Water Refilling Station'],
+  ['GAS STATION', 'Gas Station'], ['LPG', 'LPG Dealer'], ['INTERNET', 'Internet Services'], ['SOFTWARE', 'Software Company'],
+  ['BPO', 'BPO'], ['CALL CENTER', 'Call Center'], ['REMITTANCE', 'Money Remittance'], ['COOPERATIVE', 'Cooperative'], ['FOUNDATION', 'Foundation']
 ];
 
 function formatBizName(s) {
@@ -363,138 +387,99 @@ function formatBizName(s) {
   return raw.toLowerCase().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 }
 
-// ─── GENERIC BUSINESS TYPE NORMALIZER FOR CHIPS ──────────────────────────────
-// Maps brand/company names returned by /api/smart-chips into plain,
-// human-readable generic business type labels for the filter chips UI.
-// Pattern: most-specific keyword match wins; falls back to formatBizName.
 const GENERIC_CHIP_MAP = [
-  // Coffee & drinks
-  [/coffee|cafe|kape|brew/i,                       'Coffee Shop'],
+  [/coffee|cafe|kape|brew/i, 'Coffee Shop'],
   [/milk\s*tea|boba|bubble\s*tea|chatime|coco\s*fresh|gong\s*cha|macao|tealive/i, 'Milk Tea Shop'],
-  [/juice|smoothie|shake|jamba/i,                  'Juice Bar'],
-  [/tea\s*house|tea\s*room/i,                      'Tea House'],
-
-  // Food — specific first
-  [/pizza|pizzeria/i,                              'Pizza Shop'],
+  [/juice|smoothie|shake|jamba/i, 'Juice Bar'],
+  [/tea\s*house|tea\s*room/i, 'Tea House'],
+  [/pizza|pizzeria/i, 'Pizza Shop'],
   [/burger|hamburger|jollibee|mcdo|mcdonald|wendy|five\s*guys/i, 'Burger Restaurant'],
-  [/sushi|japanese|ramen|udon|maki|katsu/i,        'Japanese Restaurant'],
-  [/korean|kbbq|samgyup/i,                         'Korean Restaurant'],
-  [/chinese|dimsum|dim\s*sum|mami|noodle/i,        'Chinese Restaurant'],
-  [/chicken|fried\s*chicken|bonchon|crispy/i,      'Fried Chicken Restaurant'],
-  [/bbq|barbecue|ihaw/i,                           'BBQ Restaurant'],
-  [/shawarma|arabic|middle\s*east|halal/i,         'Halal/Shawarma Shop'],
-  [/seafood|isda|dampa/i,                          'Seafood Restaurant'],
-  [/steak|grill|steakhouse/i,                      'Steakhouse'],
-  [/pasta|italian|spaghetti/i,                     'Italian Restaurant'],
-  [/vegetarian|vegan|healthy\s*food/i,             'Healthy Food Restaurant'],
-  [/snack|merienda|street\s*food|kwek|fishball/i,  'Street Food / Snack Shop'],
-  [/panciteria|pansit|mami\s*house/i,              'Panciteria'],
-  [/canteen|carinderia|turo.turo/i,                'Canteen / Carinderia'],
-  [/bakery|bakeshop|panadeya|tinapay/i,            'Bakery'],
-  [/cake|pastry|dessert|sweets|candy|chocolate/i,  'Pastry & Dessert Shop'],
-  [/ice\s*cream|gelato|frozen|creamery/i,          'Ice Cream Shop'],
-  [/donut|doughnut|dunkin/i,                       'Donut Shop'],
-  [/fast\s*food/i,                                 'Fast Food Restaurant'],
-  [/catering/i,                                    'Catering Services'],
-  [/restaurant|eatery|diner|grill|kainan/i,        'Restaurant'],
-
-  // Grocery & retail
-  [/sari.sari|tindera/i,                           'Sari-Sari Store'],
-  [/grocery|supermarket|palengke|market/i,         'Grocery / Supermarket'],
-  [/convenience\s*store|7.eleven|minimart/i,       'Convenience Store'],
-  [/appliance|electronics|gadget/i,                'Appliance / Electronics Store'],
-  [/cellphone|mobile\s*phone|smartphone/i,         'Cellphone Shop'],
-  [/clothing|fashion|apparel|boutique|ukay/i,      'Clothing Store'],
-  [/shoe|footwear|sneaker/i,                       'Shoe Store'],
-  [/hardware|construction\s*supply/i,              'Hardware Store'],
-  [/bookstore|school\s*supply|national\s*book/i,   'Bookstore'],
-  [/toy|games\s*shop/i,                            'Toy Store'],
-  [/pet\s*shop|veterinary|vet\s*clinic/i,          'Pet Shop'],
-  [/flower|florist/i,                              'Flower Shop'],
-  [/optical|eyewear|glasses/i,                     'Optical Shop'],
+  [/sushi|japanese|ramen|udon|maki|katsu/i, 'Japanese Restaurant'],
+  [/korean|kbbq|samgyup/i, 'Korean Restaurant'],
+  [/chinese|dimsum|dim\s*sum|mami|noodle/i, 'Chinese Restaurant'],
+  [/chicken|fried\s*chicken|bonchon|crispy/i, 'Fried Chicken Restaurant'],
+  [/bbq|barbecue|ihaw/i, 'BBQ Restaurant'],
+  [/shawarma|arabic|middle\s*east|halal/i, 'Halal/Shawarma Shop'],
+  [/seafood|isda|dampa/i, 'Seafood Restaurant'],
+  [/steak|grill|steakhouse/i, 'Steakhouse'],
+  [/pasta|italian|spaghetti/i, 'Italian Restaurant'],
+  [/vegetarian|vegan|healthy\s*food/i, 'Healthy Food Restaurant'],
+  [/snack|merienda|street\s*food|kwek|fishball/i, 'Street Food / Snack Shop'],
+  [/panciteria|pansit|mami\s*house/i, 'Panciteria'],
+  [/canteen|carinderia|turo.turo/i, 'Canteen / Carinderia'],
+  [/bakery|bakeshop|panadeya|tinapay/i, 'Bakery'],
+  [/cake|pastry|dessert|sweets|candy|chocolate/i, 'Pastry & Dessert Shop'],
+  [/ice\s*cream|gelato|frozen|creamery/i, 'Ice Cream Shop'],
+  [/donut|doughnut|dunkin/i, 'Donut Shop'],
+  [/fast\s*food/i, 'Fast Food Restaurant'],
+  [/catering/i, 'Catering Services'],
+  [/restaurant|eatery|diner|grill|kainan/i, 'Restaurant'],
+  [/sari.sari|tindera/i, 'Sari-Sari Store'],
+  [/grocery|supermarket|palengke|market/i, 'Grocery / Supermarket'],
+  [/convenience\s*store|7.eleven|minimart/i, 'Convenience Store'],
+  [/appliance|electronics|gadget/i, 'Appliance / Electronics Store'],
+  [/cellphone|mobile\s*phone|smartphone/i, 'Cellphone Shop'],
+  [/clothing|fashion|apparel|boutique|ukay/i, 'Clothing Store'],
+  [/shoe|footwear|sneaker/i, 'Shoe Store'],
+  [/hardware|construction\s*supply/i, 'Hardware Store'],
+  [/bookstore|school\s*supply|national\s*book/i, 'Bookstore'],
+  [/toy|games\s*shop/i, 'Toy Store'],
+  [/pet\s*shop|veterinary|vet\s*clinic/i, 'Pet Shop'],
+  [/flower|florist/i, 'Flower Shop'],
+  [/optical|eyewear|glasses/i, 'Optical Shop'],
   [/pharmacy|drug\s*store|botika|rose\s*pharmacy|mercury/i, 'Pharmacy'],
-  [/water\s*refilling|purified\s*water/i,          'Water Refilling Station'],
-  [/lpg|gas\s*dealer/i,                            'LPG / Gas Dealer'],
-  [/retail|trading|distributor|supplier/i,         'Retail Store'],
-
-  // Personal services & beauty
-  [/salon|barbershop|barber|hair|gupit/i,          'Salon / Barbershop'],
-  [/spa|massage|wellness|relax/i,                  'Spa & Massage'],
-  [/nail\s*salon|manicure|pedicure/i,              'Nail Salon'],
-  [/laundry|dry\s*clean|washing/i,                 'Laundry Shop'],
-  [/tailoring|alteration|dress\s*maker/i,          'Tailoring Shop'],
-  [/photography|photo\s*studio/i,                  'Photo Studio'],
-  [/gym|fitness|crossfit|pilates|yoga/i,           'Gym / Fitness Center'],
-
-  // Health & medical
-  [/hospital|medical\s*center/i,                   'Hospital'],
-  [/clinic|medical/i,                              'Medical Clinic'],
-  [/dental|dentist/i,                              'Dental Clinic'],
-  [/laboratory|diagnostic/i,                       'Medical Laboratory'],
-
-  // Finance
-  [/pawnshop|palawagan|cebuana|mlhuillier/i,       'Pawnshop'],
+  [/water\s*refilling|purified\s*water/i, 'Water Refilling Station'],
+  [/lpg|gas\s*dealer/i, 'LPG / Gas Dealer'],
+  [/retail|trading|distributor|supplier/i, 'Retail Store'],
+  [/salon|barbershop|barber|hair|gupit/i, 'Salon / Barbershop'],
+  [/spa|massage|wellness|relax/i, 'Spa & Massage'],
+  [/nail\s*salon|manicure|pedicure/i, 'Nail Salon'],
+  [/laundry|dry\s*clean|washing/i, 'Laundry Shop'],
+  [/tailoring|alteration|dress\s*maker/i, 'Tailoring Shop'],
+  [/photography|photo\s*studio/i, 'Photo Studio'],
+  [/gym|fitness|crossfit|pilates|yoga/i, 'Gym / Fitness Center'],
+  [/hospital|medical\s*center/i, 'Hospital'],
+  [/clinic|medical/i, 'Medical Clinic'],
+  [/dental|dentist/i, 'Dental Clinic'],
+  [/laboratory|diagnostic/i, 'Medical Laboratory'],
+  [/pawnshop|palawagan|cebuana|mlhuillier/i, 'Pawnshop'],
   [/remittance|money\s*transfer|western\s*union|lbc\s*money/i, 'Money Remittance'],
-  [/lending|loan|microfinance/i,                   'Lending / Microfinance'],
-  [/bank|banking|savings/i,                        'Bank'],
-  [/insurance/i,                                   'Insurance'],
-  [/cooperative|coop/i,                            'Cooperative'],
-
-  // Education
-  [/tutorial|review\s*center|kumon/i,              'Tutorial / Review Center'],
-  [/school|academy|college|university/i,           'School / Academy'],
-  [/training\s*center|driving\s*school/i,          'Training Center'],
-  [/daycare|childcare|nursery/i,                   'Daycare Center'],
-
-  // Hospitality & travel
-  [/hotel|inn|hostel|lodge/i,                      'Hotel / Inn'],
-  [/travel\s*agency|tour|ticketing/i,              'Travel Agency'],
-
-  // Tech & digital
-  [/internet\s*(cafe|shop)|i.?cafe/i,              'Internet Café'],
-  [/printing|photocopy|print\s*shop/i,             'Printing Shop'],
-  [/software|app\s*dev|web\s*dev|IT\s*services/i,  'IT / Software Services'],
-  [/bpo|call\s*center|outsourc/i,                  'BPO / Call Center'],
-
-  // Logistics & auto
-  [/trucking|cargo|freight|courier/i,              'Trucking / Cargo'],
-  [/car\s*wash|auto\s*detail/i,                    'Car Wash'],
+  [/lending|loan|microfinance/i, 'Lending / Microfinance'],
+  [/bank|banking|savings/i, 'Bank'],
+  [/insurance/i, 'Insurance'],
+  [/cooperative|coop/i, 'Cooperative'],
+  [/tutorial|review\s*center|kumon/i, 'Tutorial / Review Center'],
+  [/school|academy|college|university/i, 'School / Academy'],
+  [/training\s*center|driving\s*school/i, 'Training Center'],
+  [/daycare|childcare|nursery/i, 'Daycare Center'],
+  [/hotel|inn|hostel|lodge/i, 'Hotel / Inn'],
+  [/travel\s*agency|tour|ticketing/i, 'Travel Agency'],
+  [/internet\s*(cafe|shop)|i.?cafe/i, 'Internet Café'],
+  [/printing|photocopy|print\s*shop/i, 'Printing Shop'],
+  [/software|app\s*dev|web\s*dev|IT\s*services/i, 'IT / Software Services'],
+  [/bpo|call\s*center|outsourc/i, 'BPO / Call Center'],
+  [/trucking|cargo|freight|courier/i, 'Trucking / Cargo'],
+  [/car\s*wash|auto\s*detail/i, 'Car Wash'],
   [/auto\s*repair|vulcanizing|mechanic|car\s*service/i, 'Auto Repair Shop'],
-  [/gas\s*station|petron|shell\s*station|fuel/i,   'Gas Station'],
-  [/parking/i,                                     'Parking'],
-
-  // Construction & real estate
-  [/construction|contractor|builder/i,             'Construction'],
-  [/real\s*estate|property|rental|leasing/i,       'Real Estate'],
-
-  // Security & services
-  [/security\s*agency|guard/i,                     'Security Agency'],
-  [/cleaning\s*services|janitorial/i,              'Cleaning Services'],
-  [/events?\s*(place|hall|venue)|catering\s*hall/i,'Events Place'],
-  [/funeral|memorial/i,                            'Funeral Services'],
+  [/gas\s*station|petron|shell\s*station|fuel/i, 'Gas Station'],
+  [/parking/i, 'Parking'],
+  [/construction|contractor|builder/i, 'Construction'],
+  [/real\s*estate|property|rental|leasing/i, 'Real Estate'],
+  [/security\s*agency|guard/i, 'Security Agency'],
+  [/cleaning\s*services|janitorial/i, 'Cleaning Services'],
+  [/events?\s*(place|hall|venue)|catering\s*hall/i, 'Events Place'],
+  [/funeral|memorial/i, 'Funeral Services'],
 ];
 
-/**
- * Converts a chip label (often a brand/company name from the DB)
- * into a plain generic business type string.
- * e.g. "Rustan Coffee Corporation" → "Coffee Shop"
- *      "Bonchon Chicken Philippines" → "Fried Chicken Restaurant"
- *      "Zus Coffee" → "Coffee Shop"
- */
 function toGenericChipLabel(raw) {
   const str = (raw || '').toString().trim();
   if (!str) return str;
   for (const [pattern, generic] of GENERIC_CHIP_MAP) {
     if (pattern.test(str)) return generic;
   }
-  // Fall back to existing formatBizName (strips code prefixes, title-cases)
   return formatBizName(str);
 }
 
-/**
- * De-duplicates an array of chip objects by their resolved generic label.
- * When two chips map to the same generic label, only the first is kept.
- */
 function dedupeChipsByGenericLabel(chips) {
   const seen = new Set();
   return chips.filter(chip => {
@@ -510,7 +495,6 @@ function escapeHtml(str) {
 }
 
 function plotLocations(recs) {
-  if (!isFilterMode && !allowIdeaPins) return;
   clearBusinessMarkers();
   const bounds = L.latLngBounds();
   recs.forEach((rec) => {
@@ -519,7 +503,7 @@ function plotLocations(recs) {
     const lon = Number(rec.lon);
     const brgy = rec.barangay_name || '';
     const marker = L.marker([lat, lon]).addTo(map)
-      .bindPopup(`<b>${escapeHtml(brgy)}</b><br>${lat.toFixed(6)}, ${lon.toFixed(6)}`);
+      .bindPopup(`<b>${escapeHtml(brgy)}</b><br>${lat.toFixed(6)}, ${lon.toFixed(6)}<br><span style="color:#2e7d32;">🎯 Suitability: ${Math.round((rec.suitability_score || 0) * 100)}%</span>`);
     businessMarkers.push(marker);
     bounds.extend(marker.getLatLng());
   });
@@ -658,7 +642,7 @@ async function saveRowClickHandler(e) {
   }
 }
 
-// ─── RENDER IDEA LIST FROM NAMES ──────────────────────────────────────────────
+// ─── RENDER IDEA LIST ─────────────────────────────────────────────────────────
 function renderIdeaList({ names, barangay, prefs, allowPins }) {
   const listEl = document.getElementById('rec-list');
   if (!listEl) return;
@@ -686,128 +670,147 @@ function renderIdeaList({ names, barangay, prefs, allowPins }) {
       if (!allowPins) return;
 
       const idea = el.dataset.idea;
-      const pinCount = isFilterMode ? getFilteredPinCount() : 5;
+      const idx = parseInt(el.dataset.idx);
+
+      if (activeIdeaIdx === idx) {
+        activeIdeaIdx = -1;
+        activeIdeaName = null;
+        activeIdeaBarangay = null;
+        activeIdeaPrefs = [];
+        clearBusinessMarkers();
+        listEl.querySelectorAll('.rec-item').forEach(r => r.classList.remove('active'));
+        return;
+      }
+
+      activeIdeaIdx = idx;
+      activeIdeaName = idea;
+      activeIdeaBarangay = barangay || null;
+      activeIdeaPrefs = prefs || [];
+
+      listEl.querySelectorAll('.rec-item').forEach(r => r.classList.remove('active'));
+      el.classList.add('active');
 
       await reportLogRecommendation({
         idea, area: barangay || currentBarangayName || currentLocShortName,
-        pinCount, lat: currentClickLat, lon: currentClickLng
+        pinCount: getFilteredPinCount(), lat: currentClickLat, lon: currentClickLng
       });
 
       loadAreaDemographics(barangay || currentBarangayName, idea);
 
-      if (isFilterMode) {
-        lastFilteredIdea = idea;
-        lastFilteredBarangay = barangay || null;
-        lastFilteredPrefs = prefs || [];
-        showPinRange();
-      } else {
-        hidePinRange();
-      }
+      const top = getFilteredPinCount();
+      const recs = await fetchIdeaLocations({
+        idea: idea.trim(),
+        barangay,
+        top,
+        prefs,
+        _t: Date.now()
+      });
 
-      const top = pinCount;
-      const recs = await fetchIdeaLocations({ idea, barangay, top, prefs });
+      clearBusinessMarkers();
       plotLocations(recs);
-
-      listEl.querySelectorAll('.rec-item').forEach(r => r.classList.remove('active'));
-      el.classList.add('active');
     });
   });
 
   markSavedInCurrentList();
 }
 
-// ─── CORE: RESOLVE CHIP SELECTIONS INTO IDEA NAMES ───────────────────────────
+// ✅ FIXED: resolveChipIdeas – ranks chips by suitability, returns top 3 chip labels
 async function resolveChipIdeas({ selectedChips, barangay, type, prefs }) {
-  const count = selectedChips.length;
-
-  if (count === 0) {
-    const ideas = await fetchIdeas({ barangay, type, prefs });
+  // If no chips and no type, fallback to global ideas (rare case)
+  if (selectedChips.length === 0 && !type) {
+    const ideas = await fetchIdeas({ barangay, prefs });
     return ideas.slice(0, 3);
   }
 
-  if (count >= 1 && count <= 3) {
-    // Use the generic label (already resolved when chip was built)
-    return selectedChips.map(c => c.label);
+  // If only type filter (no chips), use /api/ideas
+  if (selectedChips.length === 0 && type) {
+    const ideas = await fetchIdeas({ barangay, type, prefs });
+    if (ideas.length >= 3) return ideas.slice(0, 3);
+    const general = await fetchIdeas({ barangay, prefs });
+    const extra = general.filter(n => !ideas.includes(n));
+    return [...ideas, ...extra].slice(0, 3);
   }
 
-  const allNames = new Set();
-  const fetchPromises = selectedChips.map(c =>
-    fetchIdeas({ barangay, type: c.category || null, prefs })
-      .then(ideas => ideas.forEach(name => allNames.add(name)))
-      .catch(() => {})
-  );
-  await Promise.all(fetchPromises);
-
-  const rankedIdeas = await fetchIdeas({ barangay, prefs });
-  const ranked = rankedIdeas.filter(name => allNames.has(name));
-
-  if (ranked.length) return ranked.slice(0, 3);
-  return [...allNames].slice(0, 3);
+  // Chips are the business ideas – rank them by suitability
+  const chipLabels = selectedChips.map(c => c.label);
+  const scored = [];
+  for (const label of chipLabels) {
+    // Fetch a small sample (top=3) to get average suitability score
+    const recs = await fetchIdeaLocations({
+      idea: label.trim(),
+      barangay: barangay,
+      top: 3,
+      prefs: prefs,
+      _t: Date.now()
+    });
+    let avgScore = 0;
+    if (recs.length > 0) {
+      avgScore = recs.reduce((sum, loc) => sum + (loc.suitability_score || 0), 0) / recs.length;
+    }
+    scored.push({ label, score: avgScore });
+  }
+  // Sort by score descending
+  scored.sort((a, b) => b.score - a.score);
+  // Return top 3 chip labels
+  return scored.slice(0, 3).map(item => item.label);
 }
 
-// ─── DONE BUTTON — CHIP-AWARE FILTER APPLICATION ─────────────────────────────
 const barangayMap = {
-  'b-bagong-ilog': 'Bagong Ilog','b-bagong-katipunan': 'Bagong Katipunan','b-bambang': 'Bambang','b-buting': 'Buting',
-  'b-caniogan': 'Caniogan','b-dela-paz': 'Dela Paz','b-kalawaan': 'Kalawaan','b-kapasigan': 'Kapasigan','b-kapitolyo': 'Kapitolyo',
-  'b-malinao': 'Malinao','b-manggahan': 'Manggahan','b-maybunga': 'Maybunga','b-oranbo': 'Oranbo','b-palatiw': 'Palatiw',
-  'b-pinagbuhatan': 'Pinagbuhatan','b-pineda': 'Pineda','b-rosario': 'Rosario','b-sagad': 'Sagad','b-san-antonio': 'San Antonio',
-  'b-san-joaquin': 'San Joaquin','b-san-jose': 'San Jose','b-san-miguel': 'San Miguel','b-san-nicolas': 'San Nicolas',
-  'b-santa-lucia': 'Santa Lucia','b-santa-rosa': 'Santa Rosa','b-santolan': 'Santolan','b-sumilang': 'Sumilang','b-ugong': 'Ugong',
-  'b-vargas': 'F. Vargas','b-wack-wack': 'Wack-Wack'
+  'b-bagong-ilog': 'Bagong Ilog', 'b-bagong-katipunan': 'Bagong Katipunan', 'b-bambang': 'Bambang', 'b-buting': 'Buting',
+  'b-caniogan': 'Caniogan', 'b-dela-paz': 'Dela Paz', 'b-kalawaan': 'Kalawaan', 'b-kapasigan': 'Kapasigan', 'b-kapitolyo': 'Kapitolyo',
+  'b-malinao': 'Malinao', 'b-manggahan': 'Manggahan', 'b-maybunga': 'Maybunga', 'b-oranbo': 'Oranbo', 'b-palatiw': 'Palatiw',
+  'b-pinagbuhatan': 'Pinagbuhatan', 'b-pineda': 'Pineda', 'b-rosario': 'Rosario', 'b-sagad': 'Sagad', 'b-san-antonio': 'San Antonio',
+  'b-san-joaquin': 'San Joaquin', 'b-san-jose': 'San Jose', 'b-san-miguel': 'San Miguel', 'b-san-nicolas': 'San Nicolas',
+  'b-santa-lucia': 'Santa Lucia', 'b-santa-rosa': 'Santa Rosa', 'b-santolan': 'Santolan', 'b-sumilang': 'Sumilang', 'b-ugong': 'Ugong',
+  'b-vargas': 'F. Vargas', 'b-wack-wack': 'Wack-Wack'
 };
 
 const typeMap = {
-  'f-food': 'FOOD','f-retail': 'RETAIL','f-personal': 'PERSONAL','f-tech': 'TECH','f-wholesale': 'WHOLESALE',
-  'f-manufacturing': 'MANUFACTURING','f-it': 'IT','f-bpo': 'BPO','f-construction': 'CONSTRUCTION','f-finance': 'FINANCE',
-  'f-education': 'EDUCATION','f-healthcare': 'HEALTHCARE','f-energy': 'ENERGY','f-logistics': 'LOGISTICS',
-  'f-hospitality': 'HOSPITALITY','f-security': 'SECURITY','f-legal': 'LEGAL','f-marketing': 'MARKETING',
-  'f-admin': 'ADMIN','f-general': 'GENERAL'
+  'f-food': 'FOOD', 'f-retail': 'RETAIL', 'f-personal': 'PERSONAL', 'f-tech': 'TECH', 'f-wholesale': 'WHOLESALE',
+  'f-manufacturing': 'MANUFACTURING', 'f-it': 'IT', 'f-bpo': 'BPO', 'f-construction': 'CONSTRUCTION', 'f-finance': 'FINANCE',
+  'f-education': 'EDUCATION', 'f-healthcare': 'HEALTHCARE', 'f-energy': 'ENERGY', 'f-logistics': 'LOGISTICS',
+  'f-hospitality': 'HOSPITALITY', 'f-security': 'SECURITY', 'f-legal': 'LEGAL', 'f-marketing': 'MARKETING',
+  'f-admin': 'ADMIN', 'f-general': 'GENERAL'
 };
 
 async function applyFiltersAndShowRecommendations() {
   filterPanel.classList.remove('open');
   allowIdeaPins = true;
   isFilterMode = true;
+
+  // Reset active idea — no pins on load
+  activeIdeaIdx = -1;
+  activeIdeaName = null;
+  activeIdeaBarangay = null;
+  activeIdeaPrefs = [];
   lastFilteredIdea = null;
-  lastFilteredBarangay = null;
-  lastFilteredPrefs = null;
+
   setPinDefault();
-  hidePinRange();
+  showPinRange();
+  clearBusinessMarkers();
 
   const barangayCheckboxes = document.querySelectorAll('[id^="b-"]:checked');
   const typeCheckboxes = document.querySelectorAll('[id^="f-"]:checked');
   const selectedBarangays = [...barangayCheckboxes].map(cb => barangayMap[cb.id]).filter(Boolean);
   const selectedTypes = [...typeCheckboxes].map(cb => typeMap[cb.id]).filter(Boolean);
 
-  clearBusinessMarkers();
-
   const barangay = selectedBarangays[0] || null;
   const prefs = getPrefs();
 
-  // Collect selected chips; use the resolved generic label as chip.label
   const selectedChipEls = document.querySelectorAll('.filter-chip.selected');
   const selectedChips = [...selectedChipEls].map(el => ({
-    label: el.dataset.chip || el.textContent.trim(),   // already generic label set in renderChip
+    label: el.dataset.chip || el.textContent.trim(),
     category: el.dataset.category || ''
   }));
 
   const type = selectedChips.length === 0 ? (selectedTypes[0] || null) : null;
 
   if (!barangay && !type && !prefs.length && selectedChips.length === 0) return;
+
   if (barangay) loadAreaDemographics(barangay);
 
   const titleEl = document.getElementById('loc-panel-title');
   const badgeEl = document.getElementById('loc-badge');
-
-  let businessLabel;
-  if (selectedChips.length === 1) {
-    businessLabel = selectedChips[0].label;
-  } else if (selectedChips.length > 1) {
-    businessLabel = `${selectedChips.length} Selected Ideas`;
-  } else {
-    businessLabel = type ? (type.charAt(0) + type.slice(1).toLowerCase()) : 'Recommended';
-  }
-
   if (titleEl) titleEl.textContent = barangay
     ? `Top Businesses in ${barangay}`
     : `Top Businesses — All Barangays`;
@@ -818,12 +821,18 @@ async function applyFiltersAndShowRecommendations() {
   const listEl = document.getElementById('rec-list');
   if (listEl) listEl.innerHTML = '<div class="rec-item" style="color:#888;font-size:13px;">Loading recommendations…</div>';
 
+  lastFilteredBarangay = barangay;
+  lastFilteredPrefs = prefs;
+
   const ideaNames = await resolveChipIdeas({ selectedChips, barangay, type, prefs });
 
+  // Render ideas list only — NO pins plotted yet
   renderIdeaList({ names: ideaNames, barangay, prefs, allowPins: true });
 }
 
-document.getElementById('done-btn')?.addEventListener('click', async () => applyFiltersAndShowRecommendations());
+document.getElementById('done-btn')?.addEventListener('click', async () => {
+  await applyFiltersAndShowRecommendations();
+});
 
 function showPasigToast(msg) {
   const el = document.getElementById('pasig-toast');
@@ -839,6 +848,10 @@ async function handleLocationSelect(lat, lon, source = 'map') {
   lastFilteredIdea = null;
   lastFilteredBarangay = null;
   lastFilteredPrefs = null;
+  activeIdeaIdx = -1;
+  activeIdeaName = null;
+  activeIdeaBarangay = null;
+  activeIdeaPrefs = [];
 
   const latN = Number(lat);
   const lonN = Number(lon);
@@ -951,21 +964,42 @@ async function handleLocationSelect(lat, lon, source = 'map') {
   listEl.querySelectorAll('.rec-item').forEach(el => {
     el.addEventListener('click', async (e) => {
       if (e.target.closest('.save-row')) return;
-      if (!allowIdeaPins) {
-        allowIdeaPins = true;
-      }
+      if (!allowIdeaPins) allowIdeaPins = true;
+
       const idea = el.dataset.idea;
+      const idx = parseInt(el.dataset.idx);
+
+      if (activeIdeaIdx === idx) {
+        activeIdeaIdx = -1;
+        activeIdeaName = null;
+        clearBusinessMarkers();
+        listEl.querySelectorAll('.rec-item').forEach(r => r.classList.remove('active'));
+        return;
+      }
+
+      activeIdeaIdx = idx;
+      activeIdeaName = idea;
+
+      listEl.querySelectorAll('.rec-item').forEach(r => r.classList.remove('active'));
+      el.classList.add('active');
+
       await reportLogRecommendation({
         idea, area: currentBarangayName || currentLocShortName,
         pinCount: 5, lat: currentClickLat, lon: currentClickLng
       });
+
       loadAreaDemographics(currentBarangayName, idea);
       hidePinRange();
-      const recs = await fetchIdeaLocations({ idea, barangay: currentBarangayName, top: 5, prefs });
-      plotLocations(recs);
 
-      listEl.querySelectorAll('.rec-item').forEach(r => r.classList.remove('active'));
-      el.classList.add('active');
+      const recs = await fetchIdeaLocations({
+        idea: idea.trim(),
+        barangay: currentBarangayName,
+        top: 5,
+        prefs,
+        _t: Date.now()
+      });
+      clearBusinessMarkers();
+      plotLocations(recs);
     });
   });
 
@@ -1263,158 +1297,234 @@ function parseJumpTarget() {
     return { lat, lon, source: j?.source || 'report_jump' };
   } catch { return null; }
 }
-// ══════════════════════════════════════════════════════════════════════════════
-// SMART FILTER PERSONALIZATION SYSTEM (FIXED VERSION)
-// ══════════════════════════════════════════════════════════════════════════════
 
-let smartChipRequestId = 0;
-let fetchController = null;
+// ============================================================================
+// SMART FILTER PERSONALIZATION SYSTEM - CHIPS FILTER IDEAS (NO PINS)
+// ============================================================================
+
+const INDUSTRY_CHIP_MAP = {
+  'food and beverages': {
+    suggested: ['Restaurant', 'Coffee Shop', 'Bakery', 'Fast Food', 'Catering', 'Eatery'],
+    full: ['Grocery', 'Sari-Sari Store', 'Panciteria', 'Canteen', 'Water Refilling Station', 'Food Cart', 'Milk Tea Shop']
+  },
+  'food & beverages': {
+    suggested: ['Restaurant', 'Coffee Shop', 'Bakery', 'Fast Food', 'Catering', 'Eatery'],
+    full: ['Grocery', 'Sari-Sari Store', 'Panciteria', 'Canteen', 'Water Refilling Station', 'Food Cart', 'Milk Tea Shop']
+  },
+  'retail': {
+    suggested: ['Sari-Sari Store', 'Grocery', 'Cellphone Store', 'Hardware Store', 'Appliance Store'],
+    full: ['Clothing Store', 'Bookstore', 'Toy Store', 'Pharmacy', 'Drug Store', 'Optical Shop', 'Pet Shop', 'Trading']
+  },
+  'retail & trading': {
+    suggested: ['Sari-Sari Store', 'Grocery', 'Cellphone Store', 'Hardware Store', 'Appliance Store'],
+    full: ['Clothing Store', 'Bookstore', 'Toy Store', 'Pharmacy', 'Drug Store', 'Optical Shop', 'Trading']
+  },
+  'personal care and services': {
+    suggested: ['Salon', 'Barbershop', 'Spa', 'Laundry Shop', 'Massage'],
+    full: ['Nail Salon', 'Tattoo Studio', 'Car Wash', 'Tailoring', 'Repair Shop', 'Printing Services']
+  },
+  'beauty & wellness': {
+    suggested: ['Salon', 'Spa', 'Massage', 'Barbershop', 'Nail Salon'],
+    full: ['Gym', 'Yoga Studio', 'Skincare Clinic', 'Tattoo Studio', 'Laundry Shop']
+  },
+  'technology digital service': {
+    suggested: ['Internet Café', 'Tech Repair', 'Software Company', 'IT Services'],
+    full: ['Printing Services', 'Photography', 'Digital Printing', 'E-commerce', 'Gadget Store']
+  },
+  'it & software': {
+    suggested: ['Software Company', 'IT Services', 'Tech Repair', 'Internet Café'],
+    full: ['Web Development', 'App Development', 'Digital Printing', 'Gadget Store']
+  },
+  'healthcare': {
+    suggested: ['Medical Clinic', 'Dental Clinic', 'Pharmacy', 'Laboratory'],
+    full: ['Hospital', 'Optical Shop', 'Physical Therapy', 'Veterinary Clinic', 'Drug Store']
+  },
+  'logistics & transport': {
+    suggested: ['Trucking', 'Courier Service', 'Warehouse', 'Cargo'],
+    full: ['Car Rental', 'Motorcycle Delivery', 'Freight Forwarding', 'Cold Storage']
+  },
+  'hospitality': {
+    suggested: ['Hotel', 'Pension House', 'Catering', 'Event Venue'],
+    full: ['Motel', 'Bed & Breakfast', 'Restaurant', 'Travel Agency']
+  },
+  'education': {
+    suggested: ['Tutorial Center', 'Training Center', 'School', 'Review Center'],
+    full: ['Daycare', 'Music School', 'Driving School', 'Language Center', 'Library']
+  },
+  'finance & banking': {
+    suggested: ['Lending', 'Pawnshop', 'Remittance', 'Insurance'],
+    full: ['Bank', 'Cooperative', 'Foreign Exchange', 'Microfinance', 'Stockbroker']
+  },
+  'wholesale & import': {
+    suggested: ['Wholesaler', 'Trading', 'Distributor', 'Warehouse'],
+    full: ['Importer', 'Export', 'Cold Storage', 'Cooperative']
+  },
+  'construction': {
+    suggested: ['Hardware Store', 'Construction', 'Contractor', 'Supplies'],
+    full: ['Real Estate', 'Architecture', 'Interior Design', 'Landscaping']
+  },
+  'bpo & call center': {
+    suggested: ['BPO', 'Call Center', 'Outsourcing'],
+    full: ['Data Entry', 'Customer Service', 'IT Support', 'Back Office']
+  },
+  'energy & fuel': {
+    suggested: ['Gas Station', 'LPG Dealer', 'Solar Energy'],
+    full: ['Water Station', 'Electric Supply', 'Generator Rental']
+  },
+  'security services': {
+    suggested: ['Security Agency', 'CCTV Installation', 'Alarm Systems'],
+    full: ['Janitorial Services', 'Manpower Agency', 'Investigations']
+  },
+  'legal & consulting': {
+    suggested: ['Law Firm', 'Consultancy', 'Accounting'],
+    full: ['Notary', 'HR Consulting', 'Tax Services', 'Business Registration']
+  },
+  'marketing & advertising': {
+    suggested: ['Advertising Agency', 'Printing Services', 'Events'],
+    full: ['Digital Marketing', 'PR Agency', 'Photography', 'Videography', 'Signage']
+  },
+  'manufacturing': {
+    suggested: ['Manufacturing', 'Production', 'Fabrication'],
+    full: ['Food Processing', 'Garments', 'Furniture', 'Metal Works', 'Plastics']
+  }
+};
+
+const GLOBAL_KEYWORD_MAP = {
+  'pizza': 'Pizza Restaurant', 'burger': 'Burger Joint', 'ramen': 'Ramen Shop',
+  'sushi': 'Sushi Restaurant', 'bbq': 'BBQ Restaurant', 'barbecue': 'BBQ Restaurant',
+  'cafe': 'Coffee Shop', 'coffee': 'Coffee Shop', 'milk tea': 'Milk Tea Shop',
+  'boba': 'Milk Tea Shop', 'bakery': 'Bakery', 'bakeshop': 'Bakeshop',
+  'pastry': 'Pastry Shop', 'cake': 'Cake Shop', 'lechon': 'Lechon Restaurant',
+  'seafood': 'Seafood Restaurant', 'buffet': 'Buffet Restaurant', 'catering': 'Catering',
+  'food cart': 'Food Cart', 'lugawan': 'Lugawan', 'mami': 'Mami House',
+  'halo-halo': 'Halo-Halo Shop', 'ice cream': 'Ice Cream Shop', 'juice': 'Juice Bar',
+  'smoothie': 'Smoothie Bar', 'health food': 'Health Food Restaurant', 'vegan': 'Vegan Restaurant',
+  'canteen': 'Canteen', 'eatery': 'Eatery', 'turo-turo': 'Turo-Turo',
+  'ihawan': 'Ihawan', 'grill': 'Grill Restaurant', 'pares': 'Pares House',
+  'tapsi': 'Tapsilugan', 'silog': 'Silog Restaurant',
+  'sari-sari': 'Sari-Sari Store', 'sarisari': 'Sari-Sari Store', 'grocery': 'Grocery',
+  'minimart': 'Mini Mart', 'mini mart': 'Mini Mart', 'convenience': 'Convenience Store',
+  'hardware': 'Hardware Store', 'cellphone': 'Cellphone Store', 'gadget': 'Gadget Store',
+  'clothing': 'Clothing Store', 'ukay': 'Ukay-Ukay', 'thrift': 'Thrift Store',
+  'pharmacy': 'Pharmacy', 'drugstore': 'Drug Store', 'drug store': 'Drug Store',
+  'optical': 'Optical Shop', 'bookstore': 'Bookstore', 'toy': 'Toy Store',
+  'pet shop': 'Pet Shop', 'fish': 'Fish Shop', 'meat': 'Meat Shop',
+  'vegetables': 'Vegetable Stall', 'palengke': 'Market Stall',
+  'salon': 'Salon', 'barbershop': 'Barbershop', 'barber': 'Barbershop',
+  'spa': 'Spa', 'massage': 'Massage', 'laundry': 'Laundry Shop',
+  'nail': 'Nail Salon', 'tattoo': 'Tattoo Studio', 'gym': 'Gym',
+  'yoga': 'Yoga Studio', 'car wash': 'Car Wash', 'tailoring': 'Tailoring Shop',
+  'clinic': 'Medical Clinic', 'dental': 'Dental Clinic', 'dentist': 'Dental Clinic',
+  'laboratory': 'Laboratory', 'vet': 'Veterinary Clinic', 'veterinary': 'Veterinary Clinic',
+  'internet': 'Internet Café', 'internet cafe': 'Internet Café',
+  'printing': 'Printing Services', 'photography': 'Photography Studio',
+  'pawnshop': 'Pawnshop', 'lending': 'Lending', 'remittance': 'Money Remittance',
+  'insurance': 'Insurance', 'tutorial': 'Tutorial Center', 'review': 'Review Center',
+  'school': 'School', 'training': 'Training Center', 'driving': 'Driving School',
+  'trucking': 'Trucking', 'courier': 'Courier Service', 'delivery': 'Delivery Service',
+  'warehouse': 'Warehouse', 'hotel': 'Hotel', 'pension': 'Pension House',
+  'event': 'Event Venue', 'water refilling': 'Water Refilling Station',
+  'water': 'Water Refilling Station', 'gasoline': 'Gas Station',
+  'gas station': 'Gas Station', 'lpg': 'LPG Dealer', 'security': 'Security Agency',
+  'manpower': 'Manpower Agency', 'real estate': 'Real Estate',
+  'travel': 'Travel Agency', 'funeral': 'Funeral Services', 'cooperative': 'Cooperative'
+};
 
 const activeCustomChips = new Set();
 
-// ─── HELPERS ──────────────────────────────────────────────────────────────────
-
-function normalizeText(text) {
-  return (text || '').toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+function normalizeIndustryKey(industry) {
+  return (industry || '').toLowerCase().trim();
 }
 
-function normalizeKey(label) {
-  return normalizeText(toGenericChipLabel(label));
+function getIndustryChips(industry) {
+  const key = normalizeIndustryKey(industry);
+  return INDUSTRY_CHIP_MAP[key] || { suggested: [], full: [] };
+}
+
+function getCrossIndustryMatches(subcategoryText) {
+  if (!subcategoryText) return [];
+  const lower = subcategoryText.toLowerCase();
+  const matches = [];
+  for (const [keyword, chipLabel] of Object.entries(GLOBAL_KEYWORD_MAP)) {
+    if (lower.includes(keyword) && !matches.includes(chipLabel)) {
+      matches.push(chipLabel);
+    }
+  }
+  return matches;
 }
 
 function chipMatchesSubcategory(chipLabel, subcategoryText) {
   if (!subcategoryText || !chipLabel) return false;
-
-  const chip = normalizeText(chipLabel);
-  const subcat = normalizeText(subcategoryText);
-
-  return chip.includes(subcat) || subcat.includes(chip);
+  const subcatWords = subcategoryText.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+  const labelLower = chipLabel.toLowerCase();
+  return subcatWords.some(word => labelLower.includes(word));
 }
 
-// ─── FETCH ────────────────────────────────────────────────────────────────────
-
-async function fetchSmartChips(industry, subcategory) {
-  if (fetchController) fetchController.abort();
-  fetchController = new AbortController();
-
-  const params = new URLSearchParams();
-  if (industry) params.append("category", industry);
-  if (subcategory) params.append("subcategory", subcategory);
-
-  try {
-    const res = await fetch(`/api/smart-chips?${params.toString()}`, {
-      signal: fetchController.signal
-    });
-
-    const data = await res.json();
-    if (!data.success) return { suggested: [], full: [], cross: [] };
-
-    return data.data || { suggested: [], full: [], cross: [] };
-
-  } catch (err) {
-    if (err.name === 'AbortError') return null;
-    console.error('[fetchSmartChips]', err);
-    return { suggested: [], full: [], cross: [] };
-  }
-}
-
-// ─── CHIP RENDERING ───────────────────────────────────────────────────────────
-
-function renderChip(rawLabel, category, className = "") {
-  const generic = toGenericChipLabel(rawLabel);
-  const escapedGeneric = escapeHtml(generic).replace(/"/g, '&quot;');
-  const escapedCategory = escapeHtml(category || '').replace(/"/g, '&quot;');
-
-  return `<span class="filter-chip ${className}" 
-    data-chip="${escapedGeneric}" 
-    data-category="${escapedCategory}">
-    ${escapeHtml(generic)}
-  </span>`;
-}
-
-function dedupeChipsByGenericLabel(chips) {
-  const seen = new Set();
-  return chips.filter(chip => {
-    const key = normalizeKey(chip.label);
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
-
-// ─── BUILD CHIPS ──────────────────────────────────────────────────────────────
-
-function buildFilterChips(chips, subcategory) {
+function buildFilterChips(industry, subcategory) {
   const chipSection = document.getElementById('smart-chip-section');
   const chipContainer = document.getElementById('chip-container');
   const crossNote = document.getElementById('cross-industry-note');
 
   if (!chipContainer) return;
 
-  let suggested = chips?.suggested || [];
-  let full = chips?.full || [];
+  const industryChips = getIndustryChips(industry);
+  const crossMatches = getCrossIndustryMatches(subcategory);
 
-  // Precompute generic labels (performance boost)
-  suggested = suggested.map(c => ({
-    ...c,
-    generic: toGenericChipLabel(c.label)
-  }));
-
-  full = full.map(c => ({
-    ...c,
-    generic: toGenericChipLabel(c.label)
-  }));
-
-  // Deduplication
-  suggested = dedupeChipsByGenericLabel(suggested);
-
-  full = dedupeChipsByGenericLabel(
-    full.filter(fc => {
-      return !suggested.some(sc => normalizeKey(sc.label) === normalizeKey(fc.label));
-    })
-  );
-
-  if (crossNote) crossNote.style.display = 'none';
-
-  // Empty state
-  if (!suggested.length && !full.length) {
-    chipContainer.innerHTML = `<div class="chip-empty">No suggestions available</div>`;
-    if (chipSection) chipSection.style.display = 'block';
+  if (!crossMatches.length && !industryChips.suggested.length && !industryChips.full.length) {
+    if (chipSection) chipSection.style.display = 'none';
+    if (crossNote) crossNote.style.display = 'none';
     return;
   }
 
-  // Matching logic
-  const boostedChips = suggested.filter(chip =>
-    chipMatchesSubcategory(chip.generic, subcategory)
-  );
+  const boostedChips = industryChips.suggested.filter(chip => chipMatchesSubcategory(chip, subcategory));
+  const regularChips = industryChips.suggested.filter(chip => !chipMatchesSubcategory(chip, subcategory));
 
-  const regularChips = suggested.filter(chip =>
-    !chipMatchesSubcategory(chip.generic, subcategory)
-  );
+  const allIndustryLabels = [
+    ...industryChips.suggested.map(c => c.toLowerCase()),
+    ...industryChips.full.map(c => c.toLowerCase())
+  ];
+  const trulyCrossIndustry = crossMatches.filter(chip => !allIndustryLabels.includes(chip.toLowerCase()));
+
+  if (crossNote) {
+    if (trulyCrossIndustry.length && subcategory) {
+      crossNote.style.display = 'block';
+      crossNote.textContent = `"${subcategory}" matched outside your industry — showing relevant suggestions too.`;
+    } else {
+      crossNote.style.display = 'none';
+    }
+  }
 
   let html = '';
 
+  if (trulyCrossIndustry.length) {
+    html += `<div class="chip-group-label">Matched to your business</div><div class="chip-row">`;
+    trulyCrossIndustry.forEach(label => {
+      html += `<span class="filter-chip filter-chip--cross" data-chip="${escapeHtml(label)}">${escapeHtml(label)}</span>`;
+    });
+    html += `</div>`;
+  }
+
   if (boostedChips.length) {
     html += `<div class="chip-group-label">Top matches for your industry</div><div class="chip-row">`;
-    boostedChips.forEach(item => {
-      html += renderChip(item.label, item.category, "filter-chip--boosted");
+    boostedChips.forEach(label => {
+      html += `<span class="filter-chip filter-chip--boosted" data-chip="${escapeHtml(label)}">${escapeHtml(label)}</span>`;
     });
     html += `</div>`;
   }
 
   if (regularChips.length) {
-    const groupLabel = boostedChips.length ? 'Other suggestions' : 'Suggested for your industry';
+    const groupLabel = (boostedChips.length || trulyCrossIndustry.length) ? 'Other suggestions' : 'Suggested for your industry';
     html += `<div class="chip-group-label">${groupLabel}</div><div class="chip-row">`;
-    regularChips.forEach(item => {
-      html += renderChip(item.label, item.category);
+    regularChips.forEach(label => {
+      html += `<span class="filter-chip" data-chip="${escapeHtml(label)}">${escapeHtml(label)}</span>`;
     });
     html += `</div>`;
   }
 
-  if (full.length) {
+  if (industryChips.full.length) {
     html += `<div class="chip-divider">more</div><div class="chip-row">`;
-    full.forEach(item => {
-      html += renderChip(item.label, item.category);
+    industryChips.full.forEach(label => {
+      html += `<span class="filter-chip" data-chip="${escapeHtml(label)}">${escapeHtml(label)}</span>`;
     });
     html += `</div>`;
   }
@@ -1422,36 +1532,36 @@ function buildFilterChips(chips, subcategory) {
   chipContainer.innerHTML = html;
   if (chipSection) chipSection.style.display = 'block';
 
-  // Restore selection state + attach events
+  // ── Chip click: JUST TOGGLE SELECTION - NO PINS ──
   chipContainer.querySelectorAll('.filter-chip').forEach(chip => {
-    const value = chip.dataset.chip;
+    const chipValue = chip.dataset.chip || '';
 
-    if (activeCustomChips.has(value)) {
+    if (activeCustomChips.has(chipValue)) {
       chip.classList.add('selected');
     }
 
-    chip.addEventListener('click', () => {
+    chip.addEventListener('click', (e) => {
+      e.stopPropagation();
       chip.classList.toggle('selected');
-
       if (chip.classList.contains('selected')) {
-        activeCustomChips.add(value);
+        activeCustomChips.add(chipValue);
       } else {
-        activeCustomChips.delete(value);
+        activeCustomChips.delete(chipValue);
       }
-
       updateChipSelectionCounter();
+      if (activeCustomChips.size === 0) {
+        clearBusinessMarkers();
+        hidePinRange();
+      }
     });
   });
 
   updateChipSelectionCounter();
 }
 
-// ─── UI HELPERS ───────────────────────────────────────────────────────────────
-
 function updateChipSelectionCounter() {
   const count = activeCustomChips.size;
   const counterEl = document.getElementById('chip-selection-count');
-
   if (counterEl) {
     counterEl.textContent = count > 0 ? `${count} selected` : '';
     counterEl.style.display = count > 0 ? 'inline-block' : 'none';
@@ -1459,57 +1569,22 @@ function updateChipSelectionCounter() {
 }
 
 function clearChipSelections() {
-  document.querySelectorAll('.filter-chip.selected')
-    .forEach(c => c.classList.remove('selected'));
-
+  document.querySelectorAll('.filter-chip.selected').forEach(c => c.classList.remove('selected'));
   activeCustomChips.clear();
   updateChipSelectionCounter();
-}
-
-// ─── LOAD CHIPS ───────────────────────────────────────────────────────────────
-
-async function loadSmartChips(industry, subcategory) {
-  const requestId = ++smartChipRequestId;
-
-  try {
-    const chips = await fetchSmartChips(industry, subcategory);
-    if (!chips || requestId !== smartChipRequestId) return;
-
-    buildFilterChips(chips, subcategory);
-
-  } catch (err) {
-    console.error('[loadSmartChips]', err);
-    buildFilterChips({ suggested: [], full: [], cross: [] }, subcategory);
-  }
-}
-
-// ─── PERSONALIZATION ──────────────────────────────────────────────────────────
-
-function normalizeIndustryKey(industry) {
-  return (industry || '').toLowerCase().trim();
+  clearBusinessMarkers();
+  hidePinRange();
 }
 
 function renderPersonalizationBanner(industry, subcategory) {
   const banner = document.getElementById('personalization-banner');
   const bannerTags = document.getElementById('banner-tags');
-
   if (!banner || !bannerTags) return;
-
-  if (!industry && !subcategory) {
-    banner.style.display = 'none';
-    return;
-  }
+  if (!industry && !subcategory) { banner.style.display = 'none'; return; }
 
   let tagsHTML = '';
-
-  if (subcategory) {
-    tagsHTML += `<span class="profile-tag profile-tag--subcat">${escapeHtml(subcategory)}</span>`;
-  }
-
-  if (industry) {
-    tagsHTML += `<span class="profile-tag profile-tag--industry">${escapeHtml(industry)}</span>`;
-  }
-
+  if (subcategory) tagsHTML += `<span class="profile-tag profile-tag--subcat">${escapeHtml(subcategory)}</span>`;
+  if (industry) tagsHTML += `<span class="profile-tag profile-tag--industry">${escapeHtml(industry)}</span>`;
   bannerTags.innerHTML = tagsHTML;
   banner.style.display = 'block';
 }
@@ -1517,7 +1592,6 @@ function renderPersonalizationBanner(industry, subcategory) {
 function showFilterRebuildToast() {
   const toast = document.getElementById('filter-rebuild-toast');
   if (!toast) return;
-
   toast.classList.add('show');
   setTimeout(() => toast.classList.remove('show'), 2800);
 }
@@ -1526,13 +1600,12 @@ function onProfileSaved(industry, industrySpecific) {
   userIndustry = industry;
   userIndustrySpecific = industrySpecific;
 
-  document.querySelectorAll('.filter-panel-body input[type="checkbox"]')
-    .forEach(cb => cb.checked = false);
-
+  document.querySelectorAll('.filter-panel-body input[type="checkbox"]').forEach(cb => { cb.checked = false; });
   clearChipSelections();
 
   if (industry) {
-    const matchedId = INDUSTRY_FILTER_MAP[normalizeIndustryKey(industry)];
+    const key = (industry || '').toLowerCase().trim();
+    const matchedId = INDUSTRY_FILTER_MAP[key];
     if (matchedId) {
       const cb = document.getElementById(matchedId);
       if (cb) cb.checked = true;
@@ -1540,54 +1613,53 @@ function onProfileSaved(industry, industrySpecific) {
   }
 
   renderPersonalizationBanner(industry, industrySpecific);
-  loadSmartChips(industry, industrySpecific);
+  buildFilterChips(industry, industrySpecific);
   showFilterRebuildToast();
 }
 
-// ─── FETCH PATCH ──────────────────────────────────────────────────────────────
+window.addEventListener('storage', (e) => {
+  if (e.key === 'spotProfileUpdated' && e.newValue) {
+    try {
+      const updated = JSON.parse(e.newValue);
+      onProfileSaved(updated.industry || '', updated.industry_specific || '');
+    } catch { }
+  }
+});
 
 (function patchFetchForProfileSave() {
   const _orig = window.fetch.bind(window);
-
   window.fetch = async function (input, init) {
     const url = typeof input === 'string' ? input : (input?.url || '');
     const method = (init?.method || 'GET').toUpperCase();
-
     const response = await _orig(input, init);
-
     if (method === 'PUT' && url.includes('/api/user-profile')) {
       try {
         const data = await response.clone().json();
         if (data.success && data.user) {
           onProfileSaved(data.user.industry || '', data.user.industry_specific || '');
         }
-      } catch {}
+      } catch { }
     }
-
     return response;
   };
 })();
 
-// ─── INITIAL LOAD ─────────────────────────────────────────────────────────────
-
 function applyIndustryPersonalization(industry, industrySpecific) {
   if (industry) {
-    const matchedId = INDUSTRY_FILTER_MAP[normalizeIndustryKey(industry)];
+    const key = (industry || '').toLowerCase().trim();
+    const matchedId = INDUSTRY_FILTER_MAP[key];
     if (matchedId) {
       const cb = document.getElementById(matchedId);
       if (cb) cb.checked = true;
     }
   }
-
   const oldTip = document.getElementById('industry-tip');
   if (oldTip) oldTip.style.display = 'none';
-
   renderPersonalizationBanner(industry, industrySpecific);
-  loadSmartChips(industry, industrySpecific);
+  buildFilterChips(industry, industrySpecific);
 }
 
-// ─── DOM READY ────────────────────────────────────────────────────────────────
-
+// ─── DOM CONTENT LOADED ───────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
   fetchSavedRecommendations();
 
@@ -1605,7 +1677,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     const res = await fetch('/api/me');
     const data = await res.json();
-
     const affiliation = (data.affiliation || '').toLowerCase().trim();
     const industry = (data.industry || '').trim();
     const industrySpecific = (data.industry_specific || '').trim();
@@ -1613,14 +1684,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     userIndustry = industry;
     userIndustrySpecific = industrySpecific;
 
-    document.querySelectorAll('.entrepreneur-only')
-      .forEach(el => el.style.display = affiliation === 'entrepreneur' ? '' : 'none');
+    if (affiliation === 'entrepreneur') {
+      document.querySelectorAll('.entrepreneur-only').forEach(el => { el.style.display = ''; });
+    } else {
+      document.querySelectorAll('.entrepreneur-only').forEach(el => { el.style.display = 'none'; });
+    }
 
     applyIndustryPersonalization(industry, industrySpecific);
-
   } catch (err) {
     console.error('Failed to fetch user info:', err);
-    document.querySelectorAll('.entrepreneur-only')
-      .forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.entrepreneur-only').forEach(el => { el.style.display = 'none'; });
   }
 });
