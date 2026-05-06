@@ -726,25 +726,10 @@ async function resolveChipIdeas({ selectedChips, barangay, type, prefs }) {
   }
 
   if (count >= 1 && count <= 3) {
-    // For each selected chip, find the best matching idea name from the DB.
-    // This ensures the idea name passed to /api/ideas and /api/idea-locations
-    // is a real line_of_business value so suitable pin locations are returned.
-    const ideaPromises = selectedChips.map(async c => {
-      try {
-        const ideas = await fetchIdeas({ barangay, type: c.category || null, prefs });
-        // Find a DB idea whose generic label matches the chip label exactly
-        const match = ideas.find(name => toGenericChipLabel(name) === c.label);
-        // Fall back to top idea in category, or chip label as last resort
-        return match || ideas[0] || c.label;
-      } catch (err) {
-        console.warn('[resolveChipIdeas] fetchIdeas failed for chip:', c.label, err);
-        return c.label;
-      }
-    });
-    return await Promise.all(ideaPromises);
+    // Use the generic label (already resolved when chip was built)
+    return selectedChips.map(c => c.label);
   }
 
-  // 4+ chips: collect all ideas across selected categories, then rank top 3
   const allNames = new Set();
   const fetchPromises = selectedChips.map(c =>
     fetchIdeas({ barangay, type: c.category || null, prefs })
