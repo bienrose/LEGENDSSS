@@ -884,28 +884,41 @@ function renderIdeaList({ names, barangays, prefs, allowPins }) {
 // ─── RESOLVE CHIP IDEAS ───────────────────────────────────────────────────────
 async function resolveChipIdeas({ selectedChips, barangays, type, prefs }) {
   const barangayList = barangays && barangays.length ? barangays : [null];
+  const primaryBarangay = barangayList[0] || null;
 
+  // ── No chips, no type: fetch top ideas globally/by barangay
   if (selectedChips.length === 0 && !type) {
-    const ideas = await fetchIdeas({ barangay: barangayList[0], prefs });
+    const ideas = await fetchIdeas({ barangay: primaryBarangay, prefs });
     return ideas.slice(0, 3);
   }
 
+  // ── No chips but type filter selected: fetch by type, backfill if needed
   if (selectedChips.length === 0 && type) {
-    const ideas = await fetchIdeas({ barangay: barangayList[0], type, prefs });
+    const ideas = await fetchIdeas({ barangay: primaryBarangay, type, prefs });
     if (ideas.length >= 3) return ideas.slice(0, 3);
-    const general = await fetchIdeas({ barangay: barangayList[0], prefs });
+    const general = await fetchIdeas({ barangay: primaryBarangay, prefs });
     const extra = general.filter(n => !ideas.includes(n));
     return [...ideas, ...extra].slice(0, 3);
   }
 
-  const chipLabels = selectedChips.map(c => c.label);
+  // ── 1–3 chips: use chip labels directly, backfill to 3 if needed
+  if (selectedChips.length >= 1 && selectedChips.length <= 3) {
+    const names = selectedChips.map(c => c.label);
+    if (names.length >= 3) return names.slice(0, 3);
+    // Backfill with type or general ideas
+    const fill = await fetchIdeas({ barangay: primaryBarangay, type: type || null, prefs });
+    const extra = fill.filter(n => !names.includes(n));
+    return [...names, ...extra].slice(0, 3);
+  }
+
+  // ── 4+ chips: score each chip label by suitability across barangays, pick top 3
   const scored = [];
-  for (const label of chipLabels) {
+  for (const chip of selectedChips) {
     let totalScore = 0;
     let totalRecs = 0;
     for (const b of barangayList) {
       const recs = await fetchIdeaLocations({
-        idea: label.trim(),
+        idea: chip.label.trim(),
         barangay: b,
         top: 3,
         prefs,
@@ -916,10 +929,18 @@ async function resolveChipIdeas({ selectedChips, barangays, type, prefs }) {
         totalRecs += recs.length;
       }
     }
-    scored.push({ label, score: totalRecs > 0 ? totalScore / totalRecs : 0 });
+    scored.push({ label: chip.label, score: totalRecs > 0 ? totalScore / totalRecs : 0 });
   }
   scored.sort((a, b) => b.score - a.score);
-  return scored.slice(0, 3).map(item => item.label);
+  const top = scored.slice(0, 3).map(item => item.label);
+
+  // Backfill if still short
+  if (top.length < 3) {
+    const fill = await fetchIdeas({ barangay: primaryBarangay, prefs });
+    const extra = fill.filter(n => !top.includes(n));
+    return [...top, ...extra].slice(0, 3);
+  }
+  return top;
 }
 // Add this to dashboard.js temporarily
 async function debugBarangayData(barangayName) {
@@ -978,23 +999,32 @@ async function applyFiltersAndShowRecommendations() {
   const selectedTypes = [...typeCheckboxes].map(cb => typeMap[cb.id]).filter(Boolean);
 
   const barangays = selectedBarangays.length ? selectedBarangays : null;
+  const type = selectedTypes[0] || null;
   const prefs = getPrefs();
 
-  if (!barangays && !selectedTypes.length && !prefs.length) return;
+  // ── Collect selected chips from DOM
+  const selectedChipEls = document.querySelectorAll('.filter-chip.selected');
+  const selectedChips = [...selectedChipEls].map(el => ({
+    label: el.dataset.chip || el.textContent.trim(),
+    category: el.dataset.category || ''
+  }));
 
-  // Set current barangay
+  // Require at least one filter
+  if (!barangays && !type && !prefs.length && selectedChips.length === 0) return;
+
+  // Set current barangay context
   if (barangays && barangays.length > 0) {
     currentBarangayName = barangays[0];
   }
 
+  // Zoom map to barangay
   if (currentBarangayName) {
     const bounds = getBarangayBoundsForMap(currentBarangayName);
     if (bounds && bounds.isValid()) {
       map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
     } else {
-      // Centroid fallback for any barangay missing from BARANGAY_BOUNDS_MAP
       const CENTROID_FALLBACK = {
-        'bagong ilog': [14.5720, 14.0855], 'bagong katipunan': [14.5785, 121.0670],
+        'bagong ilog': [14.5720, 121.0855], 'bagong katipunan': [14.5785, 121.0670],
         'bambang': [14.5745, 121.0680], 'buting': [14.5720, 121.0770],
         'caniogan': [14.5785, 121.0870], 'dela paz': [14.5895, 121.0890],
         'kalawaan': [14.5685, 121.0780], 'kapasigan': [14.5695, 121.0730],
@@ -1014,12 +1044,12 @@ async function applyFiltersAndShowRecommendations() {
     }
   }
 
-  const titleEl = document.getElementById('loc-panel-title');
-  const badgeEl = document.getElementById('loc-badge');
   const areaLabel = barangays
     ? (barangays.length === 1 ? barangays[0] : `${barangays.length} Barangays`)
     : 'All Barangays';
 
+  const titleEl = document.getElementById('loc-panel-title');
+  const badgeEl = document.getElementById('loc-badge');
   if (titleEl) titleEl.textContent = `Top Businesses in ${areaLabel}`;
   if (badgeEl) badgeEl.textContent = `📍 ${areaLabel}`;
 
@@ -1031,24 +1061,22 @@ async function applyFiltersAndShowRecommendations() {
   lastFilteredBarangay = barangays;
   lastFilteredPrefs = prefs;
 
-  const type = selectedTypes[0] || null;
+  // ── Chips override type filter; type only used when no chips selected
+  const resolvedType = selectedChips.length === 0 ? type : null;
 
-  // Get idea names
-  let ideaNames;
-  try {
-    if (barangays && barangays.length > 0) {
-      const res = await fetch(`/api/barangay-business-types?barangay=${encodeURIComponent(barangays[0])}&type=${type || ''}`);
-      const data = await res.json();
-      ideaNames = data.success ? data.data : [];
-    }
-    
-    if (!ideaNames || ideaNames.length === 0) {
-      const ideas = await fetchIdeas({ barangay: barangays ? barangays[0] : null, type, prefs });
-      ideaNames = ideas.slice(0, 3);
-    }
-  } catch (err) {
-    const ideas = await fetchIdeas({ barangay: barangays ? barangays[0] : null, type, prefs });
-    ideaNames = ideas.slice(0, 3);
+  // ── Get idea names via resolveChipIdeas (handles all cases)
+  let ideaNames = await resolveChipIdeas({
+    selectedChips,
+    barangays,
+    type: resolvedType,
+    prefs
+  });
+
+  // ── Always ensure 3 ideas — backfill with general if short
+  if (ideaNames.length < 3) {
+    const general = await fetchIdeas({ barangay: barangays ? barangays[0] : null, prefs });
+    const extra = general.filter(n => !ideaNames.includes(n));
+    ideaNames = [...ideaNames, ...extra].slice(0, 3);
   }
 
   if (barangays) {
