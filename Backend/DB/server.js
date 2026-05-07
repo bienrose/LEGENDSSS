@@ -106,7 +106,15 @@ function generateResetCode() {
 }
 
 function normalizeBarangay(v) {
-  return (v || "").toString().trim().toLowerCase();
+  return (v || "")
+    .toString()
+    .toLowerCase()
+    .replace(/[._-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/^barangay\s+/, "")
+    .replace(/^brgy\s+/, "")
+    .replace(/^sta\s+/, "santa ");
 }
 
 // ─── FUZZY BARANGAY MATCHER ───────────────────────────────────────────────────
@@ -115,7 +123,8 @@ function barangayMatches(dbName, filterName) {
   if (!dbName || !filterName) return false;
   const a = normalizeBarangay(dbName);
   const b = normalizeBarangay(filterName);
-  return a === b || a.startsWith(b) || b.startsWith(a);
+  const startsWithWhole = (x, y) => x.startsWith(`${y} `) || x.startsWith(`${y}(`);
+  return a === b || startsWithWhole(a, b) || startsWithWhole(b, a);
 }
 
 // ─── BARANGAY BOUNDS HELPERS ──────────────────────────────────────────────────
@@ -1576,6 +1585,7 @@ app.get("/api/idea-locations", requireAuth, async (req, res) => {
 
     const topN = Math.max(1, parseInt(top, 10) || 5);
     const minGapMeters = IDEA_PIN_MIN_GAP_METERS;
+    const targetBounds = barangay ? getBarangayBounds(barangay) : null;
 
     // 1. Fetch real businesses matching this idea — with coordinates inside Pasig
     const [realBizRows] = await geoDB.query(
@@ -1606,7 +1616,10 @@ app.get("/api/idea-locations", requireAuth, async (req, res) => {
 
     // Always filter real locations strictly to the target barangay
     if (barangay) {
-      realLocations = realLocations.filter(r => barangayMatches(r.barangay_name, barangay));
+      realLocations = realLocations.filter(r =>
+        barangayMatches(r.barangay_name, barangay) &&
+        (!targetBounds || inBarangay(r.lat, r.lon, barangay))
+      );
     }
 
     // 2. Get centroid for target barangay from DB
@@ -1645,7 +1658,10 @@ app.get("/api/idea-locations", requireAuth, async (req, res) => {
     })).filter(c => Number.isFinite(c.lat) && Number.isFinite(c.lon) && inPasig(c.lat, c.lon));
 
     if (barangay) {
-      candidates = candidates.filter(c => barangayMatches(c.barangay_name, barangay));
+      candidates = candidates.filter(c =>
+        barangayMatches(c.barangay_name, barangay) &&
+        (!targetBounds || inBarangay(c.lat, c.lon, barangay))
+      );
     }
 
     // If DB centroid missing, use hardcoded fallback — stays within target barangay

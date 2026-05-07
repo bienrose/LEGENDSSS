@@ -675,6 +675,7 @@ function renderIdeaList({ names, barangays, prefs, allowPins }) {
   attachSaveRowListeners();
 
   const onIdeaSelect = async (el) => {
+    const requestId = ++activeRequestId;
     const idea = el.dataset.idea;
     const idx = parseInt(el.dataset.idx);
     const prevIdeaName = activeIdeaName;
@@ -717,6 +718,8 @@ function renderIdeaList({ names, barangays, prefs, allowPins }) {
         _t: Date.now()
       }))
     )).flat();
+
+    if (requestId !== activeRequestId) return;
 
     clearBusinessMarkers();
     plotLocations(allRecs);
