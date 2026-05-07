@@ -31,6 +31,7 @@ const PASIG_BOUNDS = {
   minLon: 121.0600,
   maxLon: 121.1100
 };
+// Keep generated pins reasonably separated in dense barangays without pushing results too far away.
 const IDEA_PIN_MIN_GAP_METERS = 400;
 
 // ─── BARANGAY BOUNDING BOXES ──────────────────────────────────────────────────
@@ -1798,6 +1799,7 @@ app.get("/api/idea-locations", requireAuth, async (req, res) => {
 
 app.get("/api/debug-manggahan", requireAuth, debugRouteRateLimit, async (req, res) => {
   const rawIdea = (req.query.idea || "Restaurant").toString().trim();
+  // Keep the debug search bounded and predictable while still allowing typical business labels.
   const idea = rawIdea.slice(0, 80).replace(/[^a-zA-Z0-9\s&'().,-]/g, "");
   const barangay = req.query.barangay || "Manggahan";
   try {
