@@ -1286,6 +1286,9 @@ async function loadAreaDemographics(barangay, businessLine) {
         const genderLabel = demo.gender_distribution
           ? `a predominantly ${demo.gender_distribution.toLowerCase()} population`
           : 'a balanced gender distribution';
+        const businessCountText = businessLine
+          ? `, <strong>${sameLineCount.toLocaleString()}</strong> of which are in the same line of business`
+          : '';
         summary = `<p>
           <strong>${escapeHtml(demo.barangay_name || barangay)}</strong> is a ${densityLabel} barangay in Pasig
           with a total population of <strong>${demo.population ? demo.population.toLocaleString() : 'N/A'}</strong>
@@ -1294,7 +1297,7 @@ async function loadAreaDemographics(barangay, businessLine) {
           Households in this barangay have an average income range of
           <strong>${demo.avg_income_min ? '₱' + demo.avg_income_min.toLocaleString() : 'N/A'} – ${demo.avg_income_max ? '₱' + demo.avg_income_max.toLocaleString() : 'N/A'}</strong>,
           making it an area ${incomeLabel}.
-          There are <strong>${totalBiz.toLocaleString()}</strong> registered businesses operating in the area${businessLine ? `, <strong>${sameLineCount.toLocaleString()}</strong> of which are in the same line of business` : ''}.
+          There are <strong>${totalBiz.toLocaleString()}</strong> registered businesses operating in the area${businessCountText}.
           This barangay is well-suited for businesses targeting the <strong>${ageLabel}</strong> age group.
         </p>`;
       }
