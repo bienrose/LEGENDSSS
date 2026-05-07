@@ -1615,6 +1615,10 @@ app.get("/api/idea-locations", requireAuth, async (req, res) => {
       is_predicted: true
     })).filter(c => Number.isFinite(c.lat) && Number.isFinite(c.lon) && inPasig(c.lat, c.lon));
 
+    if (barangay) {
+      candidates = candidates.filter(c => barangayMatches(c.barangay_name, barangay));
+    }
+
     // If DB centroid missing, use hardcoded fallback — stays within target barangay
     if (candidates.length === 0 && barangay) {
       const coords = getCentroidFallback(barangay);
