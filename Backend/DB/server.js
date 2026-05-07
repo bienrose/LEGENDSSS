@@ -3,6 +3,7 @@ const bcrypt = require("bcrypt");
 const session = require("express-session");
 const path = require("path");
 const crypto = require("crypto");
+const rateLimit = require("express-rate-limit");
 const { legendDB, geoDB, testConnection } = require("./db_config");
 const nodemailer = require("nodemailer");
 
@@ -30,6 +31,7 @@ const PASIG_BOUNDS = {
   minLon: 121.0600,
   maxLon: 121.1100
 };
+const IDEA_PIN_MIN_GAP_METERS = 400;
 
 // ─── BARANGAY BOUNDING BOXES ──────────────────────────────────────────────────
 const BARANGAY_BOUNDS = {
@@ -265,6 +267,13 @@ function requireAdminPage(req, res, next) {
   if (req.session.user.role !== "admin") return res.redirect("/dashboard");
   next();
 }
+
+const debugRouteRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false
+});
 
 const pendingVerifications = new Map();
 const pendingPasswordResets = new Map();
@@ -1152,7 +1161,16 @@ app.put("/api/admin/demographics/:id", requireAdmin, async (req, res) => {
         avg_income_max = COALESCE(?, avg_income_max),
         gender_distribution = COALESCE(?, gender_distribution)
        WHERE id = ?`,
-      [barangay_name || null, population || null, population_density || null, highest_age_group || null, avg_income_min || null, avg_income_max || null, gender_distribution || null, req.params.id]
+      [
+        barangay_name || null,
+        population || null,
+        population_density || null,
+        highest_age_group || null,
+        avg_income_min || null,
+        avg_income_max || null,
+        gender_distribution || null,
+        req.params.id
+      ]
     );
 
     if (result.affectedRows === 0) return res.status(404).json({ success: false, message: "Demographic not found" });
@@ -1361,7 +1379,17 @@ app.get("/api/ideas", requireAuth, async (req, res) => {
             if (haversineMeters(c.lat, c.lon, Number(b.lat), Number(b.lon)) <= radius)
               competitors += 1;
           });
-          const obj = { name, totalpop: Number(demo.population) || 0, popdensity: Number(demo.population_density) || 0, income: Number(demo.avg_income_max) || 0, gender: demo.gender_distribution === "Female" ? 1 : 0, agedist: ageScore(demo.highest_age_group), bizdensity: bizDensity, bizcount: ideaBiz.length, competitors };
+          const obj = {
+            name,
+            totalpop: Number(demo.population) || 0,
+            popdensity: Number(demo.population_density) || 0,
+            income: Number(demo.avg_income_max) || 0,
+            gender: demo.gender_distribution === "Female" ? 1 : 0,
+            agedist: ageScore(demo.highest_age_group),
+            bizdensity: bizDensity,
+            bizcount: ideaBiz.length,
+            competitors
+          };
           if (!bestObj || obj.competitors < bestObj.competitors) bestObj = obj;
         });
         if (bestObj) ideaScores.push(bestObj);
@@ -1547,6 +1575,7 @@ app.get("/api/idea-locations", requireAuth, async (req, res) => {
     if (!idea) return res.status(400).json({ success: false, message: "idea required" });
 
     const topN = Math.max(1, parseInt(top, 10) || 5);
+    const minGapMeters = IDEA_PIN_MIN_GAP_METERS;
 
     // 1. Fetch real businesses matching this idea — with coordinates inside Pasig
     const [realBizRows] = await geoDB.query(
@@ -1697,8 +1726,15 @@ app.get("/api/idea-locations", requireAuth, async (req, res) => {
     }
 
     // 5. Select pins with spacing
-    // No spacing filter — take top N by suitability score
-    let selected = allPins.slice(0, topN);
+    const selected = [];
+    for (const pin of allPins) {
+      const farEnough = selected.every(s => haversineMeters(s.lat, s.lon, pin.lat, pin.lon) >= minGapMeters);
+      if (!farEnough) continue;
+      selected.push(pin);
+      if (selected.length >= topN) break;
+    }
+    // Fallback: always return at least one best-scoring pin when strict spacing would otherwise return none.
+    if (!selected.length && allPins.length) selected.push(allPins[0]);
 
     // Third pass: jitter STRICTLY within the target barangay bounding box
     if (selected.length < topN && allPins.length > 0) {
@@ -1760,15 +1796,30 @@ app.get("/api/idea-locations", requireAuth, async (req, res) => {
 
 // ─── DEBUG ROUTES (remove in production) ─────────────────────────────────────
 
-app.get("/api/debug-manggahan", requireAuth, async (req, res) => {
-  const idea = req.query.idea || "Restaurant";
+app.get("/api/debug-manggahan", requireAuth, debugRouteRateLimit, async (req, res) => {
+  const rawIdea = (req.query.idea || "Restaurant").toString().trim();
+  const idea = rawIdea.slice(0, 80).replace(/[^a-zA-Z0-9\s&'().,-]/g, "");
   const barangay = req.query.barangay || "Manggahan";
   try {
     const [barangayNames] = await geoDB.query(`SELECT DISTINCT barangay FROM businesses WHERE barangay LIKE ? LIMIT 10`, [`%${barangay}%`]);
     const [centroid] = await geoDB.query(`SELECT barangay_name, center_lat, center_lon FROM demographic_pasig WHERE barangay_name LIKE ? LIMIT 5`, [`%${barangay}%`]);
     const [bizCount] = await geoDB.query(`SELECT COUNT(*) as cnt FROM businesses WHERE LOWER(TRIM(barangay)) LIKE LOWER(TRIM(?))`, [`${normalizeBarangay(barangay)}%`]);
-    const [ideaMatch] = await geoDB.query(`SELECT barangay, line_of_business, lat, lon FROM businesses WHERE (line_of_business LIKE ? OR business_trade_name LIKE ?) AND lat IS NOT NULL LIMIT 10`, [`%${idea}%`, `%${idea}%`]);
-    const [manggahanBiz] = await geoDB.query(`SELECT DISTINCT line_of_business FROM businesses WHERE LOWER(TRIM(barangay)) LIKE LOWER(TRIM(?)) LIMIT 20`, [`${normalizeBarangay(barangay)}%`]);
+    const [ideaMatch] = await geoDB.query(
+      `SELECT barangay, line_of_business, lat, lon
+       FROM businesses
+       WHERE (line_of_business LIKE ? OR business_trade_name LIKE ?)
+         AND lat IS NOT NULL
+         AND lon IS NOT NULL
+       LIMIT 10`,
+      [`%${idea}%`, `%${idea}%`]
+    );
+    const [manggahanBiz] = await geoDB.query(
+      `SELECT DISTINCT line_of_business
+       FROM businesses
+       WHERE LOWER(TRIM(barangay)) LIKE LOWER(TRIM(?))
+       LIMIT 20`,
+      [`${normalizeBarangay(barangay)}%`]
+    );
     res.json({ barangayNamesInDB: barangayNames, centroidData: centroid, bizCountInBarangay: bizCount[0].cnt, ideaMatchesAnyBiz: ideaMatch, barangayLineOfBusiness: manggahanBiz });
   } catch (err) {
     res.status(500).json({ error: err.message });
