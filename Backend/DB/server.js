@@ -33,70 +33,66 @@ const PASIG_BOUNDS = {
 
 // ─── BARANGAY BOUNDING BOXES ──────────────────────────────────────────────────
 const BARANGAY_BOUNDS = {
-  'bagong ilog':       { minLat: 14.5680, maxLat: 14.5780, minLon: 121.0820, maxLon: 121.0920 },
-  'bagong katipunan':  { minLat: 14.5900, maxLat: 14.5980, minLon: 121.0790, maxLon: 121.0880 },
-  'bambang':           { minLat: 14.5790, maxLat: 14.5880, minLon: 121.0630, maxLon: 121.0720 },
-  'buting':            { minLat: 14.5700, maxLat: 14.5790, minLon: 121.0740, maxLon: 121.0840 },
-  'caniogan':          { minLat: 14.5790, maxLat: 14.5870, minLon: 121.0880, maxLon: 121.0970 },
-  'dela paz':          { minLat: 14.5640, maxLat: 14.5760, minLon: 121.0880, maxLon: 121.0980 },
-  'kalawaan':          { minLat: 14.5740, maxLat: 14.5820, minLon: 121.0810, maxLon: 121.0900 },
-  'kapasigan':         { minLat: 14.5720, maxLat: 14.5810, minLon: 121.0720, maxLon: 121.0810 },
-  'kapitolyo':         { minLat: 14.5790, maxLat: 14.5880, minLon: 121.0590, maxLon: 121.0680 },
-  'malinao':           { minLat: 14.5820, maxLat: 14.5900, minLon: 121.0860, maxLon: 121.0950 },
-  'manggahan':         { minLat: 14.5800, maxLat: 14.5900, minLon: 121.0930, maxLon: 121.1050 },
-  'maybunga':          { minLat: 14.5720, maxLat: 14.5810, minLon: 121.0870, maxLon: 121.0970 },
-  'oranbo':            { minLat: 14.5830, maxLat: 14.5910, minLon: 121.0750, maxLon: 121.0840 },
-  'palatiw':           { minLat: 14.5750, maxLat: 14.5840, minLon: 121.0920, maxLon: 121.1010 },
-  'pinagbuhatan':      { minLat: 14.5620, maxLat: 14.5730, minLon: 121.0940, maxLon: 121.1060 },
-  'pineda':            { minLat: 14.5700, maxLat: 14.5790, minLon: 121.0640, maxLon: 121.0730 },
-  'rosario':           { minLat: 14.5670, maxLat: 14.5770, minLon: 121.0790, maxLon: 121.0880 },
-  'sagad':             { minLat: 14.5640, maxLat: 14.5730, minLon: 121.0840, maxLon: 121.0930 },
-  'san antonio':       { minLat: 14.5870, maxLat: 14.5960, minLon: 121.0810, maxLon: 121.0910 },
-  'san joaquin':       { minLat: 14.5900, maxLat: 14.5980, minLon: 121.0730, maxLon: 121.0830 },
-  'san jose':          { minLat: 14.5840, maxLat: 14.5930, minLon: 121.0690, maxLon: 121.0780 },
-  'san miguel':        { minLat: 14.5770, maxLat: 14.5850, minLon: 121.0770, maxLon: 121.0860 },
-  'san nicolas':       { minLat: 14.5710, maxLat: 14.5800, minLon: 121.0830, maxLon: 121.0920 },
-  'santa lucia':       { minLat: 14.5580, maxLat: 14.5680, minLon: 121.0800, maxLon: 121.0910 },
-  'santa rosa':        { minLat: 14.5660, maxLat: 14.5760, minLon: 121.0900, maxLon: 121.0990 },
-  'santolan':          { minLat: 14.5960, maxLat: 14.6060, minLon: 121.0790, maxLon: 121.0890 },
-  'sumilang':          { minLat: 14.5750, maxLat: 14.5840, minLon: 121.0800, maxLon: 121.0890 },
-  'ugong':             { minLat: 14.5840, maxLat: 14.5930, minLon: 121.0640, maxLon: 121.0730 },
-  'f. vargas':         { minLat: 14.5780, maxLat: 14.5860, minLon: 121.0710, maxLon: 121.0800 },
-  'wack-wack':         { minLat: 14.5800, maxLat: 14.5900, minLon: 121.0590, maxLon: 121.0670 }
+  'bagong ilog': { minLat: 14.5560, maxLat: 14.5680, minLon: 121.0780, maxLon: 121.0900 },
+  'bagong katipunan': { minLat: 14.5740, maxLat: 14.5830, minLon: 121.0620, maxLon: 121.0720 },
+  'bambang': { minLat: 14.5700, maxLat: 14.5790, minLon: 121.0630, maxLon: 121.0730 },
+  'buting': { minLat: 14.5680, maxLat: 14.5760, minLon: 121.0720, maxLon: 121.0820 },
+  'caniogan': { minLat: 14.5740, maxLat: 14.5830, minLon: 121.0820, maxLon: 121.0920 },
+  'dela paz': { minLat: 14.5830, maxLat: 14.5960, minLon: 121.0820, maxLon: 121.0960 },
+  'kalawaan': { minLat: 14.5640, maxLat: 14.5730, minLon: 121.0730, maxLon: 121.0830 },
+  'kapasigan': { minLat: 14.5650, maxLat: 14.5740, minLon: 121.0680, maxLon: 121.0780 },
+  'kapitolyo': { minLat: 14.5730, maxLat: 14.5820, minLon: 121.0540, maxLon: 121.0650 },
+  'malinao': { minLat: 14.5760, maxLat: 14.5850, minLon: 121.0840, maxLon: 121.0940 },
+  'manggahan': { minLat: 14.5860, maxLat: 14.6020, minLon: 121.0880, maxLon: 121.1060 },
+  'maybunga': { minLat: 14.5720, maxLat: 14.5820, minLon: 121.0860, maxLon: 121.0970 },
+  'oranbo': { minLat: 14.5740, maxLat: 14.5830, minLon: 121.0730, maxLon: 121.0830 },
+  'palatiw': { minLat: 14.5770, maxLat: 14.5860, minLon: 121.0910, maxLon: 121.1010 },
+  'pinagbuhatan': { minLat: 14.5540, maxLat: 14.5680, minLon: 121.0870, maxLon: 121.1020 },
+  'pineda': { minLat: 14.5620, maxLat: 14.5710, minLon: 121.0590, maxLon: 121.0700 },
+  'rosario': { minLat: 14.5620, maxLat: 14.5720, minLon: 121.0750, maxLon: 121.0860 },
+  'sagad': { minLat: 14.5540, maxLat: 14.5640, minLon: 121.0820, maxLon: 121.0920 },
+  'san antonio': { minLat: 14.5840, maxLat: 14.5940, minLon: 121.0820, maxLon: 121.0920 },
+  'san joaquin': { minLat: 14.5820, maxLat: 14.5910, minLon: 121.0700, maxLon: 121.0810 },
+  'san jose': { minLat: 14.5790, maxLat: 14.5880, minLon: 121.0630, maxLon: 121.0730 },
+  'san miguel': { minLat: 14.5700, maxLat: 14.5790, minLon: 121.0760, maxLon: 121.0860 },
+  'san nicolas': { minLat: 14.5670, maxLat: 14.5760, minLon: 121.0800, maxLon: 121.0900 },
+  'santa lucia': { minLat: 14.5490, maxLat: 14.5610, minLon: 121.0760, maxLon: 121.0880 },
+  'santa rosa': { minLat: 14.5590, maxLat: 14.5690, minLon: 121.0870, maxLon: 121.0970 },
+  'santolan': { minLat: 14.5960, maxLat: 14.6080, minLon: 121.0740, maxLon: 121.0870 },
+  'sumilang': { minLat: 14.5700, maxLat: 14.5790, minLon: 121.0790, maxLon: 121.0890 },
+  'ugong': { minLat: 14.5780, maxLat: 14.5870, minLon: 121.0570, maxLon: 121.0670 },
 };
 
 // ─── CENTROID FALLBACK MAP ────────────────────────────────────────────────────
 const CENTROID_FALLBACK = {
-  'manggahan':         { lat: 14.5850, lon: 121.0980 },
-  'bagong ilog':       { lat: 14.5731, lon: 121.0857 },
-  'bagong katipunan':  { lat: 14.5939, lon: 121.0832 },
-  'bambang':           { lat: 14.5833, lon: 121.0669 },
-  'buting':            { lat: 14.5742, lon: 121.0784 },
-  'caniogan':          { lat: 14.5821, lon: 121.0924 },
-  'dela paz':          { lat: 14.5696, lon: 121.0924 },
-  'kalawaan':          { lat: 14.5779, lon: 121.0852 },
-  'kapasigan':         { lat: 14.5762, lon: 121.0762 },
-  'kapitolyo':         { lat: 14.5833, lon: 121.0631 },
-  'malinao':           { lat: 14.5857, lon: 121.0901 },
-  'maybunga':          { lat: 14.5762, lon: 121.0915 },
-  'oranbo':            { lat: 14.5869, lon: 121.0794 },
-  'palatiw':           { lat: 14.5801, lon: 121.0969 },
-  'pinagbuhatan':      { lat: 14.5672, lon: 121.0999 },
-  'pineda':            { lat: 14.5743, lon: 121.0681 },
-  'rosario':           { lat: 14.5720, lon: 121.0832 },
-  'sagad':             { lat: 14.5682, lon: 121.0877 },
-  'san antonio':       { lat: 14.5914, lon: 121.0852 },
-  'san joaquin':       { lat: 14.5940, lon: 121.0776 },
-  'san jose':          { lat: 14.5880, lon: 121.0731 },
-  'san miguel':        { lat: 14.5810, lon: 121.0810 },
-  'san nicolas':       { lat: 14.5753, lon: 121.0870 },
-  'santa lucia':       { lat: 14.5630, lon: 121.0851 },
-  'santa rosa':        { lat: 14.5712, lon: 121.0943 },
-  'santolan':          { lat: 14.6012, lon: 121.0832 },
-  'sumilang':          { lat: 14.5798, lon: 121.0841 },
-  'ugong':             { lat: 14.5879, lon: 121.0681 },
-  'f. vargas':         { lat: 14.5820, lon: 121.0750 },
-  'wack-wack':         { lat: 14.5853, lon: 121.0631 }
+  'bagong ilog': { lat: 14.5620, lon: 121.0840 },
+  'bagong katipunan': { lat: 14.5785, lon: 121.0670 },
+  'bambang': { lat: 14.5745, lon: 121.0680 },
+  'buting': { lat: 14.5720, lon: 121.0770 },
+  'caniogan': { lat: 14.5785, lon: 121.0870 },
+  'dela paz': { lat: 14.5895, lon: 121.0890 },
+  'kalawaan': { lat: 14.5685, lon: 121.0780 },
+  'kapasigan': { lat: 14.5695, lon: 121.0730 },
+  'kapitolyo': { lat: 14.5775, lon: 121.0595 },
+  'malinao': { lat: 14.5805, lon: 121.0890 },
+  'manggahan': { lat: 14.5940, lon: 121.0970 },
+  'maybunga': { lat: 14.5770, lon: 121.0915 },
+  'oranbo': { lat: 14.5785, lon: 121.0780 },
+  'palatiw': { lat: 14.5815, lon: 121.0960 },
+  'pinagbuhatan': { lat: 14.5610, lon: 121.0945 },
+  'pineda': { lat: 14.5665, lon: 121.0645 },
+  'rosario': { lat: 14.5670, lon: 121.0805 },
+  'sagad': { lat: 14.5590, lon: 121.0870 },
+  'san antonio': { lat: 14.5890, lon: 121.0870 },
+  'san joaquin': { lat: 14.5865, lon: 121.0755 },
+  'san jose': { lat: 14.5835, lon: 121.0680 },
+  'san miguel': { lat: 14.5745, lon: 121.0810 },
+  'san nicolas': { lat: 14.5715, lon: 121.0850 },
+  'santa lucia': { lat: 14.5550, lon: 121.0820 },
+  'santa rosa': { lat: 14.5640, lon: 121.0920 },
+  'santolan': { lat: 14.6020, lon: 121.0805 },
+  'sumilang': { lat: 14.5745, lon: 121.0840 },
+  'ugong': { lat: 14.5825, lon: 121.0620 },
 };
 
 function generateVerificationCode() {
@@ -157,7 +153,7 @@ function haversineMeters(lat1, lon1, lat2, lon2) {
 
 function inPasig(lat, lon) {
   return lat >= PASIG_BOUNDS.minLat && lat <= PASIG_BOUNDS.maxLat &&
-         lon >= PASIG_BOUNDS.minLon && lon <= PASIG_BOUNDS.maxLon;
+    lon >= PASIG_BOUNDS.minLon && lon <= PASIG_BOUNDS.maxLon;
 }
 
 function zscores(arr) {
@@ -586,26 +582,26 @@ app.get("/api/smart-chips", requireAuth, async (req, res) => {
     }
 
     const CATEGORY_MAP = {
-      "Food and Beverages": ["Restaurant","Coffee Shop","Milk Tea Shop","Pizza Shop","Burger Restaurant","Fried Chicken Restaurant","Bakery","Fast Food Restaurant","Cafe"],
-      "Retail": ["Convenience Store","Sari-Sari Store","Grocery / Supermarket","General Business"],
-      "Personal Care and Services": ["Salon / Barbershop","Spa & Massage","Laundry Shop","Repair Shop"],
-      "Technology": ["Internet Cafe","Computer Shop","IT Services"],
-      "Digital Service": ["Printing Shop","Online Services","Digital Marketing"],
-      "Wholesale & Import": ["Wholesale Store","Importer","Trading Business"],
-      "Manufacturing": ["Factory","Production","Industrial Business"],
-      "IT & Software": ["Software Company","IT Services","System Developer"],
-      "BPO & Call Center": ["Call Center","BPO Services"],
-      "Construction": ["Construction Company","Contractor"],
-      "Finance & Banking": ["Bank","Lending Company","Financial Services"],
-      "Education": ["School","Training Center","Tutorial Center"],
-      "Healthcare": ["Clinic","Hospital","Pharmacy"],
-      "Energy and Fuel": ["Gas Station","Fuel Supplier"],
-      "Logistics & Transport": ["Delivery Service","Transport Service","Logistics Company"],
-      "Hospitality": ["Hotel","Resort","Lodging"],
+      "Food and Beverages": ["Restaurant", "Coffee Shop", "Milk Tea Shop", "Pizza Shop", "Burger Restaurant", "Fried Chicken Restaurant", "Bakery", "Fast Food Restaurant", "Cafe"],
+      "Retail": ["Convenience Store", "Sari-Sari Store", "Grocery / Supermarket", "General Business"],
+      "Personal Care and Services": ["Salon / Barbershop", "Spa & Massage", "Laundry Shop", "Repair Shop"],
+      "Technology": ["Internet Cafe", "Computer Shop", "IT Services"],
+      "Digital Service": ["Printing Shop", "Online Services", "Digital Marketing"],
+      "Wholesale & Import": ["Wholesale Store", "Importer", "Trading Business"],
+      "Manufacturing": ["Factory", "Production", "Industrial Business"],
+      "IT & Software": ["Software Company", "IT Services", "System Developer"],
+      "BPO & Call Center": ["Call Center", "BPO Services"],
+      "Construction": ["Construction Company", "Contractor"],
+      "Finance & Banking": ["Bank", "Lending Company", "Financial Services"],
+      "Education": ["School", "Training Center", "Tutorial Center"],
+      "Healthcare": ["Clinic", "Hospital", "Pharmacy"],
+      "Energy and Fuel": ["Gas Station", "Fuel Supplier"],
+      "Logistics & Transport": ["Delivery Service", "Transport Service", "Logistics Company"],
+      "Hospitality": ["Hotel", "Resort", "Lodging"],
       "Security Services": ["Security Agency"],
-      "Legal & Consulting": ["Law Firm","Consulting Firm"],
-      "Marketing & Advertising": ["Marketing Agency","Advertising Agency"],
-      "Admin & Management": ["Office Services","Admin Services"],
+      "Legal & Consulting": ["Law Firm", "Consulting Firm"],
+      "Marketing & Advertising": ["Marketing Agency", "Advertising Agency"],
+      "Admin & Management": ["Office Services", "Admin Services"],
       "General Services": ["General Business"]
     };
 
@@ -1660,21 +1656,21 @@ app.get("/api/idea-locations", requireAuth, async (req, res) => {
     candidates.forEach(c => {
       let score = 0;
       const popScore = profile.prefersHighPopulation ? Math.min(c.population / 80000, 1) :
-                       profile.prefersMediumPopulation ? Math.min(c.population / 40000, 1) :
-                       Math.min(c.population / 20000, 1);
+        profile.prefersMediumPopulation ? Math.min(c.population / 40000, 1) :
+          Math.min(c.population / 20000, 1);
       score += popScore * profile.populationWeight;
 
       const incScore = profile.prefersHighIncome ? Math.min(c.income / 120000, 1) :
-                       profile.prefersMediumIncome ? Math.min(c.income / 70000, 1) :
-                       Math.min(c.income / 35000, 1);
+        profile.prefersMediumIncome ? Math.min(c.income / 70000, 1) :
+          Math.min(c.income / 35000, 1);
       score += incScore * profile.incomeWeight;
 
       const denScore = profile.prefersHighDensity ? Math.min(c.density / 25000, 1) :
-                       Math.min(c.density / 12000, 1);
+        Math.min(c.density / 12000, 1);
       score += denScore * profile.densityWeight;
 
       const ageS = profile.targetAgeGroups.some(age => c.ageGroup.includes(age)) ? 1 :
-                   (c.ageGroup.includes("25-54") || c.ageGroup.includes("18-35")) ? 0.7 : 0.3;
+        (c.ageGroup.includes("25-54") || c.ageGroup.includes("18-35")) ? 0.7 : 0.3;
       score += ageS * profile.ageWeight;
 
       let genScore = 0.5;
@@ -1697,26 +1693,8 @@ app.get("/api/idea-locations", requireAuth, async (req, res) => {
     }
 
     // 5. Select pins with spacing
-    const minGapMeters = 200;
-    let selected = [];
-
-    for (const pin of allPins) {
-      const farEnough = selected.every(s => haversineMeters(s.lat, s.lon, pin.lat, pin.lon) >= minGapMeters);
-      if (farEnough) {
-        selected.push(pin);
-        if (selected.length >= topN) break;
-      }
-    }
-
-    // Second pass: fill without distance check
-    if (selected.length < topN) {
-      for (const pin of allPins) {
-        if (!selected.includes(pin)) {
-          selected.push(pin);
-          if (selected.length >= topN) break;
-        }
-      }
-    }
+    // No spacing filter — take top N by suitability score
+    let selected = allPins.slice(0, topN);
 
     // Third pass: jitter STRICTLY within the target barangay bounding box
     if (selected.length < topN && allPins.length > 0) {

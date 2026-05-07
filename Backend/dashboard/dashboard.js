@@ -231,7 +231,6 @@ async function fetchIdeaLocations(filters = {}) {
   return data.success ? data.data : [];
 }
 
-// ─── REPLOT: only replots the currently active idea with new pin count ────────
 // ─── REPLOT: replots the currently active idea across ALL selected barangays ──
 async function replotFilteredPins() {
   if (!isFilterMode) return;
@@ -242,7 +241,6 @@ async function replotFilteredPins() {
 
   clearBusinessMarkers();
 
-  // activeIdeaBarangay is now an array (or null for "all")
   const barangays = activeIdeaBarangay && activeIdeaBarangay.length ? activeIdeaBarangay : [null];
 
   const allRecs = (await Promise.all(
@@ -648,7 +646,6 @@ async function saveRowClickHandler(e) {
   }
 }
 
-// ─── RENDER IDEA LIST ─────────────────────────────────────────────────────────
 // ─── RENDER IDEA LIST (multi-barangay aware) ──────────────────────────────────
 function renderIdeaList({ names, barangays, prefs, allowPins }) {
   // Keep backward-compat: accept old single `barangay` string too
@@ -697,7 +694,7 @@ function renderIdeaList({ names, barangays, prefs, allowPins }) {
 
       activeIdeaIdx = idx;
       activeIdeaName = idea;
-      activeIdeaBarangay = barangays || null;  // ✅ store the full array
+      activeIdeaBarangay = barangays || null;
       activeIdeaPrefs = prefs || [];
 
       listEl.querySelectorAll('.rec-item').forEach(r => r.classList.remove('active'));
@@ -715,7 +712,6 @@ function renderIdeaList({ names, barangays, prefs, allowPins }) {
 
       const top = getFilteredPinCount();
 
-      // ✅ Fetch from every selected barangay, then plot all combined
       const barangayList = barangays && barangays.length ? barangays : [null];
       const allRecs = (await Promise.all(
         barangayList.map(b => fetchIdeaLocations({
@@ -733,10 +729,18 @@ function renderIdeaList({ names, barangays, prefs, allowPins }) {
   });
 
   markSavedInCurrentList();
-}
 
-// ✅ FIXED: resolveChipIdeas – ranks chips by suitability, returns top 3 chip labels
-// ✅ FIXED resolveChipIdeas — scores across ALL selected barangays
+  // ── Auto-select first idea so the pin slider works immediately ──
+  if (allowPins && activeIdeaIdx === -1) {
+    const firstItem = listEl.querySelector('.rec-item');
+    if (firstItem) {
+      // Use setTimeout to let the click listeners above fully attach first
+      setTimeout(() => firstItem.click(), 0);
+    }
+  }
+} // ← end of renderIdeaList
+
+// ─── RESOLVE CHIP IDEAS ───────────────────────────────────────────────────────
 async function resolveChipIdeas({ selectedChips, barangays, type, prefs }) {
   const barangayList = barangays && barangays.length ? barangays : [null];
 
@@ -803,7 +807,7 @@ async function applyFiltersAndShowRecommendations() {
 
   activeIdeaIdx = -1;
   activeIdeaName = null;
-  activeIdeaBarangay = null;   // will become string[] | null
+  activeIdeaBarangay = null;
   activeIdeaPrefs = [];
   lastFilteredIdea = null;
 
@@ -814,11 +818,9 @@ async function applyFiltersAndShowRecommendations() {
   const barangayCheckboxes = document.querySelectorAll('[id^="b-"]:checked');
   const typeCheckboxes = document.querySelectorAll('[id^="f-"]:checked');
 
-  // ✅ Collect ALL selected barangays
   const selectedBarangays = [...barangayCheckboxes].map(cb => barangayMap[cb.id]).filter(Boolean);
   const selectedTypes = [...typeCheckboxes].map(cb => typeMap[cb.id]).filter(Boolean);
 
-  // null means "all barangays" (no filter)
   const barangays = selectedBarangays.length ? selectedBarangays : null;
   const prefs = getPrefs();
 
@@ -832,7 +834,6 @@ async function applyFiltersAndShowRecommendations() {
 
   if (!barangays && !type && !prefs.length && selectedChips.length === 0) return;
 
-  // For demographics, load the first barangay (or all if none selected)
   if (barangays) loadAreaDemographics(barangays[0]);
 
   const titleEl = document.getElementById('loc-panel-title');
@@ -849,15 +850,14 @@ async function applyFiltersAndShowRecommendations() {
   const listEl = document.getElementById('rec-list');
   if (listEl) listEl.innerHTML = '<div class="rec-item" style="color:#888;font-size:13px;">Loading recommendations…</div>';
 
-  lastFilteredBarangay = barangays;   // now an array or null
+  lastFilteredBarangay = barangays;
   lastFilteredPrefs = prefs;
 
-  // ✅ Pass full array to resolveChipIdeas
   const ideaNames = await resolveChipIdeas({ selectedChips, barangays, type, prefs });
 
-  // Render — pass barangays array through
   renderIdeaList({ names: ideaNames, barangays, prefs, allowPins: true });
 }
+
 document.getElementById('done-btn')?.addEventListener('click', async () => {
   await applyFiltersAndShowRecommendations();
 });
@@ -1327,7 +1327,7 @@ function parseJumpTarget() {
 }
 
 // ============================================================================
-// SMART FILTER PERSONALIZATION SYSTEM - CHIPS FILTER IDEAS (NO PINS)
+// SMART FILTER PERSONALIZATION SYSTEM
 // ============================================================================
 
 const INDUSTRY_CHIP_MAP = {
@@ -1560,7 +1560,6 @@ function buildFilterChips(industry, subcategory) {
   chipContainer.innerHTML = html;
   if (chipSection) chipSection.style.display = 'block';
 
-  // ── Chip click: JUST TOGGLE SELECTION - NO PINS ──
   chipContainer.querySelectorAll('.filter-chip').forEach(chip => {
     const chipValue = chip.dataset.chip || '';
 
