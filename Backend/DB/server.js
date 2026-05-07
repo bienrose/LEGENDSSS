@@ -1733,6 +1733,7 @@ app.get("/api/idea-locations", requireAuth, async (req, res) => {
       selected.push(pin);
       if (selected.length >= topN) break;
     }
+    // Fallback: always return at least one best-scoring pin when strict spacing would otherwise return none.
     if (!selected.length && allPins.length) selected.push(allPins[0]);
 
     // Third pass: jitter STRICTLY within the target barangay bounding box
