@@ -674,57 +674,59 @@ function renderIdeaList({ names, barangays, prefs, allowPins }) {
 
   attachSaveRowListeners();
 
+  const onIdeaSelect = async (el) => {
+    const idea = el.dataset.idea;
+    const idx = parseInt(el.dataset.idx);
+    const prevIdeaName = activeIdeaName;
+    const prevIdeaBarangays = activeIdeaBarangay ? [...activeIdeaBarangay] : null;
+    const prevIdeaPrefs = activeIdeaPrefs ? [...activeIdeaPrefs] : [];
+
+    activeIdeaIdx = idx;
+    activeIdeaName = idea;
+    activeIdeaBarangay = barangays || null;
+    activeIdeaPrefs = prefs || [];
+
+    listEl.querySelectorAll('.rec-item').forEach(r => r.classList.remove('active'));
+    el.classList.add('active');
+
+    const sameIdea =
+      prevIdeaName === activeIdeaName &&
+      JSON.stringify(prevIdeaBarangays || []) === JSON.stringify(activeIdeaBarangay || []) &&
+      JSON.stringify(prevIdeaPrefs || []) === JSON.stringify(activeIdeaPrefs || []);
+    if (sameIdea) return;
+
+    await reportLogRecommendation({
+      idea,
+      area: barangays ? barangays.join(', ') : (currentBarangayName || currentLocShortName),
+      pinCount: getFilteredPinCount(),
+      lat: currentClickLat,
+      lon: currentClickLng
+    });
+
+    loadAreaDemographics(primaryBarangay || currentBarangayName, idea);
+
+    const top = getFilteredPinCount();
+
+    const barangayList = barangays && barangays.length ? barangays : [null];
+    const allRecs = (await Promise.all(
+      barangayList.map(b => fetchIdeaLocations({
+        idea: idea.trim(),
+        barangay: b,
+        top,
+        prefs,
+        _t: Date.now()
+      }))
+    )).flat();
+
+    clearBusinessMarkers();
+    plotLocations(allRecs);
+  };
+
   listEl.querySelectorAll('.rec-item').forEach(el => {
     el.addEventListener('click', async (e) => {
       if (e.target.closest('.save-row')) return;
       if (!allowPins) return;
-
-      const idea = el.dataset.idea;
-      const idx = parseInt(el.dataset.idx);
-
-      if (activeIdeaIdx === idx) {
-        activeIdeaIdx = -1;
-        activeIdeaName = null;
-        activeIdeaBarangay = null;
-        activeIdeaPrefs = [];
-        clearBusinessMarkers();
-        listEl.querySelectorAll('.rec-item').forEach(r => r.classList.remove('active'));
-        return;
-      }
-
-      activeIdeaIdx = idx;
-      activeIdeaName = idea;
-      activeIdeaBarangay = barangays || null;
-      activeIdeaPrefs = prefs || [];
-
-      listEl.querySelectorAll('.rec-item').forEach(r => r.classList.remove('active'));
-      el.classList.add('active');
-
-      await reportLogRecommendation({
-        idea,
-        area: barangays ? barangays.join(', ') : (currentBarangayName || currentLocShortName),
-        pinCount: getFilteredPinCount(),
-        lat: currentClickLat,
-        lon: currentClickLng
-      });
-
-      loadAreaDemographics(primaryBarangay || currentBarangayName, idea);
-
-      const top = getFilteredPinCount();
-
-      const barangayList = barangays && barangays.length ? barangays : [null];
-      const allRecs = (await Promise.all(
-        barangayList.map(b => fetchIdeaLocations({
-          idea: idea.trim(),
-          barangay: b,
-          top,
-          prefs,
-          _t: Date.now()
-        }))
-      )).flat();
-
-      clearBusinessMarkers();
-      plotLocations(allRecs);
+      await onIdeaSelect(el);
     });
   });
 
@@ -734,8 +736,7 @@ function renderIdeaList({ names, barangays, prefs, allowPins }) {
   if (allowPins && activeIdeaIdx === -1) {
     const firstItem = listEl.querySelector('.rec-item');
     if (firstItem) {
-      // Use setTimeout to let the click listeners above fully attach first
-      setTimeout(() => firstItem.click(), 0);
+      void onIdeaSelect(firstItem);
     }
   }
 } // ← end of renderIdeaList

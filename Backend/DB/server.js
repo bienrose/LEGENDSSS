@@ -1736,43 +1736,49 @@ app.get("/api/idea-locations", requireAuth, async (req, res) => {
     // Fallback: always return at least one best-scoring pin when strict spacing would otherwise return none.
     if (!selected.length && allPins.length) selected.push(allPins[0]);
 
-// Third pass: jitter STRICTLY within the target barangay bounding box
-if (selected.length < topN && allPins.length > 0) {
-  const base = allPins[0];
-  const targetBarangay = barangay || base.barangay_name;
-  const bounds = getBarangayBounds(targetBarangay);
-  let attempts = 0;
+    // Third pass: jitter within target area with spacing checks
+    if (selected.length < topN && allPins.length > 0) {
+      let attempts = 0;
 
-  while (selected.length < topN && attempts < 500) {
-    attempts++;
+      while (selected.length < topN && attempts < 500) {
+        const base = allPins[attempts % allPins.length];
+        const targetBarangay = barangay || base.barangay_name;
+        const bounds = getBarangayBounds(targetBarangay);
+        attempts++;
 
-    let newLat, newLon;
-    if (bounds) {
-      // Random point strictly inside this barangay's bounding box
-      newLat = bounds.minLat + Math.random() * (bounds.maxLat - bounds.minLat);
-      newLon = bounds.minLon + Math.random() * (bounds.maxLon - bounds.minLon);
-    } else {
-      // No bounding box — small jitter from centroid only (~300m)
-      const jDegLat = 300 / 111111;
-      const jDegLon = 300 / (111111 * Math.cos(14.58 * Math.PI / 180));
-      newLat = base.lat + (Math.random() - 0.5) * 2 * jDegLat;
-      newLon = base.lon + (Math.random() - 0.5) * 2 * jDegLon;
+        let newLat, newLon;
+        if (bounds) {
+          // Random point inside this barangay's bounding box
+          newLat = bounds.minLat + Math.random() * (bounds.maxLat - bounds.minLat);
+          newLon = bounds.minLon + Math.random() * (bounds.maxLon - bounds.minLon);
+        } else {
+          // No barangay bounds: jitter around centroid/base with wider spread
+          const centroid = getCentroidFallback(targetBarangay) || { lat: base.lat, lon: base.lon };
+          const jitterMeters = 900;
+          const jDegLat = jitterMeters / 111111;
+          const jDegLon = jitterMeters / (111111 * Math.cos((centroid.lat || base.lat) * Math.PI / 180));
+          newLat = centroid.lat + (Math.random() - 0.5) * 2 * jDegLat;
+          newLon = centroid.lon + (Math.random() - 0.5) * 2 * jDegLon;
+        }
+
+        // Must be within Pasig AND within barangay box (if known)
+        if (!inPasig(newLat, newLon)) continue;
+        if (bounds && !inBarangay(newLat, newLon, targetBarangay)) continue;
+
+        // Keep jittered pins spaced from selected pins
+        const farEnough = selected.every(s => haversineMeters(s.lat, s.lon, newLat, newLon) >= minGapMeters);
+        if (!farEnough) continue;
+
+        selected.push({
+          ...base,
+          lat: newLat,
+          lon: newLon,
+          barangay_name: targetBarangay,
+          is_predicted: true,
+          suitabilityScore: base.suitabilityScore * 0.85
+        });
+      }
     }
-
-    // Must be within Pasig AND within barangay box
-    if (!inPasig(newLat, newLon)) continue;
-    if (bounds && !inBarangay(newLat, newLon, targetBarangay)) continue;
-
-    selected.push({
-      ...base,
-      lat: newLat,
-      lon: newLon,
-      barangay_name: targetBarangay,
-      is_predicted: true,
-      suitabilityScore: base.suitabilityScore * 0.85
-    });
-  }
-}
 
     const result = selected.slice(0, topN).map(p => ({
       lat: p.lat,
