@@ -232,6 +232,7 @@ async function fetchIdeaLocations(filters = {}) {
 }
 
 // ─── REPLOT: only replots the currently active idea with new pin count ────────
+// ─── REPLOT: replots the currently active idea across ALL selected barangays ──
 async function replotFilteredPins() {
   if (!isFilterMode) return;
   if (activeIdeaIdx === -1 || !activeIdeaName) return;
@@ -241,16 +242,21 @@ async function replotFilteredPins() {
 
   clearBusinessMarkers();
 
-  const recs = await fetchIdeaLocations({
-    idea: activeIdeaName,
-    barangay: activeIdeaBarangay,
-    top,
-    prefs: activeIdeaPrefs
-  });
+  // activeIdeaBarangay is now an array (or null for "all")
+  const barangays = activeIdeaBarangay && activeIdeaBarangay.length ? activeIdeaBarangay : [null];
+
+  const allRecs = (await Promise.all(
+    barangays.map(b => fetchIdeaLocations({
+      idea: activeIdeaName,
+      barangay: b,
+      top,
+      prefs: activeIdeaPrefs
+    }))
+  )).flat();
 
   if (requestId !== activeRequestId) return;
 
-  plotLocations(recs);
+  plotLocations(allRecs);
 }
 
 if (pinCountInput && pinCountLabel) {
@@ -643,7 +649,11 @@ async function saveRowClickHandler(e) {
 }
 
 // ─── RENDER IDEA LIST ─────────────────────────────────────────────────────────
-function renderIdeaList({ names, barangay, prefs, allowPins }) {
+// ─── RENDER IDEA LIST (multi-barangay aware) ──────────────────────────────────
+function renderIdeaList({ names, barangays, prefs, allowPins }) {
+  // Keep backward-compat: accept old single `barangay` string too
+  if (typeof barangays === 'string') barangays = barangays ? [barangays] : null;
+
   const listEl = document.getElementById('rec-list');
   if (!listEl) return;
 
@@ -652,11 +662,14 @@ function renderIdeaList({ names, barangay, prefs, allowPins }) {
     return;
   }
 
+  // For save-row display use the first barangay label (or empty)
+  const primaryBarangay = barangays && barangays.length ? barangays[0] : '';
+
   listEl.innerHTML = names.map((name, i) => `
     <div class="rec-item" data-idx="${i}" data-idea="${escapeHtml(name)}" style="cursor:pointer;">
       <span class="rec-item-num">${i + 1}.</span>
       <span class="rec-item-name">${escapeHtml(formatBizName(name))}</span>
-      <div class="save-row" data-name="${escapeHtml(name)}" data-barangay="${escapeHtml(barangay || '')}">
+      <div class="save-row" data-name="${escapeHtml(name)}" data-barangay="${escapeHtml(primaryBarangay)}">
         <img src="/dashboard/save.png" alt="bookmark"><span>Save</span>
       </div>
     </div>
@@ -684,30 +697,38 @@ function renderIdeaList({ names, barangay, prefs, allowPins }) {
 
       activeIdeaIdx = idx;
       activeIdeaName = idea;
-      activeIdeaBarangay = barangay || null;
+      activeIdeaBarangay = barangays || null;  // ✅ store the full array
       activeIdeaPrefs = prefs || [];
 
       listEl.querySelectorAll('.rec-item').forEach(r => r.classList.remove('active'));
       el.classList.add('active');
 
       await reportLogRecommendation({
-        idea, area: barangay || currentBarangayName || currentLocShortName,
-        pinCount: getFilteredPinCount(), lat: currentClickLat, lon: currentClickLng
+        idea,
+        area: barangays ? barangays.join(', ') : (currentBarangayName || currentLocShortName),
+        pinCount: getFilteredPinCount(),
+        lat: currentClickLat,
+        lon: currentClickLng
       });
 
-      loadAreaDemographics(barangay || currentBarangayName, idea);
+      loadAreaDemographics(primaryBarangay || currentBarangayName, idea);
 
       const top = getFilteredPinCount();
-      const recs = await fetchIdeaLocations({
-        idea: idea.trim(),
-        barangay,
-        top,
-        prefs,
-        _t: Date.now()
-      });
+
+      // ✅ Fetch from every selected barangay, then plot all combined
+      const barangayList = barangays && barangays.length ? barangays : [null];
+      const allRecs = (await Promise.all(
+        barangayList.map(b => fetchIdeaLocations({
+          idea: idea.trim(),
+          barangay: b,
+          top,
+          prefs,
+          _t: Date.now()
+        }))
+      )).flat();
 
       clearBusinessMarkers();
-      plotLocations(recs);
+      plotLocations(allRecs);
     });
   });
 
@@ -715,43 +736,45 @@ function renderIdeaList({ names, barangay, prefs, allowPins }) {
 }
 
 // ✅ FIXED: resolveChipIdeas – ranks chips by suitability, returns top 3 chip labels
-async function resolveChipIdeas({ selectedChips, barangay, type, prefs }) {
-  // If no chips and no type, fallback to global ideas (rare case)
+// ✅ FIXED resolveChipIdeas — scores across ALL selected barangays
+async function resolveChipIdeas({ selectedChips, barangays, type, prefs }) {
+  const barangayList = barangays && barangays.length ? barangays : [null];
+
   if (selectedChips.length === 0 && !type) {
-    const ideas = await fetchIdeas({ barangay, prefs });
+    const ideas = await fetchIdeas({ barangay: barangayList[0], prefs });
     return ideas.slice(0, 3);
   }
 
-  // If only type filter (no chips), use /api/ideas
   if (selectedChips.length === 0 && type) {
-    const ideas = await fetchIdeas({ barangay, type, prefs });
+    const ideas = await fetchIdeas({ barangay: barangayList[0], type, prefs });
     if (ideas.length >= 3) return ideas.slice(0, 3);
-    const general = await fetchIdeas({ barangay, prefs });
+    const general = await fetchIdeas({ barangay: barangayList[0], prefs });
     const extra = general.filter(n => !ideas.includes(n));
     return [...ideas, ...extra].slice(0, 3);
   }
 
-  // Chips are the business ideas – rank them by suitability
+  // Score each chip across all selected barangays
   const chipLabels = selectedChips.map(c => c.label);
   const scored = [];
   for (const label of chipLabels) {
-    // Fetch a small sample (top=3) to get average suitability score
-    const recs = await fetchIdeaLocations({
-      idea: label.trim(),
-      barangay: barangay,
-      top: 3,
-      prefs: prefs,
-      _t: Date.now()
-    });
-    let avgScore = 0;
-    if (recs.length > 0) {
-      avgScore = recs.reduce((sum, loc) => sum + (loc.suitability_score || 0), 0) / recs.length;
+    let totalScore = 0;
+    let totalRecs = 0;
+    for (const b of barangayList) {
+      const recs = await fetchIdeaLocations({
+        idea: label.trim(),
+        barangay: b,
+        top: 3,
+        prefs,
+        _t: Date.now()
+      });
+      if (recs.length > 0) {
+        totalScore += recs.reduce((sum, loc) => sum + (loc.suitability_score || 0), 0);
+        totalRecs += recs.length;
+      }
     }
-    scored.push({ label, score: avgScore });
+    scored.push({ label, score: totalRecs > 0 ? totalScore / totalRecs : 0 });
   }
-  // Sort by score descending
   scored.sort((a, b) => b.score - a.score);
-  // Return top 3 chip labels
   return scored.slice(0, 3).map(item => item.label);
 }
 
@@ -778,10 +801,9 @@ async function applyFiltersAndShowRecommendations() {
   allowIdeaPins = true;
   isFilterMode = true;
 
-  // Reset active idea — no pins on load
   activeIdeaIdx = -1;
   activeIdeaName = null;
-  activeIdeaBarangay = null;
+  activeIdeaBarangay = null;   // will become string[] | null
   activeIdeaPrefs = [];
   lastFilteredIdea = null;
 
@@ -791,10 +813,13 @@ async function applyFiltersAndShowRecommendations() {
 
   const barangayCheckboxes = document.querySelectorAll('[id^="b-"]:checked');
   const typeCheckboxes = document.querySelectorAll('[id^="f-"]:checked');
+
+  // ✅ Collect ALL selected barangays
   const selectedBarangays = [...barangayCheckboxes].map(cb => barangayMap[cb.id]).filter(Boolean);
   const selectedTypes = [...typeCheckboxes].map(cb => typeMap[cb.id]).filter(Boolean);
 
-  const barangay = selectedBarangays[0] || null;
+  // null means "all barangays" (no filter)
+  const barangays = selectedBarangays.length ? selectedBarangays : null;
   const prefs = getPrefs();
 
   const selectedChipEls = document.querySelectorAll('.filter-chip.selected');
@@ -805,31 +830,34 @@ async function applyFiltersAndShowRecommendations() {
 
   const type = selectedChips.length === 0 ? (selectedTypes[0] || null) : null;
 
-  if (!barangay && !type && !prefs.length && selectedChips.length === 0) return;
+  if (!barangays && !type && !prefs.length && selectedChips.length === 0) return;
 
-  if (barangay) loadAreaDemographics(barangay);
+  // For demographics, load the first barangay (or all if none selected)
+  if (barangays) loadAreaDemographics(barangays[0]);
 
   const titleEl = document.getElementById('loc-panel-title');
   const badgeEl = document.getElementById('loc-badge');
-  if (titleEl) titleEl.textContent = barangay
-    ? `Top Businesses in ${barangay}`
-    : `Top Businesses — All Barangays`;
-  if (badgeEl) badgeEl.textContent = barangay ? `📍 ${barangay}` : `📍 All Barangays`;
+  const areaLabel = barangays
+    ? (barangays.length === 1 ? barangays[0] : `${barangays.length} Barangays`)
+    : 'All Barangays';
+
+  if (titleEl) titleEl.textContent = `Top Businesses in ${areaLabel}`;
+  if (badgeEl) badgeEl.textContent = `📍 ${areaLabel}`;
 
   locPanel.classList.add('open');
 
   const listEl = document.getElementById('rec-list');
   if (listEl) listEl.innerHTML = '<div class="rec-item" style="color:#888;font-size:13px;">Loading recommendations…</div>';
 
-  lastFilteredBarangay = barangay;
+  lastFilteredBarangay = barangays;   // now an array or null
   lastFilteredPrefs = prefs;
 
-  const ideaNames = await resolveChipIdeas({ selectedChips, barangay, type, prefs });
+  // ✅ Pass full array to resolveChipIdeas
+  const ideaNames = await resolveChipIdeas({ selectedChips, barangays, type, prefs });
 
-  // Render ideas list only — NO pins plotted yet
-  renderIdeaList({ names: ideaNames, barangay, prefs, allowPins: true });
+  // Render — pass barangays array through
+  renderIdeaList({ names: ideaNames, barangays, prefs, allowPins: true });
 }
-
 document.getElementById('done-btn')?.addEventListener('click', async () => {
   await applyFiltersAndShowRecommendations();
 });

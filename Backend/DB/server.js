@@ -31,6 +31,74 @@ const PASIG_BOUNDS = {
   maxLon: 121.1100
 };
 
+// ─── BARANGAY BOUNDING BOXES ──────────────────────────────────────────────────
+const BARANGAY_BOUNDS = {
+  'bagong ilog':       { minLat: 14.5680, maxLat: 14.5780, minLon: 121.0820, maxLon: 121.0920 },
+  'bagong katipunan':  { minLat: 14.5900, maxLat: 14.5980, minLon: 121.0790, maxLon: 121.0880 },
+  'bambang':           { minLat: 14.5790, maxLat: 14.5880, minLon: 121.0630, maxLon: 121.0720 },
+  'buting':            { minLat: 14.5700, maxLat: 14.5790, minLon: 121.0740, maxLon: 121.0840 },
+  'caniogan':          { minLat: 14.5790, maxLat: 14.5870, minLon: 121.0880, maxLon: 121.0970 },
+  'dela paz':          { minLat: 14.5640, maxLat: 14.5760, minLon: 121.0880, maxLon: 121.0980 },
+  'kalawaan':          { minLat: 14.5740, maxLat: 14.5820, minLon: 121.0810, maxLon: 121.0900 },
+  'kapasigan':         { minLat: 14.5720, maxLat: 14.5810, minLon: 121.0720, maxLon: 121.0810 },
+  'kapitolyo':         { minLat: 14.5790, maxLat: 14.5880, minLon: 121.0590, maxLon: 121.0680 },
+  'malinao':           { minLat: 14.5820, maxLat: 14.5900, minLon: 121.0860, maxLon: 121.0950 },
+  'manggahan':         { minLat: 14.5800, maxLat: 14.5900, minLon: 121.0930, maxLon: 121.1050 },
+  'maybunga':          { minLat: 14.5720, maxLat: 14.5810, minLon: 121.0870, maxLon: 121.0970 },
+  'oranbo':            { minLat: 14.5830, maxLat: 14.5910, minLon: 121.0750, maxLon: 121.0840 },
+  'palatiw':           { minLat: 14.5750, maxLat: 14.5840, minLon: 121.0920, maxLon: 121.1010 },
+  'pinagbuhatan':      { minLat: 14.5620, maxLat: 14.5730, minLon: 121.0940, maxLon: 121.1060 },
+  'pineda':            { minLat: 14.5700, maxLat: 14.5790, minLon: 121.0640, maxLon: 121.0730 },
+  'rosario':           { minLat: 14.5670, maxLat: 14.5770, minLon: 121.0790, maxLon: 121.0880 },
+  'sagad':             { minLat: 14.5640, maxLat: 14.5730, minLon: 121.0840, maxLon: 121.0930 },
+  'san antonio':       { minLat: 14.5870, maxLat: 14.5960, minLon: 121.0810, maxLon: 121.0910 },
+  'san joaquin':       { minLat: 14.5900, maxLat: 14.5980, minLon: 121.0730, maxLon: 121.0830 },
+  'san jose':          { minLat: 14.5840, maxLat: 14.5930, minLon: 121.0690, maxLon: 121.0780 },
+  'san miguel':        { minLat: 14.5770, maxLat: 14.5850, minLon: 121.0770, maxLon: 121.0860 },
+  'san nicolas':       { minLat: 14.5710, maxLat: 14.5800, minLon: 121.0830, maxLon: 121.0920 },
+  'santa lucia':       { minLat: 14.5580, maxLat: 14.5680, minLon: 121.0800, maxLon: 121.0910 },
+  'santa rosa':        { minLat: 14.5660, maxLat: 14.5760, minLon: 121.0900, maxLon: 121.0990 },
+  'santolan':          { minLat: 14.5960, maxLat: 14.6060, minLon: 121.0790, maxLon: 121.0890 },
+  'sumilang':          { minLat: 14.5750, maxLat: 14.5840, minLon: 121.0800, maxLon: 121.0890 },
+  'ugong':             { minLat: 14.5840, maxLat: 14.5930, minLon: 121.0640, maxLon: 121.0730 },
+  'f. vargas':         { minLat: 14.5780, maxLat: 14.5860, minLon: 121.0710, maxLon: 121.0800 },
+  'wack-wack':         { minLat: 14.5800, maxLat: 14.5900, minLon: 121.0590, maxLon: 121.0670 }
+};
+
+// ─── CENTROID FALLBACK MAP ────────────────────────────────────────────────────
+const CENTROID_FALLBACK = {
+  'manggahan':         { lat: 14.5850, lon: 121.0980 },
+  'bagong ilog':       { lat: 14.5731, lon: 121.0857 },
+  'bagong katipunan':  { lat: 14.5939, lon: 121.0832 },
+  'bambang':           { lat: 14.5833, lon: 121.0669 },
+  'buting':            { lat: 14.5742, lon: 121.0784 },
+  'caniogan':          { lat: 14.5821, lon: 121.0924 },
+  'dela paz':          { lat: 14.5696, lon: 121.0924 },
+  'kalawaan':          { lat: 14.5779, lon: 121.0852 },
+  'kapasigan':         { lat: 14.5762, lon: 121.0762 },
+  'kapitolyo':         { lat: 14.5833, lon: 121.0631 },
+  'malinao':           { lat: 14.5857, lon: 121.0901 },
+  'maybunga':          { lat: 14.5762, lon: 121.0915 },
+  'oranbo':            { lat: 14.5869, lon: 121.0794 },
+  'palatiw':           { lat: 14.5801, lon: 121.0969 },
+  'pinagbuhatan':      { lat: 14.5672, lon: 121.0999 },
+  'pineda':            { lat: 14.5743, lon: 121.0681 },
+  'rosario':           { lat: 14.5720, lon: 121.0832 },
+  'sagad':             { lat: 14.5682, lon: 121.0877 },
+  'san antonio':       { lat: 14.5914, lon: 121.0852 },
+  'san joaquin':       { lat: 14.5940, lon: 121.0776 },
+  'san jose':          { lat: 14.5880, lon: 121.0731 },
+  'san miguel':        { lat: 14.5810, lon: 121.0810 },
+  'san nicolas':       { lat: 14.5753, lon: 121.0870 },
+  'santa lucia':       { lat: 14.5630, lon: 121.0851 },
+  'santa rosa':        { lat: 14.5712, lon: 121.0943 },
+  'santolan':          { lat: 14.6012, lon: 121.0832 },
+  'sumilang':          { lat: 14.5798, lon: 121.0841 },
+  'ugong':             { lat: 14.5879, lon: 121.0681 },
+  'f. vargas':         { lat: 14.5820, lon: 121.0750 },
+  'wack-wack':         { lat: 14.5853, lon: 121.0631 }
+};
+
 function generateVerificationCode() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
@@ -43,6 +111,38 @@ function normalizeBarangay(v) {
   return (v || "").toString().trim().toLowerCase();
 }
 
+// ─── FUZZY BARANGAY MATCHER ───────────────────────────────────────────────────
+// Handles "Manggahan (incl. Napico)" vs "Manggahan", case differences, etc.
+function barangayMatches(dbName, filterName) {
+  if (!dbName || !filterName) return false;
+  const a = normalizeBarangay(dbName);
+  const b = normalizeBarangay(filterName);
+  return a === b || a.startsWith(b) || b.startsWith(a);
+}
+
+// ─── BARANGAY BOUNDS HELPERS ──────────────────────────────────────────────────
+function getBarangayBounds(barangayName) {
+  if (!barangayName) return null;
+  const key = normalizeBarangay(barangayName);
+  if (BARANGAY_BOUNDS[key]) return BARANGAY_BOUNDS[key];
+  const match = Object.keys(BARANGAY_BOUNDS).find(k => key.startsWith(k) || k.startsWith(key));
+  return match ? BARANGAY_BOUNDS[match] : null;
+}
+
+function inBarangay(lat, lon, barangayName) {
+  const b = getBarangayBounds(barangayName);
+  if (!b) return inPasig(lat, lon);
+  return lat >= b.minLat && lat <= b.maxLat && lon >= b.minLon && lon <= b.maxLon;
+}
+
+function getCentroidFallback(barangayName) {
+  if (!barangayName) return null;
+  const key = normalizeBarangay(barangayName);
+  if (CENTROID_FALLBACK[key]) return CENTROID_FALLBACK[key];
+  const matchKey = Object.keys(CENTROID_FALLBACK).find(k => key.startsWith(k) || k.startsWith(key));
+  return matchKey ? CENTROID_FALLBACK[matchKey] : null;
+}
+
 function haversineMeters(lat1, lon1, lat2, lon2) {
   const R = 6371000;
   const toRad = (v) => (v * Math.PI) / 180;
@@ -53,6 +153,11 @@ function haversineMeters(lat1, lon1, lat2, lon2) {
     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
     Math.sin(dLon / 2) * Math.sin(dLon / 2);
   return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function inPasig(lat, lon) {
+  return lat >= PASIG_BOUNDS.minLat && lat <= PASIG_BOUNDS.maxLat &&
+         lon >= PASIG_BOUNDS.minLon && lon <= PASIG_BOUNDS.maxLon;
 }
 
 function zscores(arr) {
@@ -103,8 +208,8 @@ async function isSubCategorySaturated(barangay, subCategory) {
   if (keywords.length === 0) return false;
 
   let sql = `SELECT COUNT(*) AS cnt FROM businesses 
-             WHERE LOWER(TRIM(barangay)) = LOWER(TRIM(?)) AND (`;
-  const params = [barangay];
+             WHERE LOWER(TRIM(barangay)) LIKE LOWER(TRIM(?)) AND (`;
+  const params = [`${normalizeBarangay(barangay)}%`];
 
   const conditions = keywords.map(() => `(LOWER(line_of_business) LIKE ? OR LOWER(business_trade_name) LIKE ?)`);
   sql += conditions.join(' OR ') + ')';
@@ -237,6 +342,55 @@ function normalizeCategoryInput(value) {
   return CATEGORY_ALIASES[key] || TYPE_TO_CATEGORY[raw] || raw;
 }
 
+// ─── BUSINESS PROFILE FUNCTION ────────────────────────────────────────────────
+function getBusinessProfile(businessType, category = null) {
+  const type = (businessType || "").toLowerCase();
+  if (category) {
+    const catLower = category.toLowerCase();
+    if (catLower.includes("food") || catLower.includes("restaurant")) {
+      return {
+        prefersHighPopulation: true, prefersMediumPopulation: false,
+        prefersHighIncome: true, prefersMediumIncome: false,
+        prefersHighDensity: true,
+        targetAgeGroups: ['25-54', '18-35', 'working'],
+        preferredGender: 'balanced',
+        populationWeight: 0.25, incomeWeight: 0.30, densityWeight: 0.20,
+        ageWeight: 0.15, genderWeight: 0.05
+      };
+    }
+    if (catLower.includes("retail")) {
+      return {
+        prefersHighPopulation: true, prefersMediumPopulation: false,
+        prefersHighIncome: false, prefersMediumIncome: true,
+        prefersHighDensity: true,
+        targetAgeGroups: ['all', 'family'],
+        preferredGender: 'balanced',
+        populationWeight: 0.35, incomeWeight: 0.15, densityWeight: 0.25,
+        ageWeight: 0.10, genderWeight: 0.05
+      };
+    }
+  }
+  const profiles = {
+    'restaurant': { prefersHighPopulation: true, prefersMediumPopulation: false, prefersHighIncome: true, prefersMediumIncome: false, prefersHighDensity: true, targetAgeGroups: ['25-54', '18-35', 'working'], preferredGender: 'balanced', populationWeight: 0.25, incomeWeight: 0.30, densityWeight: 0.20, ageWeight: 0.15, genderWeight: 0.05 },
+    'bakery': { prefersHighPopulation: false, prefersMediumPopulation: true, prefersHighIncome: false, prefersMediumIncome: true, prefersHighDensity: false, targetAgeGroups: ['family', 'children', 'all'], preferredGender: 'balanced', populationWeight: 0.30, incomeWeight: 0.20, densityWeight: 0.15, ageWeight: 0.15, genderWeight: 0.10 },
+    'eatery': { prefersHighPopulation: false, prefersMediumPopulation: true, prefersHighIncome: false, prefersMediumIncome: true, prefersHighDensity: true, targetAgeGroups: ['all', 'working', '18-35'], preferredGender: 'balanced', populationWeight: 0.25, incomeWeight: 0.20, densityWeight: 0.25, ageWeight: 0.15, genderWeight: 0.05 },
+    'coffee shop': { prefersHighPopulation: false, prefersMediumPopulation: true, prefersHighIncome: true, prefersMediumIncome: false, prefersHighDensity: true, targetAgeGroups: ['18-35', 'young', 'professional'], preferredGender: 'balanced', populationWeight: 0.20, incomeWeight: 0.35, densityWeight: 0.25, ageWeight: 0.10, genderWeight: 0.05 }
+  };
+  for (const [key, prof] of Object.entries(profiles)) {
+    if (type.includes(key)) return prof;
+  }
+  return {
+    prefersHighPopulation: false, prefersMediumPopulation: true,
+    prefersHighIncome: false, prefersMediumIncome: true,
+    prefersHighDensity: false,
+    targetAgeGroups: ['all'], preferredGender: 'balanced',
+    populationWeight: 0.25, incomeWeight: 0.20, densityWeight: 0.20,
+    ageWeight: 0.15, genderWeight: 0.10
+  };
+}
+
+// ─── ROUTES ───────────────────────────────────────────────────────────────────
+
 app.get("/", (req, res) => {
   res.sendFile(path.join(frontendPath, "login.html"));
 });
@@ -254,7 +408,9 @@ app.post("/register", async (req, res) => {
     const tempId = crypto.randomBytes(16).toString("hex");
 
     pendingVerifications.set(tempId, {
-      fullname, email, username, hashedPassword: hashed, affiliation, industry: industry || null, industry_specific: industry_specific || null, code, codeExpiresAt: expiry
+      fullname, email, username, hashedPassword: hashed, affiliation,
+      industry: industry || null, industry_specific: industry_specific || null,
+      code, codeExpiresAt: expiry
     });
 
     await sendVerificationCode(email, username, code);
@@ -426,146 +582,35 @@ app.get("/api/smart-chips", requireAuth, async (req, res) => {
     const normalizedCategory = normalizeCategoryInput(category);
 
     if (!normalizedCategory) {
-      return res.json({
-        success: true,
-        data: { suggested: [], full: [], cross: [] }
-      });
+      return res.json({ success: true, data: { suggested: [], full: [], cross: [] } });
     }
 
-    // ===============================
-    // CATEGORY MAP (MASTER CONTROL)
-    // ===============================
     const CATEGORY_MAP = {
-      "Food and Beverages": [
-        "Restaurant",
-        "Coffee Shop",
-        "Milk Tea Shop",
-        "Pizza Shop",
-        "Burger Restaurant",
-        "Fried Chicken Restaurant",
-        "Bakery",
-        "Fast Food Restaurant",
-        "Cafe"
-      ],
-
-      "Retail": [
-        "Convenience Store",
-        "Sari-Sari Store",
-        "Grocery / Supermarket",
-        "General Business"
-      ],
-
-      "Personal Care and Services": [
-        "Salon / Barbershop",
-        "Spa & Massage",
-        "Laundry Shop",
-        "Repair Shop"
-      ],
-
-      "Technology": [
-        "Internet Cafe",
-        "Computer Shop",
-        "IT Services"
-      ],
-
-      "Digital Service": [
-        "Printing Shop",
-        "Online Services",
-        "Digital Marketing"
-      ],
-
-      "Wholesale & Import": [
-        "Wholesale Store",
-        "Importer",
-        "Trading Business"
-      ],
-
-      "Manufacturing": [
-        "Factory",
-        "Production",
-        "Industrial Business"
-      ],
-
-      "IT & Software": [
-        "Software Company",
-        "IT Services",
-        "System Developer"
-      ],
-
-      "BPO & Call Center": [
-        "Call Center",
-        "BPO Services"
-      ],
-
-      "Construction": [
-        "Construction Company",
-        "Contractor"
-      ],
-
-      "Finance & Banking": [
-        "Bank",
-        "Lending Company",
-        "Financial Services"
-      ],
-
-      "Education": [
-        "School",
-        "Training Center",
-        "Tutorial Center"
-      ],
-
-      "Healthcare": [
-        "Clinic",
-        "Hospital",
-        "Pharmacy"
-      ],
-
-      "Energy and Fuel": [
-        "Gas Station",
-        "Fuel Supplier"
-      ],
-
-      "Logistics & Transport": [
-        "Delivery Service",
-        "Transport Service",
-        "Logistics Company"
-      ],
-
-      "Hospitality": [
-        "Hotel",
-        "Resort",
-        "Lodging"
-      ],
-
-      "Security Services": [
-        "Security Agency"
-      ],
-
-      "Legal & Consulting": [
-        "Law Firm",
-        "Consulting Firm"
-      ],
-
-      "Marketing & Advertising": [
-        "Marketing Agency",
-        "Advertising Agency"
-      ],
-
-      "Admin & Management": [
-        "Office Services",
-        "Admin Services"
-      ],
-
-      "General Services": [
-        "General Business"
-      ]
+      "Food and Beverages": ["Restaurant","Coffee Shop","Milk Tea Shop","Pizza Shop","Burger Restaurant","Fried Chicken Restaurant","Bakery","Fast Food Restaurant","Cafe"],
+      "Retail": ["Convenience Store","Sari-Sari Store","Grocery / Supermarket","General Business"],
+      "Personal Care and Services": ["Salon / Barbershop","Spa & Massage","Laundry Shop","Repair Shop"],
+      "Technology": ["Internet Cafe","Computer Shop","IT Services"],
+      "Digital Service": ["Printing Shop","Online Services","Digital Marketing"],
+      "Wholesale & Import": ["Wholesale Store","Importer","Trading Business"],
+      "Manufacturing": ["Factory","Production","Industrial Business"],
+      "IT & Software": ["Software Company","IT Services","System Developer"],
+      "BPO & Call Center": ["Call Center","BPO Services"],
+      "Construction": ["Construction Company","Contractor"],
+      "Finance & Banking": ["Bank","Lending Company","Financial Services"],
+      "Education": ["School","Training Center","Tutorial Center"],
+      "Healthcare": ["Clinic","Hospital","Pharmacy"],
+      "Energy and Fuel": ["Gas Station","Fuel Supplier"],
+      "Logistics & Transport": ["Delivery Service","Transport Service","Logistics Company"],
+      "Hospitality": ["Hotel","Resort","Lodging"],
+      "Security Services": ["Security Agency"],
+      "Legal & Consulting": ["Law Firm","Consulting Firm"],
+      "Marketing & Advertising": ["Marketing Agency","Advertising Agency"],
+      "Admin & Management": ["Office Services","Admin Services"],
+      "General Services": ["General Business"]
     };
 
     const allowed = CATEGORY_MAP[normalizedCategory] || [];
 
-    // ===============================
-    // FETCH DATA
-    // ===============================
     const [rows] = await geoDB.query(
       `SELECT business_trade_name, category, COUNT(*) AS cnt
        FROM businesses
@@ -576,13 +621,8 @@ app.get("/api/smart-chips", requireAuth, async (req, res) => {
       [normalizedCategory]
     );
 
-    // ===============================
-    // GENERIC TYPE DETECTOR
-    // ===============================
     function toGenericType(name) {
       const str = (name || "").toLowerCase();
-
-      // FOOD
       if (/coffee|cafe|brew|starbucks/.test(str)) return "Coffee Shop";
       if (/milk.?tea|boba|gong cha|chatime/.test(str)) return "Milk Tea Shop";
       if (/pizza|pizzeria/.test(str)) return "Pizza Shop";
@@ -592,89 +632,41 @@ app.get("/api/smart-chips", requireAuth, async (req, res) => {
       if (/fast.?food/.test(str)) return "Fast Food Restaurant";
       if (/restaurant|eatery|diner/.test(str)) return "Restaurant";
       if (/cafe/.test(str)) return "Cafe";
-
-      // RETAIL
       if (/grocery|supermarket|palengke/.test(str)) return "Grocery / Supermarket";
       if (/sari.?sari/.test(str)) return "Sari-Sari Store";
       if (/convenience|7.?eleven|minimart/.test(str)) return "Convenience Store";
-
-      // SERVICES
       if (/laundry|washing/.test(str)) return "Laundry Shop";
       if (/salon|barber/.test(str)) return "Salon / Barbershop";
       if (/spa|massage/.test(str)) return "Spa & Massage";
       if (/repair|vulcanizing/.test(str)) return "Repair Shop";
-
-      // TECH
       if (/internet|computer/.test(str)) return "Internet Cafe";
       if (/printing|photocopy/.test(str)) return "Printing Shop";
-
-      // HEALTH
       if (/clinic/.test(str)) return "Clinic";
       if (/hospital/.test(str)) return "Hospital";
       if (/pharmacy|drugstore/.test(str)) return "Pharmacy";
-
-      // FINANCE
       if (/bank/.test(str)) return "Bank";
-
       return "General Business";
     }
 
-    // ===============================
-    // GROUP DATA
-    // ===============================
     const map = new Map();
-
     rows.forEach((r) => {
       const generic = toGenericType(r.business_trade_name);
-
-      if (!map.has(generic)) {
-        map.set(generic, {
-          label: generic,
-          category: r.category || normalizedCategory,
-          cnt: 0
-        });
-      }
-
+      if (!map.has(generic)) map.set(generic, { label: generic, category: r.category || normalizedCategory, cnt: 0 });
       map.get(generic).cnt += r.cnt;
     });
 
     const all = [...map.values()].sort((a, b) => b.cnt - a.cnt);
+    let filtered = allowed.length > 0 ? all.filter(item => allowed.includes(item.label)) : all;
 
-    // ===============================
-    // FILTER MAIN RESULTS
-    // ===============================
-    let filtered = all;
-
-    if (allowed.length > 0) {
-      filtered = all.filter(item => allowed.includes(item.label));
-    }
-
-    // ===============================
-    // FALLBACK (ENSURE MIN 6)
-    // ===============================
     if (filtered.length < 6) {
       const existing = new Set(filtered.map(x => x.label));
-
       allowed.forEach(label => {
-        if (!existing.has(label)) {
-          filtered.push({
-            label,
-            category: normalizedCategory,
-            cnt: 0
-          });
-        }
+        if (!existing.has(label)) filtered.push({ label, category: normalizedCategory, cnt: 0 });
       });
     }
 
-    // ===============================
-    // SPLIT
-    // ===============================
     let suggested = filtered.slice(0, 6);
     let full = filtered.slice(6, 18);
-
-    // ===============================
-    // CROSS INDUSTRY (NOW FILTERED TOO)
-    // ===============================
     let cross = [];
     const sub = (subcategory || "").toString().trim();
 
@@ -691,34 +683,16 @@ app.get("/api/smart-chips", requireAuth, async (req, res) => {
       );
 
       const crossMap = new Map();
-
       crossRows.forEach((r) => {
         const generic = toGenericType(r.business_trade_name);
-
-        if (!crossMap.has(generic)) {
-          crossMap.set(generic, {
-            label: generic,
-            category: r.category || "",
-            cnt: 0
-          });
-        }
-
+        if (!crossMap.has(generic)) crossMap.set(generic, { label: generic, category: r.category || "", cnt: 0 });
         crossMap.get(generic).cnt += r.cnt;
       });
 
-      cross = [...crossMap.values()]
-        .sort((a, b) => b.cnt - a.cnt)
-        .slice(0, 10);
-
-      // 🔥 FILTER CROSS ALSO
-      if (allowed.length > 0) {
-        cross = cross.filter(item => allowed.includes(item.label));
-      }
+      cross = [...crossMap.values()].sort((a, b) => b.cnt - a.cnt).slice(0, 10);
+      if (allowed.length > 0) cross = cross.filter(item => allowed.includes(item.label));
     }
 
-    // ===============================
-    // FINAL SAFETY FILTER (NO LEAK EVER)
-    // ===============================
     function enforce(list) {
       if (allowed.length === 0) return list;
       return list.filter(item => allowed.includes(item.label));
@@ -728,25 +702,10 @@ app.get("/api/smart-chips", requireAuth, async (req, res) => {
     full = enforce(full);
     cross = enforce(cross);
 
-    // ===============================
-    // RESPONSE
-    // ===============================
-    return res.json({
-      success: true,
-      data: {
-        suggested,
-        full,
-        cross
-      }
-    });
-
+    return res.json({ success: true, data: { suggested, full, cross } });
   } catch (err) {
     console.error("[smart-chips error]", err);
-
-    return res.status(500).json({
-      success: false,
-      message: err.message
-    });
+    return res.status(500).json({ success: false, message: err.message });
   }
 });
 
@@ -854,19 +813,20 @@ app.get("/api/area-demographics", requireAuth, async (req, res) => {
     const { barangay, line_of_business } = req.query;
     if (!barangay) return res.status(400).json({ success: false, message: "barangay required" });
 
+    // Use LIKE to handle "Manggahan (incl. Napico)" vs "Manggahan"
     const [demoRows] = await geoDB.query(
       `SELECT barangay_name, population, population_density, highest_age_group, 
               avg_income_min, avg_income_max, gender_distribution
        FROM demographic_pasig
-       WHERE LOWER(TRIM(barangay_name)) = LOWER(TRIM(?))`,
-      [barangay]
+       WHERE LOWER(TRIM(barangay_name)) LIKE LOWER(TRIM(?))`,
+      [`${normalizeBarangay(barangay)}%`]
     );
 
     const demo = demoRows.length > 0 ? demoRows[0] : null;
 
     const [bizCountRows] = await geoDB.query(
-      `SELECT COUNT(*) AS total FROM businesses WHERE LOWER(TRIM(barangay)) = LOWER(TRIM(?))`,
-      [barangay]
+      `SELECT COUNT(*) AS total FROM businesses WHERE LOWER(TRIM(barangay)) LIKE LOWER(TRIM(?))`,
+      [`${normalizeBarangay(barangay)}%`]
     );
     const totalBusinesses = bizCountRows[0]?.total || 0;
 
@@ -874,9 +834,9 @@ app.get("/api/area-demographics", requireAuth, async (req, res) => {
     if (line_of_business) {
       const [sameLineRows] = await geoDB.query(
         `SELECT COUNT(*) AS cnt FROM businesses 
-         WHERE LOWER(TRIM(barangay)) = LOWER(TRIM(?)) 
+         WHERE LOWER(TRIM(barangay)) LIKE LOWER(TRIM(?)) 
          AND line_of_business = ?`,
-        [barangay, line_of_business]
+        [`${normalizeBarangay(barangay)}%`, line_of_business]
       );
       sameLineCount = sameLineRows[0]?.cnt || 0;
     }
@@ -890,9 +850,7 @@ app.get("/api/area-demographics", requireAuth, async (req, res) => {
   }
 });
 
-// ─── SAVED RECOMMENDATIONS ──────────────────────────────────────────────────
-// FIX: All saved_recommendations queries now use legendDB (legendsss_db),
-//      which is where the table actually lives per your phpMyAdmin screenshot.
+// ─── SAVED RECOMMENDATIONS ────────────────────────────────────────────────────
 
 app.get("/api/saved-recommendations", requireAuth, async (req, res) => {
   try {
@@ -923,12 +881,10 @@ app.post("/api/saved-recommendations", requireAuth, async (req, res) => {
     const lonVal = (lon !== null && lon !== undefined && lon !== '') ? parseFloat(lon) : null;
     const barangayVal = (barangay && barangay.trim()) ? barangay.trim() : null;
 
-    // FIX: Use IS NULL safe comparison so NULL barangay duplicate-check works correctly
     let existing;
     if (barangayVal === null) {
       [existing] = await legendDB.query(
-        `SELECT id FROM saved_recommendations 
-         WHERE user_id = ? AND business_type = ? AND barangay IS NULL`,
+        `SELECT id FROM saved_recommendations WHERE user_id = ? AND business_type = ? AND barangay IS NULL`,
         [userId, business_type]
       );
     } else {
@@ -971,8 +927,7 @@ app.delete("/api/saved-recommendations/:id", requireAuth, async (req, res) => {
   }
 });
 
-// ─── ADMIN SAVED STATS ───────────────────────────────────────────────────────
-// FIX: Also moved to legendDB since saved_recommendations is there
+// ─── ADMIN STATS ──────────────────────────────────────────────────────────────
 
 app.get("/api/admin/stats", requireAdmin, async (req, res) => {
   try {
@@ -993,14 +948,7 @@ app.get("/api/admin/stats", requireAdmin, async (req, res) => {
     const entrepreneurPct = totalAffiliation > 0 ? Math.round((entrepreneur / totalAffiliation) * 100) : 0;
     const aspiringPct = totalAffiliation > 0 ? Math.round((aspiring / totalAffiliation) * 100) : 0;
 
-    res.json({
-      success: true,
-      totalUsers,
-      entrepreneurPct,
-      aspiringPct,
-      entrepreneurCount: entrepreneur,
-      aspiringCount: aspiring
-    });
+    res.json({ success: true, totalUsers, entrepreneurPct, aspiringPct, entrepreneurCount: entrepreneur, aspiringCount: aspiring });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -1024,7 +972,7 @@ app.get("/api/admin/saved-stats", requireAdmin, async (req, res) => {
   }
 });
 
-// ─── ADMIN ROUTES ────────────────────────────────────────────────────────────
+// ─── ADMIN ROUTES ─────────────────────────────────────────────────────────────
 
 app.get("/api/admin/barangays", requireAdmin, async (req, res) => {
   try {
@@ -1074,13 +1022,7 @@ app.get("/api/admin/businesses", requireAdmin, async (req, res) => {
       [...params, parseInt(limit), offset]
     );
 
-    res.json({
-      success: true,
-      data: businesses,
-      total,
-      page: parseInt(page),
-      totalPages: Math.ceil(total / parseInt(limit))
-    });
+    res.json({ success: true, data: businesses, total, page: parseInt(page), totalPages: Math.ceil(total / parseInt(limit)) });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -1089,13 +1031,9 @@ app.get("/api/admin/businesses", requireAdmin, async (req, res) => {
 app.get("/api/admin/businesses/:id", requireAdmin, async (req, res) => {
   try {
     const [business] = await geoDB.query(
-      `SELECT b.*, d.id as demographic_id
-       FROM businesses b
-       LEFT JOIN demographic_pasig d ON b.barangay_id = d.id
-       WHERE b.id = ?`,
+      `SELECT b.*, d.id as demographic_id FROM businesses b LEFT JOIN demographic_pasig d ON b.barangay_id = d.id WHERE b.id = ?`,
       [req.params.id]
     );
-
     if (business.length === 0) return res.status(404).json({ success: false, message: "Business not found" });
     res.json({ success: true, business: business[0] });
   } catch (err) {
@@ -1112,8 +1050,7 @@ app.post("/api/admin/businesses", requireAdmin, async (req, res) => {
     const barangay_id = barangayResult.length ? barangayResult[0].id : null;
 
     const [result] = await geoDB.query(
-      `INSERT INTO businesses 
-       (business_trade_name, line_of_business, category, barangay, street, business_address, lat, lon, barangay_id)
+      `INSERT INTO businesses (business_trade_name, line_of_business, category, barangay, street, business_address, lat, lon, barangay_id)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [business_trade_name, line_of_business || null, category || null, barangay, street || null, business_address || null, lat || null, lon || null, barangay_id]
     );
@@ -1168,14 +1105,10 @@ app.delete("/api/admin/businesses/:id", requireAdmin, async (req, res) => {
 
 app.get("/api/admin/demographics", requireAdmin, async (req, res) => {
   try {
-    const [demographics] = await geoDB.query(`
-      SELECT 
-        id, barangay_name, population, population_density,
-        highest_age_group, avg_income_min, avg_income_max,
-        gender_distribution
-      FROM demographic_pasig
-      ORDER BY barangay_name
-    `);
+    const [demographics] = await geoDB.query(
+      `SELECT id, barangay_name, population, population_density, highest_age_group, avg_income_min, avg_income_max, gender_distribution
+       FROM demographic_pasig ORDER BY barangay_name`
+    );
     res.json({ success: true, data: demographics });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -1198,8 +1131,7 @@ app.post("/api/admin/demographics", requireAdmin, async (req, res) => {
     if (!barangay_name) return res.status(400).json({ success: false, message: "Barangay name is required" });
 
     const [result] = await geoDB.query(
-      `INSERT INTO demographic_pasig 
-       (barangay_name, population, population_density, highest_age_group, avg_income_min, avg_income_max, gender_distribution)
+      `INSERT INTO demographic_pasig (barangay_name, population, population_density, highest_age_group, avg_income_min, avg_income_max, gender_distribution)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [barangay_name, population || null, population_density || null, highest_age_group || null, avg_income_min || null, avg_income_max || null, gender_distribution || null]
     );
@@ -1240,7 +1172,6 @@ app.delete("/api/admin/demographics/:id", requireAdmin, async (req, res) => {
     if (businessCount[0].count > 0) {
       return res.status(400).json({ success: false, message: `Cannot delete: Barangay has ${businessCount[0].count} associated businesses` });
     }
-
     const [result] = await geoDB.query("DELETE FROM demographic_pasig WHERE id = ?", [req.params.id]);
     if (result.affectedRows === 0) return res.status(404).json({ success: false, message: "Demographic not found" });
     res.json({ success: true, message: "Demographic deleted successfully" });
@@ -1249,34 +1180,59 @@ app.delete("/api/admin/demographics/:id", requireAdmin, async (req, res) => {
   }
 });
 
+// ─── /api/ideas — always return top 3 with progressive fallback ───────────────
 app.get("/api/ideas", requireAuth, async (req, res) => {
   try {
     const { category, barangay, top = 3, prefs = "" } = req.query;
     const prefList = prefs ? prefs.split(",").filter(Boolean) : [];
     const weights = prefWeights();
+    const topN = parseInt(top) || 3;
 
-    let sql = `SELECT line_of_business AS name, COUNT(*) AS cnt
-               FROM businesses
-               WHERE line_of_business IS NOT NULL AND line_of_business <> ''`;
-    const params = [];
-
-    if (category) {
-      const mappedCategory = TYPE_TO_CATEGORY[category] || category;
-      sql += " AND category = ?";
-      params.push(mappedCategory);
+    // Helper: fetch idea rows with optional filters
+    async function fetchIdeaRows(opts = {}) {
+      let sql = `SELECT line_of_business AS name, COUNT(*) AS cnt
+                 FROM businesses
+                 WHERE line_of_business IS NOT NULL AND line_of_business <> ''`;
+      const p = [];
+      if (opts.category) {
+        const mappedCategory = TYPE_TO_CATEGORY[opts.category] || opts.category;
+        sql += " AND category = ?";
+        p.push(mappedCategory);
+      }
+      if (opts.barangay) {
+        // LIKE to handle "Manggahan (incl. Napico)" vs "Manggahan"
+        sql += " AND LOWER(TRIM(barangay)) LIKE LOWER(TRIM(?))";
+        p.push(`${normalizeBarangay(opts.barangay)}%`);
+      }
+      sql += " GROUP BY line_of_business ORDER BY cnt DESC";
+      const [rows] = await geoDB.query(sql, p);
+      return rows;
     }
 
-    if (barangay) {
-      sql += " AND barangay = ?";
-      params.push(barangay);
+    // Progressive fallback: specific → relax category → relax barangay → city-wide
+    let ideaRows = await fetchIdeaRows({ category, barangay });
+
+    if (ideaRows.length < topN && barangay && category) {
+      const wider = await fetchIdeaRows({ barangay });
+      const existing = new Set(ideaRows.map(r => r.name));
+      ideaRows = [...ideaRows, ...wider.filter(r => !existing.has(r.name))];
     }
 
-    sql += " GROUP BY line_of_business ORDER BY cnt DESC";
+    if (ideaRows.length < topN) {
+      const widest = await fetchIdeaRows({ category });
+      const existing = new Set(ideaRows.map(r => r.name));
+      ideaRows = [...ideaRows, ...widest.filter(r => !existing.has(r.name))];
+    }
 
-    const [ideaRows] = await geoDB.query(sql, params);
+    if (ideaRows.length < topN) {
+      const fallback = await fetchIdeaRows({});
+      const existing = new Set(ideaRows.map(r => r.name));
+      ideaRows = [...ideaRows, ...fallback.filter(r => !existing.has(r.name))];
+    }
+
     if (!ideaRows.length) return res.json({ success: true, data: [] });
 
-    // ── Sub-category saturation check ──────────────────────────────────
+    // Sub-category saturation check
     const userSubCategory = (req.session.user?.industry_specific || '').trim();
     const ownBarangay = barangay || '';
     let userSubCategoryIdea = null;
@@ -1284,24 +1240,20 @@ app.get("/api/ideas", requireAuth, async (req, res) => {
 
     if (userSubCategory && ownBarangay) {
       const saturated = await isSubCategorySaturated(ownBarangay, userSubCategory);
-      const subKw = userSubCategory.toLowerCase();
-      const keywords = subKw.split(/\s+/).filter(w => w.length > 2);
+      const keywords = userSubCategory.toLowerCase().split(/\s+/).filter(w => w.length > 2);
       if (!saturated) {
-        userSubCategoryIdea = ideaRows.find(row => {
-          const name = (row.name || '').toLowerCase();
-          return keywords.some(kw => name.includes(kw));
-        });
-        if (userSubCategoryIdea) {
-          filteredIdeaRows = ideaRows.filter(row => row !== userSubCategoryIdea);
-        } else {
-          // No match in DB but not saturated — create synthetic idea
-          userSubCategoryIdea = { name: userSubCategory };
-        }
+        userSubCategoryIdea = ideaRows.find(row =>
+          keywords.some(kw => (row.name || '').toLowerCase().includes(kw))
+        );
+        filteredIdeaRows = userSubCategoryIdea
+          ? ideaRows.filter(row => row !== userSubCategoryIdea)
+          : ideaRows;
+        if (!userSubCategoryIdea) userSubCategoryIdea = { name: userSubCategory };
       } else {
-        filteredIdeaRows = ideaRows.filter(row => {
-          const name = (row.name || '').toLowerCase();
-          return !keywords.some(kw => name.includes(kw));
-        });
+        const keywords2 = userSubCategory.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+        filteredIdeaRows = ideaRows.filter(row =>
+          !keywords2.some(kw => (row.name || '').toLowerCase().includes(kw))
+        );
       }
     }
 
@@ -1310,19 +1262,17 @@ app.get("/api/ideas", requireAuth, async (req, res) => {
     }
 
     if (!prefList.length) {
-      let result = [];
-      if (userSubCategoryIdea) {
-        result.push(userSubCategoryIdea.name);
-      }
-      const remaining = filteredIdeaRows.slice(0, parseInt(top) - result.length).map(r => r.name);
-      result = result.concat(remaining);
-      return res.json({ success: true, data: result.slice(0, parseInt(top)) });
+      let result = userSubCategoryIdea ? [userSubCategoryIdea.name] : [];
+      const remaining = filteredIdeaRows.slice(0, topN - result.length).map(r => r.name);
+      result = [...result, ...remaining];
+      return res.json({ success: true, data: result.slice(0, topN) });
     }
 
     const ideas = filteredIdeaRows.map(r => r.name);
     if (userSubCategoryIdea && !ideas.includes(userSubCategoryIdea.name)) {
       ideas.unshift(userSubCategoryIdea.name);
     }
+
     const [allBiz] = await geoDB.query(
       `SELECT barangay, line_of_business, CAST(lat AS DECIMAL(10,7)) AS lat, CAST(lon AS DECIMAL(10,7)) AS lon
        FROM businesses
@@ -1334,8 +1284,7 @@ app.get("/api/ideas", requireAuth, async (req, res) => {
     );
 
     const [demoRows] = await geoDB.query(
-      `SELECT barangay_name, population, population_density, avg_income_max, gender_distribution, highest_age_group
-       FROM demographic_pasig`
+      `SELECT barangay_name, population, population_density, avg_income_max, gender_distribution, highest_age_group FROM demographic_pasig`
     );
     const demoMap = {};
     demoRows.forEach(d => demoMap[normalizeBarangay(d.barangay_name)] = d);
@@ -1347,15 +1296,13 @@ app.get("/api/ideas", requireAuth, async (req, res) => {
     const centroidMap = {};
     allBiz.forEach(b => {
       const key = normalizeBarangay(b.barangay);
-      const lat = Number(b.lat);
-      const lon = Number(b.lon);
+      const lat = Number(b.lat), lon = Number(b.lon);
       if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
       if (!centroidMap[key]) centroidMap[key] = { lat: 0, lon: 0, n: 0 };
       centroidMap[key].lat += lat;
       centroidMap[key].lon += lon;
       centroidMap[key].n += 1;
     });
-
     Object.keys(centroidMap).forEach(k => {
       centroidMap[k].lat /= centroidMap[k].n;
       centroidMap[k].lon /= centroidMap[k].n;
@@ -1363,26 +1310,33 @@ app.get("/api/ideas", requireAuth, async (req, res) => {
 
     const radius = 500;
     const ideaScores = [];
+    const evalBarangay = barangay ? normalizeBarangay(barangay) : null;
 
-    if (barangay) {
-      const bKey = normalizeBarangay(barangay);
-      const c = centroidMap[bKey];
-      const demo = demoMap[bKey] || {};
-      const totalBiz = totalBizMap[bKey] || 0;
+    if (evalBarangay) {
+      // Try exact match first, then fuzzy
+      let matchedKey = centroidMap[evalBarangay]
+        ? evalBarangay
+        : Object.keys(centroidMap).find(k => k.startsWith(evalBarangay) || evalBarangay.startsWith(k));
+
+      const c = matchedKey ? centroidMap[matchedKey] : null;
+      const demoKey = demoMap[evalBarangay]
+        ? evalBarangay
+        : Object.keys(demoMap).find(k => k.startsWith(evalBarangay) || evalBarangay.startsWith(k));
+      const demo = (demoKey ? demoMap[demoKey] : null) || {};
+      const totalBiz = totalBizMap[evalBarangay] || 0;
       const bizDensity = demo.population ? totalBiz / (Number(demo.population) / 1000) : 0;
 
       ideas.forEach(name => {
-        const ideaBiz = allBiz.filter(b => b.line_of_business === name && normalizeBarangay(b.barangay) === bKey);
-        const bizcount = ideaBiz.length;
+        const ideaBiz = allBiz.filter(b =>
+          b.line_of_business === name && normalizeBarangay(b.barangay) === evalBarangay
+        );
         let competitors = 0;
-
         if (c) {
           ideaBiz.forEach(b => {
-            const d = haversineMeters(c.lat, c.lon, Number(b.lat), Number(b.lon));
-            if (d <= radius) competitors += 1;
+            if (haversineMeters(c.lat, c.lon, Number(b.lat), Number(b.lon)) <= radius)
+              competitors += 1;
           });
         }
-
         ideaScores.push({
           name,
           totalpop: Number(demo.population) || 0,
@@ -1391,60 +1345,42 @@ app.get("/api/ideas", requireAuth, async (req, res) => {
           gender: demo.gender_distribution === "Female" ? 1 : 0,
           agedist: ageScore(demo.highest_age_group),
           bizdensity: bizDensity,
-          bizcount,
+          bizcount: ideaBiz.length,
           competitors
         });
       });
     } else {
       ideas.forEach(name => {
         let bestObj = null;
-
         Object.keys(centroidMap).forEach(bgy => {
           const c = centroidMap[bgy];
           const demo = demoMap[bgy] || {};
           const totalBiz = totalBizMap[bgy] || 0;
           const bizDensity = demo.population ? totalBiz / (Number(demo.population) / 1000) : 0;
-
-          const ideaBiz = allBiz.filter(b => b.line_of_business === name && normalizeBarangay(b.barangay) === bgy);
-          const bizcount = ideaBiz.length;
-
+          const ideaBiz = allBiz.filter(b =>
+            b.line_of_business === name && normalizeBarangay(b.barangay) === bgy
+          );
           let competitors = 0;
           ideaBiz.forEach(b => {
-            const d = haversineMeters(c.lat, c.lon, Number(b.lat), Number(b.lon));
-            if (d <= radius) competitors += 1;
+            if (haversineMeters(c.lat, c.lon, Number(b.lat), Number(b.lon)) <= radius)
+              competitors += 1;
           });
-
-          const obj = {
-            name,
-            totalpop: Number(demo.population) || 0,
-            popdensity: Number(demo.population_density) || 0,
-            income: Number(demo.avg_income_max) || 0,
-            gender: demo.gender_distribution === "Female" ? 1 : 0,
-            agedist: ageScore(demo.highest_age_group),
-            bizdensity: bizDensity,
-            bizcount,
-            competitors
-          };
-
+          const obj = { name, totalpop: Number(demo.population) || 0, popdensity: Number(demo.population_density) || 0, income: Number(demo.avg_income_max) || 0, gender: demo.gender_distribution === "Female" ? 1 : 0, agedist: ageScore(demo.highest_age_group), bizdensity: bizDensity, bizcount: ideaBiz.length, competitors };
           if (!bestObj || obj.competitors < bestObj.competitors) bestObj = obj;
         });
-
         if (bestObj) ideaScores.push(bestObj);
       });
     }
 
     const finalScores = ideaScores.map(i => ({ name: i.name, score: 0 }));
-
     prefList.forEach(pref => {
       const values = ideaScores.map(i => Number(i[pref]) || 0);
       const z = zscores(values);
-      z.forEach((val, idx) => {
-        finalScores[idx].score += (weights[pref] || 0) * val;
-      });
+      z.forEach((val, idx) => { finalScores[idx].score += (weights[pref] || 0) * val; });
     });
-
     finalScores.sort((a, b) => b.score - a.score);
-    return res.json({ success: true, data: finalScores.slice(0, parseInt(top)).map(r => r.name) });
+    return res.json({ success: true, data: finalScores.slice(0, topN).map(r => r.name) });
+
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
@@ -1458,15 +1394,7 @@ app.get("/api/ideas-by-point", requireAuth, async (req, res) => {
     const latNum = Number(lat);
     const lonNum = Number(lon);
 
-    const inPasig =
-      latNum >= PASIG_BOUNDS.minLat &&
-      latNum <= PASIG_BOUNDS.maxLat &&
-      lonNum >= PASIG_BOUNDS.minLon &&
-      lonNum <= PASIG_BOUNDS.maxLon;
-
-    if (!inPasig) {
-      return res.json({ success: true, data: [] });
-    }
+    if (!inPasig(latNum, lonNum)) return res.json({ success: true, data: [] });
 
     const prefList = prefs ? prefs.split(",").filter(Boolean) : [];
     const weights = prefWeights();
@@ -1483,10 +1411,8 @@ app.get("/api/ideas-by-point", requireAuth, async (req, res) => {
     }
 
     sql += " GROUP BY line_of_business ORDER BY cnt DESC";
-
     const [ideaRows] = await geoDB.query(sql, params);
 
-    // ── Sub-category saturation check ──────────────────────────────────
     const userSubCategory = (req.session.user?.industry_specific || '').trim();
     let userSubCategoryIdea = null;
     let filteredIdeaRows = ideaRows;
@@ -1495,12 +1421,9 @@ app.get("/api/ideas-by-point", requireAuth, async (req, res) => {
       const nearestBrgy = await (async () => {
         try {
           const [barangays] = await geoDB.query(
-            `SELECT barangay_name, center_lat, center_lon 
-             FROM demographic_pasig 
-             WHERE center_lat IS NOT NULL AND center_lon IS NOT NULL`
+            `SELECT barangay_name, center_lat, center_lon FROM demographic_pasig WHERE center_lat IS NOT NULL AND center_lon IS NOT NULL`
           );
-          let nearest = null;
-          let minDist = Infinity;
+          let nearest = null, minDist = Infinity;
           barangays.forEach(row => {
             const dist = haversineMeters(latNum, lonNum, Number(row.center_lat), Number(row.center_lon));
             if (dist < minDist) { minDist = dist; nearest = row.barangay_name; }
@@ -1511,61 +1434,42 @@ app.get("/api/ideas-by-point", requireAuth, async (req, res) => {
 
       if (nearestBrgy) {
         const saturated = await isSubCategorySaturated(nearestBrgy, userSubCategory);
-        const subKw = userSubCategory.toLowerCase();
-        const keywords = subKw.split(/\s+/).filter(w => w.length > 2);
+        const keywords = userSubCategory.toLowerCase().split(/\s+/).filter(w => w.length > 2);
         if (!saturated) {
-          userSubCategoryIdea = ideaRows.find(row => {
-            const name = (row.name || '').toLowerCase();
-            return keywords.some(kw => name.includes(kw));
-          });
+          userSubCategoryIdea = ideaRows.find(row => keywords.some(kw => (row.name || '').toLowerCase().includes(kw)));
           if (userSubCategoryIdea) {
             filteredIdeaRows = ideaRows.filter(row => row !== userSubCategoryIdea);
           } else {
-            // No match in DB but not saturated — create synthetic idea
             userSubCategoryIdea = { name: userSubCategory };
           }
         } else {
-          filteredIdeaRows = ideaRows.filter(row => {
-            const name = (row.name || '').toLowerCase();
-            return !keywords.some(kw => name.includes(kw));
-          });
+          filteredIdeaRows = ideaRows.filter(row => !keywords.some(kw => (row.name || '').toLowerCase().includes(kw)));
         }
       }
     }
 
-    if (!filteredIdeaRows.length && !userSubCategoryIdea) {
-      return res.json({ success: true, data: [] });
-    }
+    if (!filteredIdeaRows.length && !userSubCategoryIdea) return res.json({ success: true, data: [] });
 
     if (!prefList.length) {
-      let result = [];
-      if (userSubCategoryIdea) {
-        result.push(userSubCategoryIdea.name);
-      }
+      let result = userSubCategoryIdea ? [userSubCategoryIdea.name] : [];
       const remaining = filteredIdeaRows.slice(0, parseInt(top) - result.length).map(r => r.name);
       result = result.concat(remaining);
       return res.json({ success: true, data: result.slice(0, parseInt(top)) });
     }
 
     const ideas = filteredIdeaRows.map(r => r.name);
-    if (userSubCategoryIdea && !ideas.includes(userSubCategoryIdea.name)) {
-      ideas.unshift(userSubCategoryIdea.name);
-    }
+    if (userSubCategoryIdea && !ideas.includes(userSubCategoryIdea.name)) ideas.unshift(userSubCategoryIdea.name);
 
     const [allBiz] = await geoDB.query(
       `SELECT barangay, line_of_business, CAST(lat AS DECIMAL(10,7)) AS lat, CAST(lon AS DECIMAL(10,7)) AS lon
        FROM businesses
-       WHERE lat IS NOT NULL AND lon IS NOT NULL
-         AND lat <> 'null' AND lon <> 'null'
+       WHERE lat IS NOT NULL AND lon IS NOT NULL AND lat <> 'null' AND lon <> 'null'
          AND CAST(lat AS DECIMAL(10,7)) BETWEEN ? AND ?
          AND CAST(lon AS DECIMAL(10,7)) BETWEEN ? AND ?`,
       [PASIG_BOUNDS.minLat, PASIG_BOUNDS.maxLat, PASIG_BOUNDS.minLon, PASIG_BOUNDS.maxLon]
     );
 
-    const [demoRows] = await geoDB.query(
-      `SELECT barangay_name, population, population_density, avg_income_max, gender_distribution, highest_age_group
-       FROM demographic_pasig`
-    );
+    const [demoRows] = await geoDB.query(`SELECT barangay_name, population, population_density, avg_income_max, gender_distribution, highest_age_group FROM demographic_pasig`);
     const demoMap = {};
     demoRows.forEach(d => demoMap[normalizeBarangay(d.barangay_name)] = d);
 
@@ -1576,29 +1480,20 @@ app.get("/api/ideas-by-point", requireAuth, async (req, res) => {
     const centroidMap = {};
     allBiz.forEach(b => {
       const key = normalizeBarangay(b.barangay);
-      const latN = Number(b.lat);
-      const lonN = Number(b.lon);
+      const latN = Number(b.lat), lonN = Number(b.lon);
       if (!Number.isFinite(latN) || !Number.isFinite(lonN)) return;
       if (!centroidMap[key]) centroidMap[key] = { lat: 0, lon: 0, n: 0 };
       centroidMap[key].lat += latN;
       centroidMap[key].lon += lonN;
       centroidMap[key].n += 1;
     });
+    Object.keys(centroidMap).forEach(k => { centroidMap[k].lat /= centroidMap[k].n; centroidMap[k].lon /= centroidMap[k].n; });
 
-    Object.keys(centroidMap).forEach(k => {
-      centroidMap[k].lat /= centroidMap[k].n;
-      centroidMap[k].lon /= centroidMap[k].n;
-    });
-
-    let nearestBarangay = null;
-    let minDist = Infinity;
+    let nearestBarangay = null, minDist = Infinity;
     Object.keys(centroidMap).forEach(b => {
       const c = centroidMap[b];
       const d = haversineMeters(Number(lat), Number(lon), c.lat, c.lon);
-      if (d < minDist) {
-        minDist = d;
-        nearestBarangay = b;
-      }
+      if (d < minDist) { minDist = d; nearestBarangay = b; }
     });
 
     const radius = 500;
@@ -1606,17 +1501,13 @@ app.get("/api/ideas-by-point", requireAuth, async (req, res) => {
 
     ideas.forEach(name => {
       const ideaBiz = allBiz.filter(b => b.line_of_business === name);
-
       let competitors = 0;
       ideaBiz.forEach(b => {
-        const d = haversineMeters(Number(lat), Number(lon), Number(b.lat), Number(b.lon));
-        if (d <= radius) competitors += 1;
+        if (haversineMeters(Number(lat), Number(lon), Number(b.lat), Number(b.lon)) <= radius) competitors += 1;
       });
-
       const demo = demoMap[nearestBarangay] || {};
       const totalBiz = totalBizMap[nearestBarangay] || 0;
       const bizDensity = demo.population ? totalBiz / (Number(demo.population) / 1000) : 0;
-
       ideaScores.push({
         name,
         totalpop: Number(demo.population) || 0,
@@ -1637,7 +1528,6 @@ app.get("/api/ideas-by-point", requireAuth, async (req, res) => {
       const ranked = ideaScores
         .map(i => ({ name: i.name, score: (max - i.competitors) / ((max - min) || 1) }))
         .sort((a, b) => b.score - a.score);
-
       return res.json({ success: true, data: ranked.slice(0, parseInt(top)).map(r => r.name) });
     }
 
@@ -1645,11 +1535,8 @@ app.get("/api/ideas-by-point", requireAuth, async (req, res) => {
     prefList.forEach(pref => {
       const values = ideaScores.map(i => Number(i[pref]) || 0);
       const z = zscores(values);
-      z.forEach((val, idx) => {
-        finalScores[idx].score += (weights[pref] || 0) * val;
-      });
+      z.forEach((val, idx) => { finalScores[idx].score += (weights[pref] || 0) * val; });
     });
-
     finalScores.sort((a, b) => b.score - a.score);
     return res.json({ success: true, data: finalScores.slice(0, parseInt(top)).map(r => r.name) });
   } catch (err) {
@@ -1657,54 +1544,69 @@ app.get("/api/ideas-by-point", requireAuth, async (req, res) => {
   }
 });
 
+// ─── /api/idea-locations — pins strictly within target barangay ───────────────
 app.get("/api/idea-locations", requireAuth, async (req, res) => {
   try {
     const { idea, barangay, top = 5, prefs = "" } = req.query;
     if (!idea) return res.status(400).json({ success: false, message: "idea required" });
 
     const topN = Math.max(1, parseInt(top, 10) || 5);
-    const prefList = prefs ? prefs.split(",").filter(Boolean) : [];
-    const weights = prefWeights();
 
-    const inPasig = (lat, lon) =>
-      lat >= PASIG_BOUNDS.minLat && lat <= PASIG_BOUNDS.maxLat &&
-      lon >= PASIG_BOUNDS.minLon && lon <= PASIG_BOUNDS.maxLon;
-
-    // 1. Fetch existing businesses of this type (real locations)
+    // 1. Fetch real businesses matching this idea — with coordinates inside Pasig
     const [realBizRows] = await geoDB.query(
       `SELECT id, barangay, CAST(lat AS DECIMAL(10,7)) AS lat, CAST(lon AS DECIMAL(10,7)) AS lon,
               business_trade_name, line_of_business, category
        FROM businesses
-       WHERE (line_of_business LIKE ? OR business_trade_name LIKE ? OR category = ?)
+       WHERE (line_of_business LIKE ? OR business_trade_name LIKE ?)
          AND lat IS NOT NULL AND lon IS NOT NULL
-         AND lat <> 'null' AND lon <> 'null'`,
-      [`%${idea}%`, `%${idea}%`, TYPE_TO_CATEGORY[idea.toUpperCase()] || null]
+         AND lat <> 'null' AND lon <> 'null'
+         AND CAST(lat AS DECIMAL(10,7)) BETWEEN ? AND ?
+         AND CAST(lon AS DECIMAL(10,7)) BETWEEN ? AND ?`,
+      [
+        `%${idea}%`, `%${idea}%`,
+        PASIG_BOUNDS.minLat, PASIG_BOUNDS.maxLat,
+        PASIG_BOUNDS.minLon, PASIG_BOUNDS.maxLon
+      ]
     );
 
-    let realLocations = realBizRows
-      .map(r => ({
-        id: r.id,
-        barangay_name: r.barangay,
-        lat: Number(r.lat),
-        lon: Number(r.lon),
-        business_name: r.business_trade_name,
-        is_predicted: false
-      }))
-      .filter(r => Number.isFinite(r.lat) && Number.isFinite(r.lon) && inPasig(r.lat, r.lon));
+    let realLocations = realBizRows.map(r => ({
+      id: r.id,
+      barangay_name: r.barangay,
+      lat: Number(r.lat),
+      lon: Number(r.lon),
+      business_name: r.business_trade_name,
+      is_predicted: false,
+      suitabilityScore: 0.85
+    })).filter(r => Number.isFinite(r.lat) && Number.isFinite(r.lon) && inPasig(r.lat, r.lon));
 
+    // Always filter real locations strictly to the target barangay
     if (barangay) {
-      realLocations = realLocations.filter(r => normalizeBarangay(r.barangay_name) === normalizeBarangay(barangay));
+      realLocations = realLocations.filter(r => barangayMatches(r.barangay_name, barangay));
     }
 
-    // 2. Get all barangay centroids as prediction candidates
-    const [barangayCentroids] = await geoDB.query(
-      `SELECT barangay_name, center_lat AS lat, center_lon AS lon,
-              population, population_density, avg_income_max,
-              gender_distribution, highest_age_group
-       FROM demographic_pasig
-       WHERE center_lat IS NOT NULL AND center_lon IS NOT NULL`
-    );
+    // 2. Get centroid for target barangay from DB
+    let barangayCentroids = [];
+    if (barangay) {
+      const [rows] = await geoDB.query(
+        `SELECT barangay_name, center_lat AS lat, center_lon AS lon,
+                population, population_density, avg_income_max, gender_distribution, highest_age_group
+         FROM demographic_pasig
+         WHERE LOWER(TRIM(barangay_name)) LIKE LOWER(TRIM(?))
+           AND center_lat IS NOT NULL AND center_lon IS NOT NULL`,
+        [`${normalizeBarangay(barangay)}%`]
+      );
+      barangayCentroids = rows;
+    } else {
+      const [rows] = await geoDB.query(
+        `SELECT barangay_name, center_lat AS lat, center_lon AS lon,
+                population, population_density, avg_income_max, gender_distribution, highest_age_group
+         FROM demographic_pasig
+         WHERE center_lat IS NOT NULL AND center_lon IS NOT NULL`
+      );
+      barangayCentroids = rows;
+    }
 
+    // Build candidates from DB centroids
     let candidates = barangayCentroids.map(b => ({
       barangay_name: b.barangay_name,
       lat: Number(b.lat),
@@ -1715,103 +1617,98 @@ app.get("/api/idea-locations", requireAuth, async (req, res) => {
       gender: (b.gender_distribution || "").toLowerCase(),
       ageGroup: (b.highest_age_group || "").toLowerCase(),
       is_predicted: true
-    }));
+    })).filter(c => Number.isFinite(c.lat) && Number.isFinite(c.lon) && inPasig(c.lat, c.lon));
 
-    if (barangay) {
-      candidates = candidates.filter(c => normalizeBarangay(c.barangay_name) === normalizeBarangay(barangay));
+    // If DB centroid missing, use hardcoded fallback — stays within target barangay
+    if (candidates.length === 0 && barangay) {
+      const coords = getCentroidFallback(barangay);
+      if (coords) {
+        candidates = [{
+          barangay_name: barangay,
+          lat: coords.lat,
+          lon: coords.lon,
+          population: 50000,
+          density: 15000,
+          income: 40000,
+          gender: 'balanced',
+          ageGroup: '25-54',
+          is_predicted: true
+        }];
+      }
     }
 
-    // 3. Score candidates using business profile
+    // If still no candidates and barangay specified, derive from bounding box center
+    if (candidates.length === 0 && barangay) {
+      const bounds = getBarangayBounds(barangay);
+      if (bounds) {
+        candidates = [{
+          barangay_name: barangay,
+          lat: (bounds.minLat + bounds.maxLat) / 2,
+          lon: (bounds.minLon + bounds.maxLon) / 2,
+          population: 50000,
+          density: 15000,
+          income: 40000,
+          gender: 'balanced',
+          ageGroup: '25-54',
+          is_predicted: true
+        }];
+      }
+    }
+
+    // 3. Score candidates
     const profile = getBusinessProfile(idea);
     candidates.forEach(c => {
       let score = 0;
-      let popScore = profile.prefersHighPopulation ? Math.min(c.population / 80000, 1) :
-                    profile.prefersMediumPopulation ? Math.min(c.population / 40000, 1) :
-                    Math.min(c.population / 20000, 1);
+      const popScore = profile.prefersHighPopulation ? Math.min(c.population / 80000, 1) :
+                       profile.prefersMediumPopulation ? Math.min(c.population / 40000, 1) :
+                       Math.min(c.population / 20000, 1);
       score += popScore * profile.populationWeight;
 
-      let incScore = profile.prefersHighIncome ? Math.min(c.income / 120000, 1) :
-                     profile.prefersMediumIncome ? Math.min(c.income / 70000, 1) :
-                     Math.min(c.income / 35000, 1);
+      const incScore = profile.prefersHighIncome ? Math.min(c.income / 120000, 1) :
+                       profile.prefersMediumIncome ? Math.min(c.income / 70000, 1) :
+                       Math.min(c.income / 35000, 1);
       score += incScore * profile.incomeWeight;
 
-      let denScore = profile.prefersHighDensity ? Math.min(c.density / 25000, 1) :
-                     Math.min(c.density / 12000, 1);
+      const denScore = profile.prefersHighDensity ? Math.min(c.density / 25000, 1) :
+                       Math.min(c.density / 12000, 1);
       score += denScore * profile.densityWeight;
 
-      let ageScore = profile.targetAgeGroups.some(age => c.ageGroup.includes(age)) ? 1 :
-                     (c.ageGroup.includes("25-54") || c.ageGroup.includes("18-35")) ? 0.7 : 0.3;
-      score += ageScore * profile.ageWeight;
+      const ageS = profile.targetAgeGroups.some(age => c.ageGroup.includes(age)) ? 1 :
+                   (c.ageGroup.includes("25-54") || c.ageGroup.includes("18-35")) ? 0.7 : 0.3;
+      score += ageS * profile.ageWeight;
 
       let genScore = 0.5;
       if (profile.preferredGender === "female" && c.gender.includes("female")) genScore = 1;
       else if (profile.preferredGender === "male" && c.gender.includes("male")) genScore = 1;
-      else if (profile.preferredGender === "balanced" && !c.gender.includes("female") && !c.gender.includes("male")) genScore = 1;
-      else if (c.gender.includes("balanced")) genScore = 0.8;
+      else if (profile.preferredGender === "balanced") genScore = 0.8;
       score += genScore * profile.genderWeight;
 
       c.suitabilityScore = Math.min(1, Math.max(0, score));
     });
 
-    // 4. Combine real + predicted, remove duplicate barangays (keep real)
-    let allPins = [...realLocations];
+    // 4. Combine real + predicted (real takes priority, no duplicate barangays)
     const existingBarangays = new Set(realLocations.map(l => normalizeBarangay(l.barangay_name)));
-    const predictedFiltered = candidates.filter(c => !existingBarangays.has(normalizeBarangay(c.barangay_name)));
-    allPins.push(...predictedFiltered);
+    const predictedOnly = candidates.filter(c => !existingBarangays.has(normalizeBarangay(c.barangay_name)));
+    let allPins = [...realLocations, ...predictedOnly];
+    allPins.sort((a, b) => b.suitabilityScore - a.suitabilityScore);
 
-    // Sort by suitability (real locations get a high default score)
-    allPins.forEach(p => { if (p.suitabilityScore === undefined) p.suitabilityScore = 0.8; });
-    allPins.sort((a,b) => b.suitabilityScore - a.suitabilityScore);
-
-    // 5. Select pins with better spreading (prioritize different barangays first)
-    const minGapMeters = 500; // increased spacing
-    let selected = [];
-    
-    // First pass: try to pick one pin per barangay (if multiple barangays available)
-    const barangayGroups = new Map();
-    for (const pin of allPins) {
-      const key = normalizeBarangay(pin.barangay_name);
-      if (!barangayGroups.has(key)) barangayGroups.set(key, []);
-      barangayGroups.get(key).push(pin);
+    if (!allPins.length) {
+      return res.json({ success: true, data: [] });
     }
-    
-    // Pick the best pin from each barangay (sorted by score)
-    const barangayList = Array.from(barangayGroups.keys());
-    for (const bgy of barangayList) {
-      const bestInBarangay = barangayGroups.get(bgy).sort((a,b) => b.suitabilityScore - a.suitabilityScore)[0];
-      // Check distance to already selected pins
-      let farEnough = true;
-      for (const s of selected) {
-        if (haversineMeters(s.lat, s.lon, bestInBarangay.lat, bestInBarangay.lon) < minGapMeters) {
-          farEnough = false;
-          break;
-        }
-      }
+
+    // 5. Select pins with spacing
+    const minGapMeters = 200;
+    let selected = [];
+
+    for (const pin of allPins) {
+      const farEnough = selected.every(s => haversineMeters(s.lat, s.lon, pin.lat, pin.lon) >= minGapMeters);
       if (farEnough) {
-        selected.push(bestInBarangay);
+        selected.push(pin);
         if (selected.length >= topN) break;
       }
     }
-    
-    // Second pass: if still need more, add next best pins (respecting distance)
-    if (selected.length < topN) {
-      for (const pin of allPins) {
-        if (selected.includes(pin)) continue;
-        let farEnough = true;
-        for (const s of selected) {
-          if (haversineMeters(s.lat, s.lon, pin.lat, pin.lon) < minGapMeters) {
-            farEnough = false;
-            break;
-          }
-        }
-        if (farEnough) {
-          selected.push(pin);
-          if (selected.length >= topN) break;
-        }
-      }
-    }
-    
-    // Third pass: if still not enough, add any remaining without distance check (but try to keep spread)
+
+    // Second pass: fill without distance check
     if (selected.length < topN) {
       for (const pin of allPins) {
         if (!selected.includes(pin)) {
@@ -1820,28 +1717,46 @@ app.get("/api/idea-locations", requireAuth, async (req, res) => {
         }
       }
     }
-    
-    // Final fallback: jitter duplicates to reach topN (but only if absolutely necessary)
-    const jitterMeters = 300;
-    const jitterDegLat = jitterMeters / 111111;
-    const jitterDegLon = jitterMeters / (111111 * Math.cos(14.58 * Math.PI / 180));
-    let attempts = 0;
-    while (selected.length < topN && attempts < 100) {
-      const base = selected.length ? selected[0] : allPins[0];
-      if (!base) break;
-      const newLat = base.lat + (Math.random() - 0.5) * jitterDegLat;
-      const newLon = base.lon + (Math.random() - 0.5) * jitterDegLon;
-      if (inPasig(newLat, newLon)) {
+
+    // Third pass: jitter STRICTLY within the target barangay bounding box
+    if (selected.length < topN && allPins.length > 0) {
+      const base = allPins[0];
+      const targetBarangay = barangay || base.barangay_name;
+      const bounds = getBarangayBounds(targetBarangay);
+      let attempts = 0;
+
+      while (selected.length < topN && attempts < 500) {
+        attempts++;
+
+        let newLat, newLon;
+        if (bounds) {
+          // Random point strictly inside this barangay's bounding box
+          newLat = bounds.minLat + Math.random() * (bounds.maxLat - bounds.minLat);
+          newLon = bounds.minLon + Math.random() * (bounds.maxLon - bounds.minLon);
+        } else {
+          // No bounding box — small jitter from centroid only (~300m)
+          const jDegLat = 300 / 111111;
+          const jDegLon = 300 / (111111 * Math.cos(14.58 * Math.PI / 180));
+          newLat = base.lat + (Math.random() - 0.5) * 2 * jDegLat;
+          newLon = base.lon + (Math.random() - 0.5) * 2 * jDegLon;
+        }
+
+        // Must be within Pasig AND within barangay box
+        if (!inPasig(newLat, newLon)) continue;
+        if (bounds && !inBarangay(newLat, newLon, targetBarangay)) continue;
+
+        const farEnough = selected.every(s => haversineMeters(s.lat, s.lon, newLat, newLon) >= minGapMeters);
+        if (!farEnough) continue;
+
         selected.push({
           ...base,
           lat: newLat,
           lon: newLon,
-          barangay_name: base.barangay_name + " (area)",
+          barangay_name: targetBarangay,
           is_predicted: true,
-          suitabilityScore: base.suitabilityScore * 0.9
+          suitabilityScore: base.suitabilityScore * 0.85
         });
       }
-      attempts++;
     }
 
     const result = selected.slice(0, topN).map(p => ({
@@ -1854,60 +1769,30 @@ app.get("/api/idea-locations", requireAuth, async (req, res) => {
     }));
 
     return res.json({ success: true, data: result });
+
   } catch (err) {
     console.error("idea-locations error:", err);
     return res.status(500).json({ success: false, message: err.message });
   }
 });
-// Enhanced profile function that uses category if available
-function getBusinessProfile(businessType, category = null) {
-  const type = (businessType || "").toLowerCase();
-  // Use category if provided (more reliable)
-  if (category) {
-    const catLower = category.toLowerCase();
-    if (catLower.includes("food") || catLower.includes("restaurant")) {
-      return {
-        prefersHighPopulation: true, prefersMediumPopulation: false,
-        prefersHighIncome: true, prefersMediumIncome: false,
-        prefersHighDensity: true,
-        targetAgeGroups: ['25-54', '18-35', 'working'],
-        preferredGender: 'balanced',
-        populationWeight: 0.25, incomeWeight: 0.30, densityWeight: 0.20,
-        ageWeight: 0.15, genderWeight: 0.05
-      };
-    }
-    if (catLower.includes("retail")) {
-      return {
-        prefersHighPopulation: true, prefersMediumPopulation: false,
-        prefersHighIncome: false, prefersMediumIncome: true,
-        prefersHighDensity: true,
-        targetAgeGroups: ['all', 'family'],
-        preferredGender: 'balanced',
-        populationWeight: 0.35, incomeWeight: 0.15, densityWeight: 0.25,
-        ageWeight: 0.10, genderWeight: 0.05
-      };
-    }
+
+// ─── DEBUG ROUTES (remove in production) ─────────────────────────────────────
+
+app.get("/api/debug-manggahan", requireAuth, async (req, res) => {
+  const idea = req.query.idea || "Restaurant";
+  const barangay = req.query.barangay || "Manggahan";
+  try {
+    const [barangayNames] = await geoDB.query(`SELECT DISTINCT barangay FROM businesses WHERE barangay LIKE ? LIMIT 10`, [`%${barangay}%`]);
+    const [centroid] = await geoDB.query(`SELECT barangay_name, center_lat, center_lon FROM demographic_pasig WHERE barangay_name LIKE ? LIMIT 5`, [`%${barangay}%`]);
+    const [bizCount] = await geoDB.query(`SELECT COUNT(*) as cnt FROM businesses WHERE LOWER(TRIM(barangay)) LIKE LOWER(TRIM(?))`, [`${normalizeBarangay(barangay)}%`]);
+    const [ideaMatch] = await geoDB.query(`SELECT barangay, line_of_business, lat, lon FROM businesses WHERE (line_of_business LIKE ? OR business_trade_name LIKE ?) AND lat IS NOT NULL LIMIT 10`, [`%${idea}%`, `%${idea}%`]);
+    const [manggahanBiz] = await geoDB.query(`SELECT DISTINCT line_of_business FROM businesses WHERE LOWER(TRIM(barangay)) LIKE LOWER(TRIM(?)) LIMIT 20`, [`${normalizeBarangay(barangay)}%`]);
+    res.json({ barangayNamesInDB: barangayNames, centroidData: centroid, bizCountInBarangay: bizCount[0].cnt, ideaMatchesAnyBiz: ideaMatch, barangayLineOfBusiness: manggahanBiz });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-  // Fallback to keyword profiles
-  const profiles = {
-    'restaurant': { prefersHighPopulation: true, prefersMediumPopulation: false, prefersHighIncome: true, prefersMediumIncome: false, prefersHighDensity: true, targetAgeGroups: ['25-54', '18-35', 'working'], preferredGender: 'balanced', populationWeight: 0.25, incomeWeight: 0.30, densityWeight: 0.20, ageWeight: 0.15, genderWeight: 0.05 },
-    'bakery': { prefersHighPopulation: false, prefersMediumPopulation: true, prefersHighIncome: false, prefersMediumIncome: true, prefersHighDensity: false, targetAgeGroups: ['family', 'children', 'all'], preferredGender: 'balanced', populationWeight: 0.30, incomeWeight: 0.20, densityWeight: 0.15, ageWeight: 0.15, genderWeight: 0.10 },
-    'eatery': { prefersHighPopulation: false, prefersMediumPopulation: true, prefersHighIncome: false, prefersMediumIncome: true, prefersHighDensity: true, targetAgeGroups: ['all', 'working', '18-35'], preferredGender: 'balanced', populationWeight: 0.25, incomeWeight: 0.20, densityWeight: 0.25, ageWeight: 0.15, genderWeight: 0.05 },
-    'coffee shop': { prefersHighPopulation: false, prefersMediumPopulation: true, prefersHighIncome: true, prefersMediumIncome: false, prefersHighDensity: true, targetAgeGroups: ['18-35', 'young', 'professional'], preferredGender: 'balanced', populationWeight: 0.20, incomeWeight: 0.35, densityWeight: 0.25, ageWeight: 0.10, genderWeight: 0.05 }
-  };
-  for (const [key, prof] of Object.entries(profiles)) {
-    if (type.includes(key)) return prof;
-  }
-  // Default profile
-  return {
-    prefersHighPopulation: false, prefersMediumPopulation: true,
-    prefersHighIncome: false, prefersMediumIncome: true,
-    prefersHighDensity: false,
-    targetAgeGroups: ['all'], preferredGender: 'balanced',
-    populationWeight: 0.25, incomeWeight: 0.20, densityWeight: 0.20,
-    ageWeight: 0.15, genderWeight: 0.10
-  };
-}
+});
+
 app.get("/geo-test", async (req, res) => {
   try {
     const [rows] = await geoDB.query("SELECT 1 AS test");
@@ -1925,19 +1810,18 @@ app.get("/api/debug-session", (req, res) => {
     adminDashboardPath
   });
 });
-// ─── REPORT LOGGING ROUTES ───────────────────────────────────────────────────
+
+// ─── REPORT LOGGING ROUTES ────────────────────────────────────────────────────
 
 app.post("/api/report/search-pin", requireAuth, async (req, res) => {
   try {
     const userId = req.session.user.id;
     const { query, source, lat, lon } = req.body;
-
     await legendDB.query(
       `INSERT INTO search_pin_history (user_id, query, pinned_item_id, pinned_item_type, is_pinned, created_at)
        VALUES (?, ?, NULL, 'location', ?, NOW())`,
       [userId, query || null, (source === 'map_click' || source === 'drag') ? 1 : 0]
     );
-
     res.json({ success: true });
   } catch (err) {
     console.error("search-pin report error:", err);
@@ -1949,13 +1833,11 @@ app.post("/api/report/recommendation", requireAuth, async (req, res) => {
   try {
     const userId = req.session.user.id;
     const { idea, area, lat, lon } = req.body;
-
     await legendDB.query(
       `INSERT INTO recommendation_history (user_id, recommended_item_id, recommended_item_type, source, was_clicked, created_at)
        VALUES (?, ?, 'business_idea', ?, 1, NOW())`,
       [userId, idea || null, area || null]
     );
-
     res.json({ success: true });
   } catch (err) {
     console.error("recommendation report error:", err);
@@ -1967,40 +1849,26 @@ app.post("/api/report/saved", requireAuth, async (req, res) => {
   try {
     const userId = req.session.user.id;
     const { action, business_type, barangay, lat, lon } = req.body;
-
     const wasRemoved = action === 'removed' ? 1 : 0;
-
     await legendDB.query(
       `INSERT INTO saved_history (user_id, business_type, barangay, suitability_score, lat, lon, saved_at, was_removed, removed_at)
        VALUES (?, ?, ?, NULL, ?, ?, NOW(), ?, ?)`,
-      [
-        userId,
-        business_type || null,
-        barangay || null,
-        lat ? parseFloat(lat) : null,
-        lon ? parseFloat(lon) : null,
-        wasRemoved,
-        wasRemoved ? new Date() : null
-      ]
+      [userId, business_type || null, barangay || null, lat ? parseFloat(lat) : null, lon ? parseFloat(lon) : null, wasRemoved, wasRemoved ? new Date() : null]
     );
-
     res.json({ success: true });
   } catch (err) {
     console.error("saved report error:", err);
     res.status(500).json({ success: false, message: err.message });
   }
 });
-// ─── ADMIN REPORT HISTORY ROUTES ─────────────────────────────────────────────
+
+// ─── ADMIN REPORT HISTORY ROUTES ──────────────────────────────────────────────
 
 app.get("/api/admin/report/search-pins", requireAdmin, async (req, res) => {
   try {
-    const [rows] = await legendDB.query(`
-      SELECT s.*, u.username, u.fullname
-      FROM search_pin_history s
-      LEFT JOIN users u ON s.user_id = u.id
-      ORDER BY s.created_at DESC
-      LIMIT 200
-    `);
+    const [rows] = await legendDB.query(
+      `SELECT s.*, u.username, u.fullname FROM search_pin_history s LEFT JOIN users u ON s.user_id = u.id ORDER BY s.created_at DESC LIMIT 200`
+    );
     res.json({ success: true, data: rows });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -2009,13 +1877,9 @@ app.get("/api/admin/report/search-pins", requireAdmin, async (req, res) => {
 
 app.get("/api/admin/report/recommendations", requireAdmin, async (req, res) => {
   try {
-    const [rows] = await legendDB.query(`
-      SELECT r.*, u.username, u.fullname
-      FROM recommendation_history r
-      LEFT JOIN users u ON r.user_id = u.id
-      ORDER BY r.created_at DESC
-      LIMIT 200
-    `);
+    const [rows] = await legendDB.query(
+      `SELECT r.*, u.username, u.fullname FROM recommendation_history r LEFT JOIN users u ON r.user_id = u.id ORDER BY r.created_at DESC LIMIT 200`
+    );
     res.json({ success: true, data: rows });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -2024,18 +1888,16 @@ app.get("/api/admin/report/recommendations", requireAdmin, async (req, res) => {
 
 app.get("/api/admin/report/saved", requireAdmin, async (req, res) => {
   try {
-    const [rows] = await legendDB.query(`
-      SELECT s.*, u.username, u.fullname
-      FROM saved_history s
-      LEFT JOIN users u ON s.user_id = u.id
-      ORDER BY s.saved_at DESC
-      LIMIT 200
-    `);
+    const [rows] = await legendDB.query(
+      `SELECT s.*, u.username, u.fullname FROM saved_history s LEFT JOIN users u ON s.user_id = u.id ORDER BY s.saved_at DESC LIMIT 200`
+    );
     res.json({ success: true, data: rows });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 });
+
+// ─── STATIC FILES ─────────────────────────────────────────────────────────────
 
 app.use(express.static(frontendPath));
 app.use("/dashboard", express.static(dashboardPath));
