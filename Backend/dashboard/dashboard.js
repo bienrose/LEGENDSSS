@@ -25,6 +25,38 @@ let activeIdeaPrefs = [];
 let userIndustry = '';
 let userIndustrySpecific = '';
 
+// ─── BARANGAY BOUNDS FOR MAP ──────────────────────────────────────────────────
+const BARANGAY_BOUNDS_MAP = {
+  'bagong ilog':      { minLat: 14.5680, maxLat: 14.5800, minLon: 121.0790, maxLon: 121.0920 },
+  'bagong katipunan': { minLat: 14.5740, maxLat: 14.5840, minLon: 121.0620, maxLon: 121.0730 },
+  'bambang':          { minLat: 14.5690, maxLat: 14.5800, minLon: 121.0620, maxLon: 121.0740 },
+  'buting':           { minLat: 14.5670, maxLat: 14.5780, minLon: 121.0710, maxLon: 121.0830 },
+  'caniogan':         { minLat: 14.5730, maxLat: 14.5840, minLon: 121.0810, maxLon: 121.0930 },
+  'dela paz':         { minLat: 14.5820, maxLat: 14.5970, minLon: 121.0810, maxLon: 121.0970 },
+  'kalawaan':         { minLat: 14.5630, maxLat: 14.5740, minLon: 121.0720, maxLon: 121.0840 },
+  'kapasigan':        { minLat: 14.5640, maxLat: 14.5750, minLon: 121.0670, maxLon: 121.0790 },
+  'kapitolyo':        { minLat: 14.5740, maxLat: 14.5910, minLon: 121.0550, maxLon: 121.0710 },
+  'malinao':          { minLat: 14.5750, maxLat: 14.5860, minLon: 121.0830, maxLon: 121.0950 },
+  'manggahan':        { minLat: 14.5850, maxLat: 14.6030, minLon: 121.0870, maxLon: 121.1070 },
+  'maybunga':         { minLat: 14.5710, maxLat: 14.5830, minLon: 121.0850, maxLon: 121.0980 },
+  'oranbo':           { minLat: 14.5730, maxLat: 14.5840, minLon: 121.0720, maxLon: 121.0840 },
+  'palatiw':          { minLat: 14.5760, maxLat: 14.5870, minLon: 121.0900, maxLon: 121.1020 },
+  'pinagbuhatan':     { minLat: 14.5530, maxLat: 14.5690, minLon: 121.0860, maxLon: 121.1030 },
+  'pineda':           { minLat: 14.5610, maxLat: 14.5720, minLon: 121.0580, maxLon: 121.0710 },
+  'rosario':          { minLat: 14.5610, maxLat: 14.5730, minLon: 121.0740, maxLon: 121.0870 },
+  'sagad':            { minLat: 14.5530, maxLat: 14.5650, minLon: 121.0810, maxLon: 121.0930 },
+  'san antonio':      { minLat: 14.5830, maxLat: 14.5950, minLon: 121.0810, maxLon: 121.0930 },
+  'san joaquin':      { minLat: 14.5810, maxLat: 14.5920, minLon: 121.0690, maxLon: 121.0820 },
+  'san jose':         { minLat: 14.5780, maxLat: 14.5890, minLon: 121.0620, maxLon: 121.0740 },
+  'san miguel':       { minLat: 14.5690, maxLat: 14.5800, minLon: 121.0750, maxLon: 121.0870 },
+  'san nicolas':      { minLat: 14.5660, maxLat: 14.5770, minLon: 121.0790, maxLon: 121.0910 },
+  'santa lucia':      { minLat: 14.5740, maxLat: 14.5890, minLon: 121.0950, maxLon: 121.1080 },
+  'santa rosa':       { minLat: 14.5580, maxLat: 14.5700, minLon: 121.0860, maxLon: 121.0980 },
+  'santolan':         { minLat: 14.5860, maxLat: 14.6030, minLon: 121.0690, maxLon: 121.0910 },
+  'sumilang':         { minLat: 14.5690, maxLat: 14.5800, minLon: 121.0780, maxLon: 121.0900 },
+  'ugong':            { minLat: 14.5770, maxLat: 14.5880, minLon: 121.0560, maxLon: 121.0680 },
+};
+
 // ─── INDUSTRY → FILTER CHECKBOX MAP ─────────────────────────────────────────
 const INDUSTRY_FILTER_MAP = {
   'food and beverages': 'f-food',
@@ -205,6 +237,25 @@ function isInPasig(lat, lon) {
     lon >= PASIG_BOUNDS.minLon && lon <= PASIG_BOUNDS.maxLon;
 }
 
+function getBarangayBoundsForMap(barangayName) {
+  if (!barangayName) return null;
+  const normalized = barangayName.toLowerCase().trim();
+
+  let bounds = BARANGAY_BOUNDS_MAP[normalized];
+
+  if (!bounds) {
+    const key = Object.keys(BARANGAY_BOUNDS_MAP).find(k =>
+      normalized.startsWith(k) || k.startsWith(normalized)
+    );
+    if (!key) return null;
+    bounds = BARANGAY_BOUNDS_MAP[key];
+  }
+
+  return L.latLngBounds(
+    [bounds.minLat, bounds.minLon],
+    [bounds.maxLat, bounds.maxLon]
+  );
+}
 const pinRangeEl = document.getElementById('pin-range');
 const pinCountInput = document.getElementById('pin-count');
 const pinCountLabel = document.getElementById('pin-count-label');
@@ -230,6 +281,37 @@ async function fetchIdeaLocations(filters = {}) {
   const data = await res.json();
   return data.success ? data.data : [];
 }
+function zoomToBarangay(barangayName) {
+  if (!barangayName) return false;
+  const bounds = getBarangayBoundsForMap(barangayName);
+  if (bounds && bounds.isValid()) {
+    map.fitBounds(bounds, { padding: [60, 60], maxZoom: 16 });
+    return true;
+  }
+  const CENTROID_FALLBACK_CLIENT = {
+    'bagong ilog': [14.5740, 121.0855], 'bagong katipunan': [14.5790, 121.0675],
+    'bambang': [14.5745, 121.0680], 'buting': [14.5725, 121.0770],
+    'caniogan': [14.5785, 121.0870], 'dela paz': [14.5895, 121.0890],
+    'kalawaan': [14.5685, 121.0780], 'kapasigan': [14.5695, 121.0730],
+    'kapitolyo': [14.5825, 121.0630], 'malinao': [14.5805, 121.0890],
+    'manggahan': [14.5940, 121.0970], 'maybunga': [14.5770, 121.0915],
+    'oranbo': [14.5785, 121.0780], 'palatiw': [14.5815, 121.0960],
+    'pinagbuhatan': [14.5610, 121.0945], 'pineda': [14.5665, 121.0645],
+    'rosario': [14.5670, 121.0805], 'sagad': [14.5590, 121.0870],
+    'san antonio': [14.5890, 121.0870], 'san joaquin': [14.5865, 121.0755],
+    'san jose': [14.5835, 121.0680], 'san miguel': [14.5745, 121.0810],
+    'san nicolas': [14.5715, 121.0850], 'santa lucia': [14.5815, 121.1015],
+    'santa rosa': [14.5640, 121.0920], 'santolan': [14.5945, 121.0800],
+    'sumilang': [14.5745, 121.0840], 'ugong': [14.5825, 121.0620],
+  };
+  const key = barangayName.toLowerCase().trim();
+  const centroid = CENTROID_FALLBACK_CLIENT[key];
+  if (centroid) {
+    map.setView(centroid, 15);
+    return true;
+  }
+  return false;
+}
 
 // ─── REPLOT: replots the currently active idea across ALL selected barangays ──
 async function replotFilteredPins() {
@@ -241,14 +323,18 @@ async function replotFilteredPins() {
 
   clearBusinessMarkers();
 
-  const barangays = activeIdeaBarangay && activeIdeaBarangay.length ? activeIdeaBarangay : [null];
+  // Get the currently selected barangays from checkboxes
+  const barangayCheckboxes = document.querySelectorAll('[id^="b-"]:checked');
+  const selectedBarangays = [...barangayCheckboxes].map(cb => barangayMap[cb.id]).filter(Boolean);
+
+  let barangays = selectedBarangays.length ? selectedBarangays : [null];
 
   const allRecs = (await Promise.all(
     barangays.map(b => fetchIdeaLocations({
       idea: activeIdeaName,
       barangay: b,
       top,
-      prefs: activeIdeaPrefs
+      prefs: activeIdeaPrefs.length ? activeIdeaPrefs : getPrefs()
     }))
   )).flat();
 
@@ -265,9 +351,25 @@ if (pinCountInput && pinCountLabel) {
   });
 
   const fireSlider = async () => {
-    if (!isFilterMode) return;
     pinCountLabel.textContent = String(getFilteredPinCount());
-    await replotFilteredPins();
+
+    if (isFilterMode) {
+      // Filter panel mode — replot across selected barangays
+      await replotFilteredPins();
+    } else if (activeIdeaName) {
+      // Map-click mode — replot for the active idea at clicked location
+      const top = getFilteredPinCount();
+      const prefs = getPrefs();
+      const recs = await fetchIdeaLocations({
+        idea: activeIdeaName.trim(),
+        barangay: currentBarangayName,
+        top,
+        prefs,
+        _t: Date.now()
+      });
+      clearBusinessMarkers();
+      plotLocations(recs);
+    }
   };
 
   pinCountInput.addEventListener('change', fireSlider);
@@ -500,18 +602,60 @@ function escapeHtml(str) {
 
 function plotLocations(recs) {
   clearBusinessMarkers();
-  const bounds = L.latLngBounds();
+
+  if (!recs || recs.length === 0) {
+    if (currentBarangayName) {
+      const bounds = getBarangayBoundsForMap(currentBarangayName);
+      if (bounds && bounds.isValid()) {
+        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+        return;
+      }
+    }
+    map.fitBounds([
+      [PASIG_BOUNDS.minLat, PASIG_BOUNDS.minLon],
+      [PASIG_BOUNDS.maxLat, PASIG_BOUNDS.maxLon]
+    ]);
+    return;
+  }
+
+  const pinBounds = L.latLngBounds();
+
   recs.forEach((rec) => {
     if (!rec.lat || !rec.lon) return;
     const lat = Number(rec.lat);
     const lon = Number(rec.lon);
-    const brgy = rec.barangay_name || '';
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+
+    const brgy = rec.barangay_name || currentBarangayName || '';
     const marker = L.marker([lat, lon]).addTo(map)
-      .bindPopup(`<b>${escapeHtml(brgy)}</b><br>${lat.toFixed(6)}, ${lon.toFixed(6)}<br><span style="color:#2e7d32;">🎯 Suitability: ${Math.round((rec.suitability_score || 0) * 100)}%</span>`);
+      .bindPopup(
+        `<b>${escapeHtml(brgy)}</b><br>${lat.toFixed(6)}, ${lon.toFixed(6)}<br>` +
+        `<span style="color:#2e7d32;">🎯 Suitability: ${Math.round((rec.suitability_score || 0) * 100)}%</span>`
+      );
     businessMarkers.push(marker);
-    bounds.extend(marker.getLatLng());
+    pinBounds.extend([lat, lon]);  // ← explicitly [lat, lon], not the marker
   });
-  if (bounds.isValid()) map.fitBounds(bounds.pad(0.2));
+
+  if (businessMarkers.length === 0) return;
+
+  // Always zoom to the barangay boundary, not the pin cluster.
+  // This prevents drift when pins land near a barangay border.
+  if (currentBarangayName) {
+    const brgyBounds = getBarangayBoundsForMap(currentBarangayName);
+    if (brgyBounds && brgyBounds.isValid()) {
+      map.flyToBounds(brgyBounds, { padding: [50, 50], maxZoom: 16, duration: 0.8 });
+      return;
+    }
+  }
+
+  // Fallback: zoom to actual pin bounds
+  if (pinBounds.isValid()) {
+    map.flyToBounds(pinBounds, { padding: [50, 50], maxZoom: 16, duration: 0.8 });
+  } else if (recs.length === 1) {
+    map.flyTo([Number(recs[0].lat), Number(recs[0].lon)], 16, { duration: 0.8 });
+  }
+
+  console.log(`Plotted ${businessMarkers.length} pins at zoom ${map.getZoom()}`);
 }
 
 function getPrefs() {
@@ -557,7 +701,6 @@ async function fetchSavedRecommendations() {
     console.error('Error fetching saved recommendations:', err);
   }
 }
-
 async function saveRecommendationToDB(business_type, barangay, lat, lon) {
   try {
     const res = await fetch('/api/saved-recommendations', {
@@ -648,7 +791,6 @@ async function saveRowClickHandler(e) {
 
 // ─── RENDER IDEA LIST (multi-barangay aware) ──────────────────────────────────
 function renderIdeaList({ names, barangays, prefs, allowPins }) {
-  // Keep backward-compat: accept old single `barangay` string too
   if (typeof barangays === 'string') barangays = barangays ? [barangays] : null;
 
   const listEl = document.getElementById('rec-list');
@@ -659,7 +801,6 @@ function renderIdeaList({ names, barangays, prefs, allowPins }) {
     return;
   }
 
-  // For save-row display use the first barangay label (or empty)
   const primaryBarangay = barangays && barangays.length ? barangays[0] : '';
 
   listEl.innerHTML = names.map((name, i) => `
@@ -732,14 +873,13 @@ function renderIdeaList({ names, barangays, prefs, allowPins }) {
 
   markSavedInCurrentList();
 
-  // ── Auto-select first idea so the pin slider works immediately ──
   if (allowPins && activeIdeaIdx === -1) {
     const firstItem = listEl.querySelector('.rec-item');
     if (firstItem) {
       void onIdeaSelect(firstItem);
     }
   }
-} // ← end of renderIdeaList
+}
 
 // ─── RESOLVE CHIP IDEAS ───────────────────────────────────────────────────────
 async function resolveChipIdeas({ selectedChips, barangays, type, prefs }) {
@@ -758,7 +898,6 @@ async function resolveChipIdeas({ selectedChips, barangays, type, prefs }) {
     return [...ideas, ...extra].slice(0, 3);
   }
 
-  // Score each chip across all selected barangays
   const chipLabels = selectedChips.map(c => c.label);
   const scored = [];
   for (const label of chipLabels) {
@@ -781,6 +920,21 @@ async function resolveChipIdeas({ selectedChips, barangays, type, prefs }) {
   }
   scored.sort((a, b) => b.score - a.score);
   return scored.slice(0, 3).map(item => item.label);
+}
+// Add this to dashboard.js temporarily
+async function debugBarangayData(barangayName) {
+  try {
+    const res = await fetch(`/api/debug-barangay-check?barangay=${encodeURIComponent(barangayName || 'Santa Lucia')}`);
+    const data = await res.json();
+    console.log('=== BARANGAY DEBUG ===');
+    console.log('All barangays in DB:', data.allBarangaysInDB);
+    console.log('Matching businesses:', data.matchingBusinesses);
+    console.log('Demographic data:', data.demographicData);
+    console.log('Businesses in Santa Lucia bounds:', data.businessesInSantaLuciaBounds);
+    return data;
+  } catch (err) {
+    console.error('Debug error:', err);
+  }
 }
 
 const barangayMap = {
@@ -815,6 +969,7 @@ async function applyFiltersAndShowRecommendations() {
   setPinDefault();
   showPinRange();
   clearBusinessMarkers();
+  clearClickedMarker();
 
   const barangayCheckboxes = document.querySelectorAll('[id^="b-"]:checked');
   const typeCheckboxes = document.querySelectorAll('[id^="f-"]:checked');
@@ -825,17 +980,39 @@ async function applyFiltersAndShowRecommendations() {
   const barangays = selectedBarangays.length ? selectedBarangays : null;
   const prefs = getPrefs();
 
-  const selectedChipEls = document.querySelectorAll('.filter-chip.selected');
-  const selectedChips = [...selectedChipEls].map(el => ({
-    label: el.dataset.chip || el.textContent.trim(),
-    category: el.dataset.category || ''
-  }));
+  if (!barangays && !selectedTypes.length && !prefs.length) return;
 
-  const type = selectedChips.length === 0 ? (selectedTypes[0] || null) : null;
+  // Set current barangay
+  if (barangays && barangays.length > 0) {
+    currentBarangayName = barangays[0];
+  }
 
-  if (!barangays && !type && !prefs.length && selectedChips.length === 0) return;
-
-  if (barangays) loadAreaDemographics(barangays[0]);
+  if (currentBarangayName) {
+    const bounds = getBarangayBoundsForMap(currentBarangayName);
+    if (bounds && bounds.isValid()) {
+      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+    } else {
+      // Centroid fallback for any barangay missing from BARANGAY_BOUNDS_MAP
+      const CENTROID_FALLBACK = {
+        'bagong ilog': [14.5720, 14.0855], 'bagong katipunan': [14.5785, 121.0670],
+        'bambang': [14.5745, 121.0680], 'buting': [14.5720, 121.0770],
+        'caniogan': [14.5785, 121.0870], 'dela paz': [14.5895, 121.0890],
+        'kalawaan': [14.5685, 121.0780], 'kapasigan': [14.5695, 121.0730],
+        'kapitolyo': [14.5825, 121.0630], 'malinao': [14.5805, 121.0890],
+        'manggahan': [14.5940, 121.0970], 'maybunga': [14.5770, 121.0915],
+        'oranbo': [14.5785, 121.0780], 'palatiw': [14.5815, 121.0960],
+        'pinagbuhatan': [14.5610, 121.0945], 'pineda': [14.5665, 121.0645],
+        'rosario': [14.5670, 121.0805], 'sagad': [14.5590, 121.0870],
+        'san antonio': [14.5890, 121.0870], 'san joaquin': [14.5865, 121.0755],
+        'san jose': [14.5835, 121.0680], 'san miguel': [14.5745, 121.0810],
+        'san nicolas': [14.5715, 121.0850], 'santa lucia': [14.5815, 121.1015],
+        'santa rosa': [14.5640, 121.0920], 'santolan': [14.5945, 121.0800],
+        'sumilang': [14.5745, 121.0840], 'ugong': [14.5825, 121.0620],
+      };
+      const c = CENTROID_FALLBACK[currentBarangayName.toLowerCase().trim()];
+      if (c) map.setView(c, 15);
+    }
+  }
 
   const titleEl = document.getElementById('loc-panel-title');
   const badgeEl = document.getElementById('loc-badge');
@@ -854,7 +1031,29 @@ async function applyFiltersAndShowRecommendations() {
   lastFilteredBarangay = barangays;
   lastFilteredPrefs = prefs;
 
-  const ideaNames = await resolveChipIdeas({ selectedChips, barangays, type, prefs });
+  const type = selectedTypes[0] || null;
+
+  // Get idea names
+  let ideaNames;
+  try {
+    if (barangays && barangays.length > 0) {
+      const res = await fetch(`/api/barangay-business-types?barangay=${encodeURIComponent(barangays[0])}&type=${type || ''}`);
+      const data = await res.json();
+      ideaNames = data.success ? data.data : [];
+    }
+    
+    if (!ideaNames || ideaNames.length === 0) {
+      const ideas = await fetchIdeas({ barangay: barangays ? barangays[0] : null, type, prefs });
+      ideaNames = ideas.slice(0, 3);
+    }
+  } catch (err) {
+    const ideas = await fetchIdeas({ barangay: barangays ? barangays[0] : null, type, prefs });
+    ideaNames = ideas.slice(0, 3);
+  }
+
+  if (barangays) {
+    loadAreaDemographics(barangays[0]);
+  }
 
   renderIdeaList({ names: ideaNames, barangays, prefs, allowPins: true });
 }
