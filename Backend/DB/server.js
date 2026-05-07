@@ -1798,7 +1798,7 @@ app.get("/api/idea-locations", requireAuth, async (req, res) => {
 
 app.get("/api/debug-manggahan", requireAuth, debugRouteRateLimit, async (req, res) => {
   const rawIdea = (req.query.idea || "Restaurant").toString().trim();
-  const idea = rawIdea.slice(0, 80).replace(/[%_]/g, "");
+  const idea = rawIdea.slice(0, 80).replace(/[^a-zA-Z0-9\s&'().,-]/g, "");
   const barangay = req.query.barangay || "Manggahan";
   try {
     const [barangayNames] = await geoDB.query(`SELECT DISTINCT barangay FROM businesses WHERE barangay LIKE ? LIMIT 10`, [`%${barangay}%`]);
