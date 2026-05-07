@@ -3,6 +3,7 @@ const bcrypt = require("bcrypt");
 const session = require("express-session");
 const path = require("path");
 const crypto = require("crypto");
+const rateLimit = require("express-rate-limit");
 const { legendDB, geoDB, testConnection } = require("./db_config");
 const nodemailer = require("nodemailer");
 
@@ -267,27 +268,12 @@ function requireAdminPage(req, res, next) {
   next();
 }
 
-const DEBUG_RATE_WINDOW_MS = 60 * 1000;
-const DEBUG_RATE_MAX_REQUESTS = 30;
-const debugRateStore = new Map();
-
-function debugRouteRateLimit(req, res, next) {
-  const now = Date.now();
-  const key = String(req.session.user?.id || req.ip || "anonymous");
-  const current = debugRateStore.get(key);
-
-  if (!current || now - current.startedAt >= DEBUG_RATE_WINDOW_MS) {
-    debugRateStore.set(key, { startedAt: now, count: 1 });
-    return next();
-  }
-
-  if (current.count >= DEBUG_RATE_MAX_REQUESTS) {
-    return res.status(429).json({ success: false, message: "Too many requests, please try again later." });
-  }
-
-  current.count += 1;
-  return next();
-}
+const debugRouteRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false
+});
 
 const pendingVerifications = new Map();
 const pendingPasswordResets = new Map();
