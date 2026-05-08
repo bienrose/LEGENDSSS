@@ -13,6 +13,13 @@ let lastFilteredIdea = null;
 let lastFilteredBarangay = null;
 let lastFilteredPrefs = null;
 let searchHistory = [];
+let currentUserId = null; 
+let lastAppliedChips = [];  
+let lastAppliedBarangays = null;
+let lastAppliedPrefs = [];
+let lastAppliedType = null;
+let isFilterApplied = false;
+let ideaPinsCache = new Map();
 const locSavedItems = new Set();
 
 // ─── ACTIVE IDEA STATE ────────────────────────────────────────────────────────
@@ -27,36 +34,35 @@ let userIndustrySpecific = '';
 
 // ─── BARANGAY BOUNDS FOR MAP ──────────────────────────────────────────────────
 const BARANGAY_BOUNDS_MAP = {
-  'bagong ilog':      { minLat: 14.5680, maxLat: 14.5800, minLon: 121.0790, maxLon: 121.0920 },
+  'bagong ilog':      { minLat: 14.5700, maxLat: 14.5780, minLon: 121.0820, maxLon: 121.0890 },
   'bagong katipunan': { minLat: 14.5740, maxLat: 14.5840, minLon: 121.0620, maxLon: 121.0730 },
-  'bambang':          { minLat: 14.5690, maxLat: 14.5800, minLon: 121.0620, maxLon: 121.0740 },
-  'buting':           { minLat: 14.5670, maxLat: 14.5780, minLon: 121.0710, maxLon: 121.0830 },
-  'caniogan':         { minLat: 14.5730, maxLat: 14.5840, minLon: 121.0810, maxLon: 121.0930 },
-  'dela paz':         { minLat: 14.5820, maxLat: 14.5970, minLon: 121.0810, maxLon: 121.0970 },
-  'kalawaan':         { minLat: 14.5630, maxLat: 14.5740, minLon: 121.0720, maxLon: 121.0840 },
-  'kapasigan':        { minLat: 14.5640, maxLat: 14.5750, minLon: 121.0670, maxLon: 121.0790 },
-  'kapitolyo':        { minLat: 14.5740, maxLat: 14.5910, minLon: 121.0550, maxLon: 121.0710 },
-  'malinao':          { minLat: 14.5750, maxLat: 14.5860, minLon: 121.0830, maxLon: 121.0950 },
-  'manggahan':        { minLat: 14.5850, maxLat: 14.6030, minLon: 121.0870, maxLon: 121.1070 },
-  'maybunga':         { minLat: 14.5710, maxLat: 14.5830, minLon: 121.0850, maxLon: 121.0980 },
-  'oranbo':           { minLat: 14.5730, maxLat: 14.5840, minLon: 121.0720, maxLon: 121.0840 },
-  'palatiw':          { minLat: 14.5760, maxLat: 14.5870, minLon: 121.0900, maxLon: 121.1020 },
-  'pinagbuhatan':     { minLat: 14.5530, maxLat: 14.5690, minLon: 121.0860, maxLon: 121.1030 },
-  'pineda':           { minLat: 14.5610, maxLat: 14.5720, minLon: 121.0580, maxLon: 121.0710 },
-  'rosario':          { minLat: 14.5610, maxLat: 14.5730, minLon: 121.0740, maxLon: 121.0870 },
-  'sagad':            { minLat: 14.5530, maxLat: 14.5650, minLon: 121.0810, maxLon: 121.0930 },
-  'san antonio':      { minLat: 14.5830, maxLat: 14.5950, minLon: 121.0810, maxLon: 121.0930 },
-  'san joaquin':      { minLat: 14.5810, maxLat: 14.5920, minLon: 121.0690, maxLon: 121.0820 },
-  'san jose':         { minLat: 14.5780, maxLat: 14.5890, minLon: 121.0620, maxLon: 121.0740 },
-  'san miguel':       { minLat: 14.5690, maxLat: 14.5800, minLon: 121.0750, maxLon: 121.0870 },
-  'san nicolas':      { minLat: 14.5660, maxLat: 14.5770, minLon: 121.0790, maxLon: 121.0910 },
-  'santa lucia':      { minLat: 14.5740, maxLat: 14.5890, minLon: 121.0950, maxLon: 121.1080 },
-  'santa rosa':       { minLat: 14.5580, maxLat: 14.5700, minLon: 121.0860, maxLon: 121.0980 },
-  'santolan':         { minLat: 14.5860, maxLat: 14.6030, minLon: 121.0690, maxLon: 121.0910 },
-  'sumilang':         { minLat: 14.5690, maxLat: 14.5800, minLon: 121.0780, maxLon: 121.0900 },
-  'ugong':            { minLat: 14.5770, maxLat: 14.5880, minLon: 121.0560, maxLon: 121.0680 },
+  'bambang':          { minLat: 14.5640, maxLat: 14.5850, minLon: 121.0570, maxLon: 121.0790 },
+  'buting':           { minLat: 14.5620, maxLat: 14.5830, minLon: 121.0660, maxLon: 121.0880 },
+  'caniogan':         { minLat: 14.5740, maxLat: 14.5820, minLon: 121.0830, maxLon: 121.0910 },
+  'dela paz':         { minLat: 14.5780, maxLat: 14.6010, minLon: 121.0770, maxLon: 121.1010 },
+  'kalawaan':         { minLat: 14.5580, maxLat: 14.5790, minLon: 121.0670, maxLon: 121.0890 },
+  'kapasigan':        { minLat: 14.5590, maxLat: 14.5800, minLon: 121.0620, maxLon: 121.0840 },
+  'kapitolyo':        { minLat: 14.5700, maxLat: 14.5950, minLon: 121.0500, maxLon: 121.0760 },
+  'malinao':          { minLat: 14.5700, maxLat: 14.5910, minLon: 121.0780, maxLon: 121.1000 },
+  'manggahan':        { minLat: 14.5810, maxLat: 14.6070, minLon: 121.0830, maxLon: 121.1110 },
+  'maybunga':         { minLat: 14.5660, maxLat: 14.5880, minLon: 121.0800, maxLon: 121.1020 },
+  'oranbo':           { minLat: 14.5680, maxLat: 14.5890, minLon: 121.0670, maxLon: 121.0890 },
+  'palatiw':          { minLat: 14.5770, maxLat: 14.5860, minLon: 121.0920, maxLon: 121.1000 },
+  'pinagbuhatan':     { minLat: 14.5480, maxLat: 14.5740, minLon: 121.0810, maxLon: 121.1080 },
+  'pineda':           { minLat: 14.5560, maxLat: 14.5760, minLon: 121.0530, maxLon: 121.0760 },
+  'rosario':          { minLat: 14.5620, maxLat: 14.5720, minLon: 121.0750, maxLon: 121.0850 },
+  'sagad':            { minLat: 14.5480, maxLat: 14.5700, minLon: 121.0760, maxLon: 121.0980 },
+  'san antonio':      { minLat: 14.5780, maxLat: 14.6000, minLon: 121.0760, maxLon: 121.0980 },
+  'san joaquin':      { minLat: 14.5810, maxLat: 14.5910, minLon: 121.0710, maxLon: 121.0810 },
+  'san jose':         { minLat: 14.5800, maxLat: 14.5890, minLon: 121.0640, maxLon: 121.0730 },
+  'san miguel':       { minLat: 14.5690, maxLat: 14.5790, minLon: 121.0770, maxLon: 121.0850 },
+  'san nicolas':      { minLat: 14.5660, maxLat: 14.5760, minLon: 121.0800, maxLon: 121.0890 },
+  'santa lucia':      { minLat: 14.5760, maxLat: 14.5860, minLon: 121.0970, maxLon: 121.1050 },
+  'santa rosa':       { minLat: 14.5600, maxLat: 14.5690, minLon: 121.0860, maxLon: 121.0940 },
+  'santolan':         { minLat: 14.5830, maxLat: 14.6050, minLon: 121.0650, maxLon: 121.0920 },
+  'sumilang':         { minLat: 14.5650, maxLat: 14.5800, minLon: 121.0760, maxLon: 121.0910 },
+  'ugong':            { minLat: 14.5730, maxLat: 14.5880, minLon: 121.0570, maxLon: 121.0690 },
 };
-
 // ─── INDUSTRY → FILTER CHECKBOX MAP ─────────────────────────────────────────
 const INDUSTRY_FILTER_MAP = {
   'food and beverages': 'f-food',
@@ -126,100 +132,110 @@ const INDUSTRY_FILTER_MAP = {
   'general': 'f-general'
 };
 
-// ─── REPORT LOGGING ───────────────────────────────────────────────────────────
+// ─── REPORT LOGGING (FIXED - USER SPECIFIC) ──────────────────────────────────
+function getReportStorageKey() {
+    if (!currentUserId) {
+        return 'reportLogs_anonymous';
+    }
+    return `reportLogs_${currentUserId}`;
+}
+
 function reportLogRead() {
-  try {
-    return JSON.parse(localStorage.getItem('reportLogs') || '{"searchPins":[],"recommendations":[],"saved":[]}') || {
-      searchPins: [], recommendations: [], saved: []
-    };
-  } catch {
-    return { searchPins: [], recommendations: [], saved: [] };
-  }
+    try {
+        const key = getReportStorageKey();
+        const data = localStorage.getItem(key);
+        return JSON.parse(data || '{"searchPins":[],"recommendations":[],"saved":[]}') || {
+            searchPins: [], recommendations: [], saved: []
+        };
+    } catch {
+        return { searchPins: [], recommendations: [], saved: [] };
+    }
 }
 
 function reportLogWrite(logs) {
-  localStorage.setItem('reportLogs', JSON.stringify(logs));
+    const key = getReportStorageKey();
+    localStorage.setItem(key, JSON.stringify(logs));
 }
 
 function reportNow() {
-  return new Date().toISOString();
+    return new Date().toISOString();
 }
 
 function reportPush(kind, payload) {
-  const logs = reportLogRead();
-  if (!logs[kind]) logs[kind] = [];
-  if (kind === 'searchPins') {
-    const key = `${payload.source || ''}::${(payload.locationName || '').trim().toLowerCase()}`;
-    logs[kind] = logs[kind].filter(x => {
-      const k2 = `${x.source || ''}::${(x.locationName || '').trim().toLowerCase()}`;
-      return k2 !== key;
-    });
-  }
-  logs[kind].unshift(payload);
-  logs[kind] = logs[kind].slice(0, 200);
-  reportLogWrite(logs);
+    const logs = reportLogRead();
+    if (!logs[kind]) logs[kind] = [];
+    if (kind === 'searchPins') {
+        const key = `${payload.source || ''}::${(payload.locationName || '').trim().toLowerCase()}`;
+        logs[kind] = logs[kind].filter(x => {
+            const k2 = `${x.source || ''}::${(x.locationName || '').trim().toLowerCase()}`;
+            return k2 !== key;
+        });
+    }
+    logs[kind].unshift(payload);
+    logs[kind] = logs[kind].slice(0, 200);
+    reportLogWrite(logs);
 }
 
 function reportCurrentFiltersSnapshot() {
-  const barangayCheckboxes = document.querySelectorAll('[id^="b-"]:checked');
-  const typeCheckboxes = document.querySelectorAll('[id^="f-"]:checked');
-  const selectedBarangays = [...barangayCheckboxes].map(cb => barangayMap[cb.id]).filter(Boolean);
-  const selectedTypes = [...typeCheckboxes].map(cb => typeMap[cb.id]).filter(Boolean);
-  const prefs = getPrefs();
-  return {
-    barangay: selectedBarangays[0] || null,
-    type: selectedTypes[0] || null,
-    prefs,
-    pinCount: isFilterMode ? getFilteredPinCount() : null
-  };
+    const barangayCheckboxes = document.querySelectorAll('[id^="b-"]:checked');
+    const typeCheckboxes = document.querySelectorAll('[id^="f-"]:checked');
+    const selectedBarangays = [...barangayCheckboxes].map(cb => barangayMap[cb.id]).filter(Boolean);
+    const selectedTypes = [...typeCheckboxes].map(cb => typeMap[cb.id]).filter(Boolean);
+    const prefs = getPrefs();
+    return {
+        barangay: selectedBarangays[0] || null,
+        type: selectedTypes[0] || null,
+        prefs,
+        pinCount: isFilterMode ? getFilteredPinCount() : null
+    };
 }
 
 async function reportLogSearchOrPin({ source, locationName, lat, lon }) {
-  const f = reportCurrentFiltersSnapshot();
-  reportPush('searchPins', {
-    at: reportNow(), source,
-    locationName: locationName || null,
-    lat: lat ?? null, lon: lon ?? null, filters: f
-  });
-  try {
-    await fetch('/api/report/search-pin', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: locationName || null, source: source || 'map', lat: lat ?? null, lon: lon ?? null })
+    const f = reportCurrentFiltersSnapshot();
+    reportPush('searchPins', {
+        at: reportNow(), source,
+        locationName: locationName || null,
+        lat: lat ?? null, lon: lon ?? null, filters: f
     });
-  } catch (e) { console.warn('DB report search-pin failed:', e); }
+    try {
+        await fetch('/api/report/search-pin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: locationName || null, source: source || 'map', lat: lat ?? null, lon: lon ?? null })
+        });
+    } catch (e) { console.warn('DB report search-pin failed:', e); }
 }
 
 async function reportLogRecommendation({ idea, area, pinCount, lat, lon }) {
-  const f = reportCurrentFiltersSnapshot();
-  reportPush('recommendations', {
-    at: reportNow(), idea, area: area || null,
-    pinCount: pinCount ?? null, lat: lat ?? null, lon: lon ?? null, filters: f
-  });
-  try {
-    await fetch('/api/report/recommendation', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idea: idea || null, area: area || null, lat: lat ?? null, lon: lon ?? null })
+    const f = reportCurrentFiltersSnapshot();
+    reportPush('recommendations', {
+        at: reportNow(), idea, area: area || null,
+        pinCount: pinCount ?? null, lat: lat ?? null, lon: lon ?? null, filters: f
     });
-  } catch (e) { console.warn('DB report recommendation failed:', e); }
+    try {
+        await fetch('/api/report/recommendation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ idea: idea || null, area: area || null, lat: lat ?? null, lon: lon ?? null })
+        });
+    } catch (e) { console.warn('DB report recommendation failed:', e); }
 }
 
 async function reportLogSaved({ action, business_type, barangay, lat, lon }) {
-  reportPush('saved', {
-    at: reportNow(), action, business_type,
-    barangay: barangay || null, lat: lat ?? null, lon: lon ?? null
-  });
-  try {
-    await fetch('/api/report/saved', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: action || 'saved', business_type: business_type || null,
+    reportPush('saved', {
+        at: reportNow(), action, business_type,
         barangay: barangay || null, lat: lat ?? null, lon: lon ?? null
-      })
     });
-  } catch (e) { console.warn('DB report saved failed:', e); }
+    try {
+        await fetch('/api/report/saved', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: action || 'saved', business_type: business_type || null,
+                barangay: barangay || null, lat: lat ?? null, lon: lon ?? null
+            })
+        });
+    } catch (e) { console.warn('DB report saved failed:', e); }
 }
 
 // ─── MAP SETUP ───────────────────────────────────────────────────────────────
@@ -277,9 +293,31 @@ async function fetchIdeaLocations(filters = {}) {
   if (filters.top) params.append('top', filters.top);
   if (filters.prefs?.length) params.append('prefs', filters.prefs.join(','));
   if (filters._t) params.append('_t', filters._t);
+  
+  // Create a cache key from the filters
+  const cacheKey = JSON.stringify({
+    idea: filters.idea?.trim(),
+    barangay: filters.barangay,
+    top: filters.top,
+    prefs: filters.prefs?.sort()
+  });
+  
+  // Check if we have cached results
+  if (ideaPinsCache.has(cacheKey)) {
+    console.log('Using cached pins for:', filters.idea);
+    return ideaPinsCache.get(cacheKey);
+  }
+  
+  // Fetch new results
   const res = await fetch(`/api/idea-locations?${params.toString()}`);
   const data = await res.json();
-  return data.success ? data.data : [];
+  const results = data.success ? data.data : [];
+  
+  // Cache the results
+  ideaPinsCache.set(cacheKey, results);
+  console.log('Cached new pins for:', filters.idea);
+  
+  return results;
 }
 function zoomToBarangay(barangayName) {
   if (!barangayName) return false;
@@ -406,28 +444,37 @@ function clearClickedMarker() {
 document.getElementById('close-saved-panel')?.addEventListener('click', () => savedPanel.classList.remove('open'));
 document.getElementById('close-loc-panel')?.addEventListener('click', () => locPanel.classList.remove('open'));
 
-document.getElementById('close-filter-panel')?.addEventListener('click', () => {
-  filterPanel.classList.remove('open');
-  activeRequestId++;
+// RESET FILTER BUTTON HANDLER - clears all pins and resets selections
+document.getElementById('filter-btn')?.addEventListener('click', function (e) {
+  e.stopPropagation();
+  
+  // Clear all pins from map
+  clearBusinessMarkers();
+  clearClickedMarker();
+  
+  // Reset filter mode
   isFilterMode = false;
   allowIdeaPins = false;
-  lastFilteredIdea = null;
-  lastFilteredBarangay = null;
-  lastFilteredPrefs = null;
   activeIdeaIdx = -1;
   activeIdeaName = null;
   activeIdeaBarangay = null;
   activeIdeaPrefs = [];
-  clearBusinessMarkers();
-  clearClickedMarker();
+  lastFilteredIdea = null;
+  lastFilteredBarangay = null;
+  lastFilteredPrefs = null;
+  
+  // Reset pin range slider to default
   hidePinRange();
   setPinDefault();
+  
+  // Clear the recommendations list
   const listEl = document.getElementById('rec-list');
   if (listEl) listEl.innerHTML = '';
-});
-
-document.getElementById('filter-btn')?.addEventListener('click', function (e) {
-  e.stopPropagation();
+  
+  // Close location panel if open
+  locPanel?.classList.remove('open');
+  
+  // Open filter panel
   const isOpen = filterPanel.classList.contains('open');
   closeAllPanels();
   if (!isOpen) filterPanel.classList.add('open');
@@ -633,13 +680,11 @@ function plotLocations(recs) {
         `<span style="color:#2e7d32;">🎯 Suitability: ${Math.round((rec.suitability_score || 0) * 100)}%</span>`
       );
     businessMarkers.push(marker);
-    pinBounds.extend([lat, lon]);  // ← explicitly [lat, lon], not the marker
+    pinBounds.extend([lat, lon]);
   });
 
   if (businessMarkers.length === 0) return;
 
-  // Always zoom to the barangay boundary, not the pin cluster.
-  // This prevents drift when pins land near a barangay border.
   if (currentBarangayName) {
     const brgyBounds = getBarangayBoundsForMap(currentBarangayName);
     if (brgyBounds && brgyBounds.isValid()) {
@@ -648,7 +693,6 @@ function plotLocations(recs) {
     }
   }
 
-  // Fallback: zoom to actual pin bounds
   if (pinBounds.isValid()) {
     map.flyToBounds(pinBounds, { padding: [50, 50], maxZoom: 16, duration: 0.8 });
   } else if (recs.length === 1) {
@@ -901,17 +945,22 @@ async function resolveChipIdeas({ selectedChips, barangays, type, prefs }) {
     return [...ideas, ...extra].slice(0, 3);
   }
 
-  // ── 1–3 chips: use chip labels directly, backfill to 3 if needed
-  if (selectedChips.length >= 1 && selectedChips.length <= 3) {
-    const names = selectedChips.map(c => c.label);
-    if (names.length >= 3) return names.slice(0, 3);
-    // Backfill with type or general ideas
-    const fill = await fetchIdeas({ barangay: primaryBarangay, type: type || null, prefs });
-    const extra = fill.filter(n => !names.includes(n));
-    return [...names, ...extra].slice(0, 3);
+  // ── 1 chip: return exactly 1 chip (no backfill)
+  if (selectedChips.length === 1) {
+    return [selectedChips[0].label];
   }
 
-  // ── 4+ chips: score each chip label by suitability across barangays, pick top 3
+  // ── 2 chips: return exactly 2 chips (no backfill)
+  if (selectedChips.length === 2) {
+    return selectedChips.map(c => c.label);
+  }
+
+  // ── 3 chips: return exactly 3 chips (no backfill)
+  if (selectedChips.length === 3) {
+    return selectedChips.map(c => c.label);
+  }
+
+  // ── 4+ chips: score each chip label by suitability, keep top 3
   const scored = [];
   for (const chip of selectedChips) {
     let totalScore = 0;
@@ -929,20 +978,18 @@ async function resolveChipIdeas({ selectedChips, barangays, type, prefs }) {
         totalRecs += recs.length;
       }
     }
-    scored.push({ label: chip.label, score: totalRecs > 0 ? totalScore / totalRecs : 0 });
+    // If no recs found, give a default low score
+    const avgScore = totalRecs > 0 ? totalScore / totalRecs : 0;
+    scored.push({ label: chip.label, score: avgScore });
   }
+  
+  // Sort by score (highest first) and take top 3
   scored.sort((a, b) => b.score - a.score);
-  const top = scored.slice(0, 3).map(item => item.label);
-
-  // Backfill if still short
-  if (top.length < 3) {
-    const fill = await fetchIdeas({ barangay: primaryBarangay, prefs });
-    const extra = fill.filter(n => !top.includes(n));
-    return [...top, ...extra].slice(0, 3);
-  }
-  return top;
+  const top3 = scored.slice(0, 3).map(item => item.label);
+  
+  return top3;
 }
-// Add this to dashboard.js temporarily
+
 async function debugBarangayData(barangayName) {
   try {
     const res = await fetch(`/api/debug-barangay-check?barangay=${encodeURIComponent(barangayName || 'Santa Lucia')}`);
@@ -1002,15 +1049,24 @@ async function applyFiltersAndShowRecommendations() {
   const type = selectedTypes[0] || null;
   const prefs = getPrefs();
 
-  // ── Collect selected chips from DOM
+  // Get ALL selected chips (from all sections)
   const selectedChipEls = document.querySelectorAll('.filter-chip.selected');
   const selectedChips = [...selectedChipEls].map(el => ({
     label: el.dataset.chip || el.textContent.trim(),
     category: el.dataset.category || ''
   }));
 
+  // SAVE the applied filters
+  lastAppliedChips = [...selectedChips];
+  lastAppliedBarangays = barangays;
+  lastAppliedPrefs = [...prefs];
+  lastAppliedType = type;
+  isFilterApplied = true;
+
   // Require at least one filter
-  if (!barangays && !type && !prefs.length && selectedChips.length === 0) return;
+  if (!barangays && !type && !prefs.length && selectedChips.length === 0) {
+    return;
+  }
 
   // Set current barangay context
   if (barangays && barangays.length > 0) {
@@ -1061,10 +1117,10 @@ async function applyFiltersAndShowRecommendations() {
   lastFilteredBarangay = barangays;
   lastFilteredPrefs = prefs;
 
-  // ── Chips override type filter; type only used when no chips selected
+  // Chips override type filter; type only used when no chips selected
   const resolvedType = selectedChips.length === 0 ? type : null;
 
-  // ── Get idea names via resolveChipIdeas (handles all cases)
+  // Get idea names via resolveChipIdeas (handles all cases)
   let ideaNames = await resolveChipIdeas({
     selectedChips,
     barangays,
@@ -1072,11 +1128,15 @@ async function applyFiltersAndShowRecommendations() {
     prefs
   });
 
-  // ── Always ensure 3 ideas — backfill with general if short
-  if (ideaNames.length < 3) {
-    const general = await fetchIdeas({ barangay: barangays ? barangays[0] : null, prefs });
-    const extra = general.filter(n => !ideaNames.includes(n));
-    ideaNames = [...ideaNames, ...extra].slice(0, 3);
+  // If we have selected chips, DO NOT backfill - keep exactly what resolveChipIdeas returned
+  // If no chips and we have type, keep what we got
+  // If no chips and no type, ensure we have 3
+  if (selectedChips.length === 0 && !type) {
+    if (ideaNames.length < 3) {
+      const general = await fetchIdeas({ barangay: barangays ? barangays[0] : null, prefs });
+      const extra = general.filter(n => !ideaNames.includes(n));
+      ideaNames = [...ideaNames, ...extra].slice(0, 3);
+    }
   }
 
   if (barangays) {
@@ -1084,6 +1144,26 @@ async function applyFiltersAndShowRecommendations() {
   }
 
   renderIdeaList({ names: ideaNames, barangays, prefs, allowPins: true });
+  
+  // Also fetch and display pins for the selected ideas using the pin count from slider
+  const top = getFilteredPinCount();
+  const barangayList = barangays && barangays.length ? barangays : [null];
+  const allRecs = (await Promise.all(
+    ideaNames.map(idea => 
+      Promise.all(barangayList.map(b => 
+        fetchIdeaLocations({
+          idea: idea.trim(),
+          barangay: b,
+          top: top,
+          prefs,
+          _t: Date.now()
+        })
+      ))
+    )
+  )).flat(2);
+  
+  clearBusinessMarkers();
+  plotLocations(allRecs);
 }
 
 document.getElementById('done-btn')?.addEventListener('click', async () => {
@@ -1442,8 +1522,9 @@ document.addEventListener('click', function (e) {
     profilePopup.classList.remove('open');
 });
 document.getElementById('logout-btn')?.addEventListener('click', () => {
-  profilePopup?.classList.remove('open');
-  window.location.href = '/logout';
+    currentUserId = null;
+    profilePopup?.classList.remove('open');
+    window.location.href = '/logout';
 });
 document.getElementById('profile-link-btn')?.addEventListener('click', () => {
   profilePopup?.classList.remove('open');
@@ -1758,7 +1839,10 @@ function buildFilterChips(industry, subcategory) {
   if (trulyCrossIndustry.length) {
     html += `<div class="chip-group-label">Matched to your business</div><div class="chip-row">`;
     trulyCrossIndustry.forEach(label => {
-      html += `<span class="filter-chip filter-chip--cross" data-chip="${escapeHtml(label)}">${escapeHtml(label)}</span>`;
+      // Check if this chip was previously selected
+      const isPreviouslySelected = lastAppliedChips.some(c => c.label === label);
+      const selectedClass = isPreviouslySelected ? 'selected' : '';
+      html += `<span class="filter-chip filter-chip--cross ${selectedClass}" data-chip="${escapeHtml(label)}" data-category="${escapeHtml(subcategory)}">${escapeHtml(label)}</span>`;
     });
     html += `</div>`;
   }
@@ -1766,7 +1850,9 @@ function buildFilterChips(industry, subcategory) {
   if (boostedChips.length) {
     html += `<div class="chip-group-label">Top matches for your industry</div><div class="chip-row">`;
     boostedChips.forEach(label => {
-      html += `<span class="filter-chip filter-chip--boosted" data-chip="${escapeHtml(label)}">${escapeHtml(label)}</span>`;
+      const isPreviouslySelected = lastAppliedChips.some(c => c.label === label);
+      const selectedClass = isPreviouslySelected ? 'selected' : '';
+      html += `<span class="filter-chip filter-chip--boosted ${selectedClass}" data-chip="${escapeHtml(label)}" data-category="${escapeHtml(industry)}">${escapeHtml(label)}</span>`;
     });
     html += `</div>`;
   }
@@ -1775,7 +1861,9 @@ function buildFilterChips(industry, subcategory) {
     const groupLabel = (boostedChips.length || trulyCrossIndustry.length) ? 'Other suggestions' : 'Suggested for your industry';
     html += `<div class="chip-group-label">${groupLabel}</div><div class="chip-row">`;
     regularChips.forEach(label => {
-      html += `<span class="filter-chip" data-chip="${escapeHtml(label)}">${escapeHtml(label)}</span>`;
+      const isPreviouslySelected = lastAppliedChips.some(c => c.label === label);
+      const selectedClass = isPreviouslySelected ? 'selected' : '';
+      html += `<span class="filter-chip ${selectedClass}" data-chip="${escapeHtml(label)}" data-category="${escapeHtml(industry)}">${escapeHtml(label)}</span>`;
     });
     html += `</div>`;
   }
@@ -1783,13 +1871,23 @@ function buildFilterChips(industry, subcategory) {
   if (industryChips.full.length) {
     html += `<div class="chip-divider">more</div><div class="chip-row">`;
     industryChips.full.forEach(label => {
-      html += `<span class="filter-chip" data-chip="${escapeHtml(label)}">${escapeHtml(label)}</span>`;
+      const isPreviouslySelected = lastAppliedChips.some(c => c.label === label);
+      const selectedClass = isPreviouslySelected ? 'selected' : '';
+      html += `<span class="filter-chip ${selectedClass}" data-chip="${escapeHtml(label)}" data-category="${escapeHtml(industry)}">${escapeHtml(label)}</span>`;
     });
     html += `</div>`;
   }
 
   chipContainer.innerHTML = html;
   if (chipSection) chipSection.style.display = 'block';
+
+  // Restore the activeCustomChips from lastAppliedChips
+  activeCustomChips.clear();
+  lastAppliedChips.forEach(chip => {
+    if (chip.label) {
+      activeCustomChips.add(chip.label);
+    }
+  });
 
   chipContainer.querySelectorAll('.filter-chip').forEach(chip => {
     const chipValue = chip.dataset.chip || '';
@@ -1807,10 +1905,6 @@ function buildFilterChips(industry, subcategory) {
         activeCustomChips.delete(chipValue);
       }
       updateChipSelectionCounter();
-      if (activeCustomChips.size === 0) {
-        clearBusinessMarkers();
-        hidePinRange();
-      }
     });
   });
 
@@ -1919,38 +2013,50 @@ function applyIndustryPersonalization(industry, industrySpecific) {
 
 // ─── DOM CONTENT LOADED ───────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
-  fetchSavedRecommendations();
-
-  try {
-    const jump = parseJumpTarget();
-    if (jump) {
-      localStorage.removeItem('mapJumpTarget');
-      map.setView([jump.lat, jump.lon], 16);
-      await handleLocationSelect(jump.lat, jump.lon, jump.source);
-    }
-  } catch (e) {
-    console.warn('Jump-to-map failed:', e);
-  }
-
-  try {
-    const res = await fetch('/api/me');
-    const data = await res.json();
-    const affiliation = (data.affiliation || '').toLowerCase().trim();
-    const industry = (data.industry || '').trim();
-    const industrySpecific = (data.industry_specific || '').trim();
-
-    userIndustry = industry;
-    userIndustrySpecific = industrySpecific;
-
-    if (affiliation === 'entrepreneur') {
-      document.querySelectorAll('.entrepreneur-only').forEach(el => { el.style.display = ''; });
-    } else {
-      document.querySelectorAll('.entrepreneur-only').forEach(el => { el.style.display = 'none'; });
+    // Get current user ID first for report isolation
+    try {
+        const authRes = await fetch('/api/check-auth');
+        const authData = await authRes.json();
+        if (authData.authenticated && authData.user?.id) {
+            currentUserId = authData.user.id;
+            console.log('Reports initialized for user:', currentUserId);
+        }
+    } catch (err) {
+        console.warn('Failed to get user ID for reports:', err);
     }
 
-    applyIndustryPersonalization(industry, industrySpecific);
-  } catch (err) {
-    console.error('Failed to fetch user info:', err);
-    document.querySelectorAll('.entrepreneur-only').forEach(el => { el.style.display = 'none'; });
-  }
+    fetchSavedRecommendations();
+
+    try {
+        const jump = parseJumpTarget();
+        if (jump) {
+            localStorage.removeItem('mapJumpTarget');
+            map.setView([jump.lat, jump.lon], 16);
+            await handleLocationSelect(jump.lat, jump.lon, jump.source);
+        }
+    } catch (e) {
+        console.warn('Jump-to-map failed:', e);
+    }
+
+    try {
+        const res = await fetch('/api/me');
+        const data = await res.json();
+        const affiliation = (data.affiliation || '').toLowerCase().trim();
+        const industry = (data.industry || '').trim();
+        const industrySpecific = (data.industry_specific || '').trim();
+
+        userIndustry = industry;
+        userIndustrySpecific = industrySpecific;
+
+        if (affiliation === 'entrepreneur') {
+            document.querySelectorAll('.entrepreneur-only').forEach(el => { el.style.display = ''; });
+        } else {
+            document.querySelectorAll('.entrepreneur-only').forEach(el => { el.style.display = 'none'; });
+        }
+
+        applyIndustryPersonalization(industry, industrySpecific);
+    } catch (err) {
+        console.error('Failed to fetch user info:', err);
+        document.querySelectorAll('.entrepreneur-only').forEach(el => { el.style.display = 'none'; });
+    }
 });

@@ -36,34 +36,34 @@ const IDEA_PIN_MIN_GAP_METERS = 200;
 // ─── BARANGAY BOUNDING BOXES ──────────────────────────────────────────────────
 // FINAL CORRECTED BARANGAY_BOUNDS for server.js
 const BARANGAY_BOUNDS = {
-  'bagong ilog': { minLat: 14.568, maxLat: 14.580, minLon: 121.079, maxLon: 121.092 },
-  'bagong katipunan': { minLat: 14.574, maxLat: 14.583, minLon: 121.062, maxLon: 121.072 },
-  'bambang': { minLat: 14.570, maxLat: 14.579, minLon: 121.063, maxLon: 121.073 },
-  'buting': { minLat: 14.568, maxLat: 14.578, minLon: 121.072, maxLon: 121.082 },
-  'caniogan': { minLat: 14.574, maxLat: 14.583, minLon: 121.082, maxLon: 121.092 },
-  'dela paz': { minLat: 14.583, maxLat: 14.596, minLon: 121.082, maxLon: 121.096 },
-  'kalawaan': { minLat: 14.564, maxLat: 14.573, minLon: 121.073, maxLon: 121.083 },
-  'kapasigan': { minLat: 14.565, maxLat: 14.574, minLon: 121.068, maxLon: 121.078 },
-  'kapitolyo': { minLat: 14.575, maxLat: 14.590, minLon: 121.056, maxLon: 121.070 },
-  'malinao': { minLat: 14.576, maxLat: 14.585, minLon: 121.084, maxLon: 121.094 },
-  'manggahan': { minLat: 14.586, maxLat: 14.602, minLon: 121.088, maxLon: 121.106 },
-  'maybunga': { minLat: 14.572, maxLat: 14.582, minLon: 121.086, maxLon: 121.097 },
-  'oranbo': { minLat: 14.574, maxLat: 14.583, minLon: 121.073, maxLon: 121.083 },
-  'palatiw': { minLat: 14.577, maxLat: 14.586, minLon: 121.091, maxLon: 121.101 },
-  'pinagbuhatan': { minLat: 14.554, maxLat: 14.568, minLon: 121.087, maxLon: 121.102 },
-  'pineda': { minLat: 14.562, maxLat: 14.571, minLon: 121.059, maxLon: 121.070 },
-  'rosario': { minLat: 14.562, maxLat: 14.572, minLon: 121.075, maxLon: 121.086 },
-  'sagad': { minLat: 14.554, maxLat: 14.564, minLon: 121.082, maxLon: 121.092 },
-  'san antonio': { minLat: 14.584, maxLat: 14.594, minLon: 121.082, maxLon: 121.092 },
-  'san joaquin': { minLat: 14.582, maxLat: 14.591, minLon: 121.070, maxLon: 121.081 },
-  'san jose': { minLat: 14.579, maxLat: 14.588, minLon: 121.063, maxLon: 121.073 },
-  'san miguel': { minLat: 14.570, maxLat: 14.579, minLon: 121.076, maxLon: 121.086 },
-  'san nicolas': { minLat: 14.567, maxLat: 14.576, minLon: 121.080, maxLon: 121.090 },
-  'santa lucia': { minLat: 14.575, maxLat: 14.588, minLon: 121.096, maxLon: 121.107 },
-  'santa rosa': { minLat: 14.559, maxLat: 14.569, minLon: 121.087, maxLon: 121.097 },
-  'santolan': { minLat: 14.587, maxLat: 14.602, minLon: 121.070, maxLon: 121.090 },
-  'sumilang': { minLat: 14.570, maxLat: 14.579, minLon: 121.079, maxLon: 121.089 },
-  'ugong': { minLat: 14.578, maxLat: 14.587, minLon: 121.057, maxLon: 121.067 },
+  'bagong ilog':      { minLat: 14.570, maxLat: 14.578, minLon: 121.082, maxLon: 121.089 },
+  'bagong katipunan': { minLat: 14.574, maxLat: 14.584, minLon: 121.062, maxLon: 121.073 },
+  'bambang':          { minLat: 14.564, maxLat: 14.585, minLon: 121.057, maxLon: 121.079 },
+  'buting':           { minLat: 14.562, maxLat: 14.583, minLon: 121.066, maxLon: 121.088 },
+  'caniogan':         { minLat: 14.574, maxLat: 14.582, minLon: 121.083, maxLon: 121.091 },
+  'dela paz':         { minLat: 14.578, maxLat: 14.601, minLon: 121.077, maxLon: 121.101 },
+  'kalawaan':         { minLat: 14.558, maxLat: 14.579, minLon: 121.067, maxLon: 121.089 },
+  'kapasigan':        { minLat: 14.559, maxLat: 14.580, minLon: 121.062, maxLon: 121.084 },
+  'kapitolyo':        { minLat: 14.570, maxLat: 14.595, minLon: 121.050, maxLon: 121.076 },
+  'malinao':          { minLat: 14.570, maxLat: 14.591, minLon: 121.078, maxLon: 121.100 },
+  'manggahan':        { minLat: 14.581, maxLat: 14.607, minLon: 121.083, maxLon: 121.111 },
+  'maybunga':         { minLat: 14.566, maxLat: 14.588, minLon: 121.080, maxLon: 121.102 },
+  'oranbo':           { minLat: 14.568, maxLat: 14.589, minLon: 121.067, maxLon: 121.089 },
+  'palatiw':          { minLat: 14.577, maxLat: 14.586, minLon: 121.092, maxLon: 121.100 },
+  'pinagbuhatan':     { minLat: 14.548, maxLat: 14.574, minLon: 121.081, maxLon: 121.108 },
+  'pineda':           { minLat: 14.556, maxLat: 14.576, minLon: 121.053, maxLon: 121.076 },
+  'rosario':          { minLat: 14.562, maxLat: 14.572, minLon: 121.075, maxLon: 121.085 },
+  'sagad':            { minLat: 14.548, maxLat: 14.570, minLon: 121.076, maxLon: 121.098 },
+  'san antonio':      { minLat: 14.578, maxLat: 14.600, minLon: 121.076, maxLon: 121.098 },
+  'san joaquin':      { minLat: 14.581, maxLat: 14.591, minLon: 121.071, maxLon: 121.081 },
+  'san jose':         { minLat: 14.580, maxLat: 14.589, minLon: 121.064, maxLon: 121.073 },
+  'san miguel':       { minLat: 14.569, maxLat: 14.579, minLon: 121.077, maxLon: 121.085 },
+  'san nicolas':      { minLat: 14.566, maxLat: 14.576, minLon: 121.080, maxLon: 121.089 },
+  'santa lucia':      { minLat: 14.576, maxLat: 14.586, minLon: 121.097, maxLon: 121.105 },
+  'santa rosa':       { minLat: 14.560, maxLat: 14.569, minLon: 121.086, maxLon: 121.094 },
+  'santolan':         { minLat: 14.583, maxLat: 14.605, minLon: 121.065, maxLon: 121.092 },
+  'sumilang':         { minLat: 14.565, maxLat: 14.580, minLon: 121.076, maxLon: 121.091 },
+  'ugong':            { minLat: 14.573, maxLat: 14.588, minLon: 121.057, maxLon: 121.069 },
 };
 // ─── CENTROID FALLBACK MAP ────────────────────────────────────────────────────
 const CENTROID_FALLBACK = {
@@ -1830,39 +1830,54 @@ app.get("/api/idea-locations", requireAuth, async (req, res) => {
     const { idea, barangay, top = 5 } = req.query;
     if (!idea) return res.status(400).json({ success: false, message: "idea required" });
 
-    const topN = parseInt(top, 10) || 5;
-    const searchTerms = ideaToDbSearchTerms(idea) || [idea];
-    const conditions = searchTerms.map(() => `line_of_business LIKE ?`).join(' OR ');
+    const topN = Math.min(parseInt(top, 10) || 5, 50);
+    const searchTerms = ideaToDbSearchTerms(idea);
     
     let sql = `SELECT id, barangay, CAST(lat AS DECIMAL(10,7)) AS lat, CAST(lon AS DECIMAL(10,7)) AS lon,
                       business_trade_name, line_of_business
                FROM businesses
-               WHERE (${conditions} OR business_trade_name LIKE ?)
-                 AND lat IS NOT NULL AND lon IS NOT NULL
-                 AND lat <> 'null' AND lon <> 'null'`;
+               WHERE lat IS NOT NULL AND lon IS NOT NULL
+                 AND lat != 'null' AND lon != 'null'`;
     
     const params = [];
-    searchTerms.forEach(term => params.push(`%${term}%`));
-    params.push(`%${idea}%`);
+    
+    // Add search conditions
+    if (searchTerms && searchTerms.length > 0) {
+      const conditions = searchTerms.map(() => `(LOWER(line_of_business) LIKE ? OR LOWER(business_trade_name) LIKE ?)`).join(' OR ');
+      sql += ` AND (${conditions})`;
+      searchTerms.forEach(term => {
+        params.push(`%${term.toLowerCase()}%`, `%${term.toLowerCase()}%`);
+      });
+    }
+    
+    sql += ` AND (LOWER(line_of_business) LIKE ? OR LOWER(business_trade_name) LIKE ?)`;
+    params.push(`%${idea.toLowerCase()}%`, `%${idea.toLowerCase()}%`);
 
+    // SIMPLE barangay filter - just match the name, no bounds!
     if (barangay) {
-      sql += ` AND barangay = ?`;
-      params.push(barangay.trim());
+      sql += ` AND LOWER(TRIM(barangay)) = LOWER(TRIM(?))`;
+      params.push(barangay);
     }
 
-    sql += ` ORDER BY RAND() LIMIT ${topN * 3}`;
+    sql += ` ORDER BY RAND() LIMIT ${Math.min(topN * 3, 100)}`;
+    
     const [rows] = await geoDB.query(sql, params);
 
-    const result = rows.map(r => ({
+    let result = rows.map(r => ({
       lat: Number(r.lat),
       lon: Number(r.lon),
       barangay_name: r.barangay,
       suitability_score: 0.9,
       business_type: idea,
+      business_name: r.business_trade_name,
       is_predicted: false
     })).filter(r => Number.isFinite(r.lat) && Number.isFinite(r.lon));
 
-    return res.json({ success: true, data: result.slice(0, topN) });
+    return res.json({ 
+      success: true, 
+      data: result.slice(0, topN),
+      total_found: rows.length
+    });
   } catch (err) {
     console.error("idea-locations error:", err);
     return res.status(500).json({ success: false, message: err.message });
