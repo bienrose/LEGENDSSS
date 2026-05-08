@@ -1082,9 +1082,9 @@ function renderHistory() {
 
   container.innerHTML = searchHistory.map((item, i) => `
     <div class="history-item" data-idx="${i}">
-      <img src="history.png" alt="history" class="history-icon">
+      <img src="/dashboard/history.png" alt="history" class="history-icon">
       <span class="history-label">${escapeHtml(item)}</span>
-      <img src="x.png" alt="remove" class="history-x" data-remove="${i}">
+      <img src="/dashboard/x.png" alt="remove" class="history-x" data-remove="${i}">
     </div>
   `).join('');
   container.classList.add('open');
