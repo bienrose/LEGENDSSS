@@ -13,8 +13,8 @@ let lastFilteredIdea = null;
 let lastFilteredBarangay = null;
 let lastFilteredPrefs = null;
 let searchHistory = [];
-let currentUserId = null; 
-let lastAppliedChips = [];  
+let currentUserId = null;
+let lastAppliedChips = [];
 let lastAppliedBarangays = null;
 let lastAppliedPrefs = [];
 let lastAppliedType = null;
@@ -34,34 +34,34 @@ let userIndustrySpecific = '';
 
 // ─── BARANGAY BOUNDS FOR MAP ──────────────────────────────────────────────────
 const BARANGAY_BOUNDS_MAP = {
-  'bagong ilog':      { minLat: 14.5700, maxLat: 14.5780, minLon: 121.0820, maxLon: 121.0890 },
+  'bagong ilog': { minLat: 14.5700, maxLat: 14.5780, minLon: 121.0820, maxLon: 121.0890 },
   'bagong katipunan': { minLat: 14.5740, maxLat: 14.5840, minLon: 121.0620, maxLon: 121.0730 },
-  'bambang':          { minLat: 14.5640, maxLat: 14.5850, minLon: 121.0570, maxLon: 121.0790 },
-  'buting':           { minLat: 14.5620, maxLat: 14.5830, minLon: 121.0660, maxLon: 121.0880 },
-  'caniogan':         { minLat: 14.5740, maxLat: 14.5820, minLon: 121.0830, maxLon: 121.0910 },
-  'dela paz':         { minLat: 14.5780, maxLat: 14.6010, minLon: 121.0770, maxLon: 121.1010 },
-  'kalawaan':         { minLat: 14.5580, maxLat: 14.5790, minLon: 121.0670, maxLon: 121.0890 },
-  'kapasigan':        { minLat: 14.5590, maxLat: 14.5800, minLon: 121.0620, maxLon: 121.0840 },
-  'kapitolyo':        { minLat: 14.5700, maxLat: 14.5950, minLon: 121.0500, maxLon: 121.0760 },
-  'malinao':          { minLat: 14.5700, maxLat: 14.5910, minLon: 121.0780, maxLon: 121.1000 },
-  'manggahan':        { minLat: 14.5810, maxLat: 14.6070, minLon: 121.0830, maxLon: 121.1110 },
-  'maybunga':         { minLat: 14.5660, maxLat: 14.5880, minLon: 121.0800, maxLon: 121.1020 },
-  'oranbo':           { minLat: 14.5680, maxLat: 14.5890, minLon: 121.0670, maxLon: 121.0890 },
-  'palatiw':          { minLat: 14.5770, maxLat: 14.5860, minLon: 121.0920, maxLon: 121.1000 },
-  'pinagbuhatan':     { minLat: 14.5480, maxLat: 14.5740, minLon: 121.0810, maxLon: 121.1080 },
-  'pineda':           { minLat: 14.5560, maxLat: 14.5760, minLon: 121.0530, maxLon: 121.0760 },
-  'rosario':          { minLat: 14.5620, maxLat: 14.5720, minLon: 121.0750, maxLon: 121.0850 },
-  'sagad':            { minLat: 14.5480, maxLat: 14.5700, minLon: 121.0760, maxLon: 121.0980 },
-  'san antonio':      { minLat: 14.5780, maxLat: 14.6000, minLon: 121.0760, maxLon: 121.0980 },
-  'san joaquin':      { minLat: 14.5810, maxLat: 14.5910, minLon: 121.0710, maxLon: 121.0810 },
-  'san jose':         { minLat: 14.5800, maxLat: 14.5890, minLon: 121.0640, maxLon: 121.0730 },
-  'san miguel':       { minLat: 14.5690, maxLat: 14.5790, minLon: 121.0770, maxLon: 121.0850 },
-  'san nicolas':      { minLat: 14.5660, maxLat: 14.5760, minLon: 121.0800, maxLon: 121.0890 },
-  'santa lucia':      { minLat: 14.5760, maxLat: 14.5860, minLon: 121.0970, maxLon: 121.1050 },
-  'santa rosa':       { minLat: 14.5600, maxLat: 14.5690, minLon: 121.0860, maxLon: 121.0940 },
-  'santolan':         { minLat: 14.5830, maxLat: 14.6050, minLon: 121.0650, maxLon: 121.0920 },
-  'sumilang':         { minLat: 14.5650, maxLat: 14.5800, minLon: 121.0760, maxLon: 121.0910 },
-  'ugong':            { minLat: 14.5730, maxLat: 14.5880, minLon: 121.0570, maxLon: 121.0690 },
+  'bambang': { minLat: 14.5640, maxLat: 14.5850, minLon: 121.0570, maxLon: 121.0790 },
+  'buting': { minLat: 14.5620, maxLat: 14.5830, minLon: 121.0660, maxLon: 121.0880 },
+  'caniogan': { minLat: 14.5740, maxLat: 14.5820, minLon: 121.0830, maxLon: 121.0910 },
+  'dela paz': { minLat: 14.5780, maxLat: 14.6010, minLon: 121.0770, maxLon: 121.1010 },
+  'kalawaan': { minLat: 14.5580, maxLat: 14.5790, minLon: 121.0670, maxLon: 121.0890 },
+  'kapasigan': { minLat: 14.5590, maxLat: 14.5800, minLon: 121.0620, maxLon: 121.0840 },
+  'kapitolyo': { minLat: 14.5700, maxLat: 14.5950, minLon: 121.0500, maxLon: 121.0760 },
+  'malinao': { minLat: 14.5700, maxLat: 14.5910, minLon: 121.0780, maxLon: 121.1000 },
+  'manggahan': { minLat: 14.5810, maxLat: 14.6070, minLon: 121.0830, maxLon: 121.1110 },
+  'maybunga': { minLat: 14.5660, maxLat: 14.5880, minLon: 121.0800, maxLon: 121.1020 },
+  'oranbo': { minLat: 14.5680, maxLat: 14.5890, minLon: 121.0670, maxLon: 121.0890 },
+  'palatiw': { minLat: 14.5770, maxLat: 14.5860, minLon: 121.0920, maxLon: 121.1000 },
+  'pinagbuhatan': { minLat: 14.5480, maxLat: 14.5740, minLon: 121.0810, maxLon: 121.1080 },
+  'pineda': { minLat: 14.5560, maxLat: 14.5760, minLon: 121.0530, maxLon: 121.0760 },
+  'rosario': { minLat: 14.5620, maxLat: 14.5720, minLon: 121.0750, maxLon: 121.0850 },
+  'sagad': { minLat: 14.5480, maxLat: 14.5700, minLon: 121.0760, maxLon: 121.0980 },
+  'san antonio': { minLat: 14.5780, maxLat: 14.6000, minLon: 121.0760, maxLon: 121.0980 },
+  'san joaquin': { minLat: 14.5810, maxLat: 14.5910, minLon: 121.0710, maxLon: 121.0810 },
+  'san jose': { minLat: 14.5800, maxLat: 14.5890, minLon: 121.0640, maxLon: 121.0730 },
+  'san miguel': { minLat: 14.5690, maxLat: 14.5790, minLon: 121.0770, maxLon: 121.0850 },
+  'san nicolas': { minLat: 14.5660, maxLat: 14.5760, minLon: 121.0800, maxLon: 121.0890 },
+  'santa lucia': { minLat: 14.5760, maxLat: 14.5860, minLon: 121.0970, maxLon: 121.1050 },
+  'santa rosa': { minLat: 14.5600, maxLat: 14.5690, minLon: 121.0860, maxLon: 121.0940 },
+  'santolan': { minLat: 14.5830, maxLat: 14.6050, minLon: 121.0650, maxLon: 121.0920 },
+  'sumilang': { minLat: 14.5650, maxLat: 14.5800, minLon: 121.0760, maxLon: 121.0910 },
+  'ugong': { minLat: 14.5730, maxLat: 14.5880, minLon: 121.0570, maxLon: 121.0690 },
 };
 // ─── INDUSTRY → FILTER CHECKBOX MAP ─────────────────────────────────────────
 const INDUSTRY_FILTER_MAP = {
@@ -134,108 +134,108 @@ const INDUSTRY_FILTER_MAP = {
 
 // ─── REPORT LOGGING (FIXED - USER SPECIFIC) ──────────────────────────────────
 function getReportStorageKey() {
-    if (!currentUserId) {
-        return 'reportLogs_anonymous';
-    }
-    return `reportLogs_${currentUserId}`;
+  if (!currentUserId) {
+    return 'reportLogs_anonymous';
+  }
+  return `reportLogs_${currentUserId}`;
 }
 
 function reportLogRead() {
-    try {
-        const key = getReportStorageKey();
-        const data = localStorage.getItem(key);
-        return JSON.parse(data || '{"searchPins":[],"recommendations":[],"saved":[]}') || {
-            searchPins: [], recommendations: [], saved: []
-        };
-    } catch {
-        return { searchPins: [], recommendations: [], saved: [] };
-    }
+  try {
+    const key = getReportStorageKey();
+    const data = localStorage.getItem(key);
+    return JSON.parse(data || '{"searchPins":[],"recommendations":[],"saved":[]}') || {
+      searchPins: [], recommendations: [], saved: []
+    };
+  } catch {
+    return { searchPins: [], recommendations: [], saved: [] };
+  }
 }
 
 function reportLogWrite(logs) {
-    const key = getReportStorageKey();
-    localStorage.setItem(key, JSON.stringify(logs));
+  const key = getReportStorageKey();
+  localStorage.setItem(key, JSON.stringify(logs));
 }
 
 function reportNow() {
-    return new Date().toISOString();
+  return new Date().toISOString();
 }
 
 function reportPush(kind, payload) {
-    const logs = reportLogRead();
-    if (!logs[kind]) logs[kind] = [];
-    if (kind === 'searchPins') {
-        const key = `${payload.source || ''}::${(payload.locationName || '').trim().toLowerCase()}`;
-        logs[kind] = logs[kind].filter(x => {
-            const k2 = `${x.source || ''}::${(x.locationName || '').trim().toLowerCase()}`;
-            return k2 !== key;
-        });
-    }
-    logs[kind].unshift(payload);
-    logs[kind] = logs[kind].slice(0, 200);
-    reportLogWrite(logs);
+  const logs = reportLogRead();
+  if (!logs[kind]) logs[kind] = [];
+  if (kind === 'searchPins') {
+    const key = `${payload.source || ''}::${(payload.locationName || '').trim().toLowerCase()}`;
+    logs[kind] = logs[kind].filter(x => {
+      const k2 = `${x.source || ''}::${(x.locationName || '').trim().toLowerCase()}`;
+      return k2 !== key;
+    });
+  }
+  logs[kind].unshift(payload);
+  logs[kind] = logs[kind].slice(0, 200);
+  reportLogWrite(logs);
 }
 
 function reportCurrentFiltersSnapshot() {
-    const barangayCheckboxes = document.querySelectorAll('[id^="b-"]:checked');
-    const typeCheckboxes = document.querySelectorAll('[id^="f-"]:checked');
-    const selectedBarangays = [...barangayCheckboxes].map(cb => barangayMap[cb.id]).filter(Boolean);
-    const selectedTypes = [...typeCheckboxes].map(cb => typeMap[cb.id]).filter(Boolean);
-    const prefs = getPrefs();
-    return {
-        barangay: selectedBarangays[0] || null,
-        type: selectedTypes[0] || null,
-        prefs,
-        pinCount: isFilterMode ? getFilteredPinCount() : null
-    };
+  const barangayCheckboxes = document.querySelectorAll('[id^="b-"]:checked');
+  const typeCheckboxes = document.querySelectorAll('[id^="f-"]:checked');
+  const selectedBarangays = [...barangayCheckboxes].map(cb => barangayMap[cb.id]).filter(Boolean);
+  const selectedTypes = [...typeCheckboxes].map(cb => typeMap[cb.id]).filter(Boolean);
+  const prefs = getPrefs();
+  return {
+    barangay: selectedBarangays[0] || null,
+    type: selectedTypes[0] || null,
+    prefs,
+    pinCount: isFilterMode ? getFilteredPinCount() : null
+  };
 }
 
 async function reportLogSearchOrPin({ source, locationName, lat, lon }) {
-    const f = reportCurrentFiltersSnapshot();
-    reportPush('searchPins', {
-        at: reportNow(), source,
-        locationName: locationName || null,
-        lat: lat ?? null, lon: lon ?? null, filters: f
+  const f = reportCurrentFiltersSnapshot();
+  reportPush('searchPins', {
+    at: reportNow(), source,
+    locationName: locationName || null,
+    lat: lat ?? null, lon: lon ?? null, filters: f
+  });
+  try {
+    await fetch('/api/report/search-pin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: locationName || null, source: source || 'map', lat: lat ?? null, lon: lon ?? null })
     });
-    try {
-        await fetch('/api/report/search-pin', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query: locationName || null, source: source || 'map', lat: lat ?? null, lon: lon ?? null })
-        });
-    } catch (e) { console.warn('DB report search-pin failed:', e); }
+  } catch (e) { console.warn('DB report search-pin failed:', e); }
 }
 
 async function reportLogRecommendation({ idea, area, pinCount, lat, lon }) {
-    const f = reportCurrentFiltersSnapshot();
-    reportPush('recommendations', {
-        at: reportNow(), idea, area: area || null,
-        pinCount: pinCount ?? null, lat: lat ?? null, lon: lon ?? null, filters: f
+  const f = reportCurrentFiltersSnapshot();
+  reportPush('recommendations', {
+    at: reportNow(), idea, area: area || null,
+    pinCount: pinCount ?? null, lat: lat ?? null, lon: lon ?? null, filters: f
+  });
+  try {
+    await fetch('/api/report/recommendation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idea: idea || null, area: area || null, lat: lat ?? null, lon: lon ?? null })
     });
-    try {
-        await fetch('/api/report/recommendation', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ idea: idea || null, area: area || null, lat: lat ?? null, lon: lon ?? null })
-        });
-    } catch (e) { console.warn('DB report recommendation failed:', e); }
+  } catch (e) { console.warn('DB report recommendation failed:', e); }
 }
 
 async function reportLogSaved({ action, business_type, barangay, lat, lon }) {
-    reportPush('saved', {
-        at: reportNow(), action, business_type,
+  reportPush('saved', {
+    at: reportNow(), action, business_type,
+    barangay: barangay || null, lat: lat ?? null, lon: lon ?? null
+  });
+  try {
+    await fetch('/api/report/saved', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: action || 'saved', business_type: business_type || null,
         barangay: barangay || null, lat: lat ?? null, lon: lon ?? null
+      })
     });
-    try {
-        await fetch('/api/report/saved', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                action: action || 'saved', business_type: business_type || null,
-                barangay: barangay || null, lat: lat ?? null, lon: lon ?? null
-            })
-        });
-    } catch (e) { console.warn('DB report saved failed:', e); }
+  } catch (e) { console.warn('DB report saved failed:', e); }
 }
 
 // ─── MAP SETUP ───────────────────────────────────────────────────────────────
@@ -293,7 +293,7 @@ async function fetchIdeaLocations(filters = {}) {
   if (filters.top) params.append('top', filters.top);
   if (filters.prefs?.length) params.append('prefs', filters.prefs.join(','));
   if (filters._t) params.append('_t', filters._t);
-  
+
   // Create a cache key from the filters
   const cacheKey = JSON.stringify({
     idea: filters.idea?.trim(),
@@ -301,47 +301,65 @@ async function fetchIdeaLocations(filters = {}) {
     top: filters.top,
     prefs: filters.prefs?.sort()
   });
-  
+
   // Check if we have cached results
   if (ideaPinsCache.has(cacheKey)) {
     console.log('Using cached pins for:', filters.idea);
     return ideaPinsCache.get(cacheKey);
   }
-  
+
   // Fetch new results
   const res = await fetch(`/api/idea-locations?${params.toString()}`);
   const data = await res.json();
   const results = data.success ? data.data : [];
-  
+
   // Cache the results
   ideaPinsCache.set(cacheKey, results);
   console.log('Cached new pins for:', filters.idea);
-  
+
   return results;
 }
 function zoomToBarangay(barangayName) {
   if (!barangayName) return false;
+
   const bounds = getBarangayBoundsForMap(barangayName);
   if (bounds && bounds.isValid()) {
     map.fitBounds(bounds, { padding: [60, 60], maxZoom: 16 });
     return true;
   }
-  const CENTROID_FALLBACK_CLIENT = {
-    'bagong ilog': [14.5740, 121.0855], 'bagong katipunan': [14.5790, 121.0675],
-    'bambang': [14.5745, 121.0680], 'buting': [14.5725, 121.0770],
-    'caniogan': [14.5785, 121.0870], 'dela paz': [14.5895, 121.0890],
-    'kalawaan': [14.5685, 121.0780], 'kapasigan': [14.5695, 121.0730],
-    'kapitolyo': [14.5825, 121.0630], 'malinao': [14.5805, 121.0890],
-    'manggahan': [14.5940, 121.0970], 'maybunga': [14.5770, 121.0915],
-    'oranbo': [14.5785, 121.0780], 'palatiw': [14.5815, 121.0960],
-    'pinagbuhatan': [14.5610, 121.0945], 'pineda': [14.5665, 121.0645],
-    'rosario': [14.5670, 121.0805], 'sagad': [14.5590, 121.0870],
-    'san antonio': [14.5890, 121.0870], 'san joaquin': [14.5865, 121.0755],
-    'san jose': [14.5835, 121.0680], 'san miguel': [14.5745, 121.0810],
-    'san nicolas': [14.5715, 121.0850], 'santa lucia': [14.5815, 121.1015],
-    'santa rosa': [14.5640, 121.0920], 'santolan': [14.5945, 121.0800],
-    'sumilang': [14.5745, 121.0840], 'ugong': [14.5825, 121.0620],
-  };
+
+  // VERIFIED CENTROIDS - matching the actual pin locations
+const CENTROID_FALLBACK_CLIENT = {
+  'bagong ilog':       [14.5740, 121.0860],
+  'bagong katipunan':  [14.5572, 121.0750],  // ← OFFICIAL
+  'bambang':           [14.5740, 121.0680],
+  'buting':            [14.5720, 121.0770],
+  'caniogan':          [14.5790, 121.0870],
+  'dela paz':          [14.5900, 121.0890],
+  'kalawaan':          [14.5690, 121.0780],
+  'kapasigan':         [14.5700, 121.0730],
+  'kapitolyo':         [14.5830, 121.0630],
+  'malinao':           [14.5810, 121.0890],
+  'manggahan':         [14.5940, 121.0970],
+  'maybunga':          [14.5770, 121.0920],
+  'oranbo':            [14.5790, 121.0780],
+  'palatiw':           [14.5820, 121.0960],
+  'pinagbuhatan':      [14.5610, 121.0940],
+  'pineda':            [14.5670, 121.0650],
+  'rosario':           [14.5861, 121.0846],  // ← OFFICIAL
+  'sagad':             [14.5590, 121.0870],
+  'san antonio':       [14.5890, 121.0870],
+  'san joaquin':       [14.5521, 121.0798],  // ← OFFICIAL
+  'san jose':          [14.5594, 121.0734],  // ← OFFICIAL
+  'san miguel':        [14.5658, 121.0855],  // ← OFFICIAL
+  'san nicolas':       [14.5643, 121.0798],  // ← OFFICIAL
+  'santa lucia':       [14.5843, 121.1013],  // ← OFFICIAL
+  'santa rosa':        [14.5589, 121.0729],  // ← OFFICIAL
+  'santolan':          [14.5950, 121.0800],
+  'sumilang':          [14.5750, 121.0840],
+  'ugong':             [14.5830, 121.0620],
+};
+
   const key = barangayName.toLowerCase().trim();
   const centroid = CENTROID_FALLBACK_CLIENT[key];
   if (centroid) {
@@ -447,11 +465,11 @@ document.getElementById('close-loc-panel')?.addEventListener('click', () => locP
 // RESET FILTER BUTTON HANDLER - clears all pins and resets selections
 document.getElementById('filter-btn')?.addEventListener('click', function (e) {
   e.stopPropagation();
-  
+
   // Clear all pins from map
   clearBusinessMarkers();
   clearClickedMarker();
-  
+
   // Reset filter mode
   isFilterMode = false;
   allowIdeaPins = false;
@@ -462,18 +480,18 @@ document.getElementById('filter-btn')?.addEventListener('click', function (e) {
   lastFilteredIdea = null;
   lastFilteredBarangay = null;
   lastFilteredPrefs = null;
-  
+
   // Reset pin range slider to default
   hidePinRange();
   setPinDefault();
-  
+
   // Clear the recommendations list
   const listEl = document.getElementById('rec-list');
   if (listEl) listEl.innerHTML = '';
-  
+
   // Close location panel if open
   locPanel?.classList.remove('open');
-  
+
   // Open filter panel
   const isOpen = filterPanel.classList.contains('open');
   closeAllPanels();
@@ -651,17 +669,8 @@ function plotLocations(recs) {
   clearBusinessMarkers();
 
   if (!recs || recs.length === 0) {
-    if (currentBarangayName) {
-      const bounds = getBarangayBoundsForMap(currentBarangayName);
-      if (bounds && bounds.isValid()) {
-        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
-        return;
-      }
-    }
-    map.fitBounds([
-      [PASIG_BOUNDS.minLat, PASIG_BOUNDS.minLon],
-      [PASIG_BOUNDS.maxLat, PASIG_BOUNDS.maxLon]
-    ]);
+    console.log('📍 No pins to plot');
+    // Don't move the map if no pins
     return;
   }
 
@@ -685,21 +694,41 @@ function plotLocations(recs) {
 
   if (businessMarkers.length === 0) return;
 
-  if (currentBarangayName) {
-    const brgyBounds = getBarangayBoundsForMap(currentBarangayName);
-    if (brgyBounds && brgyBounds.isValid()) {
-      map.flyToBounds(brgyBounds, { padding: [50, 50], maxZoom: 16, duration: 0.8 });
-      return;
-    }
-  }
+  console.log(`📍 Plotted ${businessMarkers.length} pins`);
 
+  // ─── FIX: Smart zoom - don't zoom out too far ───────────────────────────────
   if (pinBounds.isValid()) {
-    map.flyToBounds(pinBounds, { padding: [50, 50], maxZoom: 16, duration: 0.8 });
+    // Check if bounds are too large (spread across multiple barangays)
+    const boundsCenter = pinBounds.getCenter();
+    const boundsWidth = pinBounds.getEast() - pinBounds.getWest();
+    const boundsHeight = pinBounds.getNorth() - pinBounds.getSouth();
+    
+    // If bounds are too large (>0.02 degrees ≈ 2km), zoom to center instead
+    if (boundsWidth > 0.02 || boundsHeight > 0.02) {
+      // Zoom to center with appropriate zoom level based on spread
+      const maxSpread = Math.max(boundsWidth, boundsHeight);
+      let zoomLevel = 16;
+      if (maxSpread > 0.05) zoomLevel = 14;
+      else if (maxSpread > 0.03) zoomLevel = 15;
+      
+      map.flyTo([boundsCenter.lat, boundsCenter.lng], zoomLevel, { duration: 0.8 });
+    } else {
+      // Normal zoom with padding
+      map.flyToBounds(pinBounds, { 
+        padding: [60, 60], 
+        maxZoom: 16, 
+        duration: 0.8 
+      });
+    }
   } else if (recs.length === 1) {
     map.flyTo([Number(recs[0].lat), Number(recs[0].lon)], 16, { duration: 0.8 });
   }
-
-  console.log(`Plotted ${businessMarkers.length} pins at zoom ${map.getZoom()}`);
+  
+  // ─── ENSURE we stay within Pasig bounds ─────────────────────────────────────
+  map.setMaxBounds([
+    [PASIG_BOUNDS.minLat - 0.01, PASIG_BOUNDS.minLon - 0.01],
+    [PASIG_BOUNDS.maxLat + 0.01, PASIG_BOUNDS.maxLon + 0.01]
+  ]);
 }
 
 function getPrefs() {
@@ -840,14 +869,17 @@ function renderIdeaList({ names, barangays, prefs, allowPins }) {
   const listEl = document.getElementById('rec-list');
   if (!listEl) return;
 
-  if (!names || !names.length) {
+  // ─── REMOVE DUPLICATES ──────────────────────────────────────────────────────
+  const uniqueNames = [...new Set(names)];
+
+  if (!uniqueNames || !uniqueNames.length) {
     listEl.innerHTML = '<div class="rec-item" style="color:#888;font-size:13px;">No recommendations found.</div>';
     return;
   }
 
   const primaryBarangay = barangays && barangays.length ? barangays[0] : '';
 
-  listEl.innerHTML = names.map((name, i) => `
+  listEl.innerHTML = uniqueNames.map((name, i) => `
     <div class="rec-item" data-idx="${i}" data-idea="${escapeHtml(name)}" style="cursor:pointer;">
       <span class="rec-item-num">${i + 1}.</span>
       <span class="rec-item-name">${escapeHtml(formatBizName(name))}</span>
@@ -982,11 +1014,11 @@ async function resolveChipIdeas({ selectedChips, barangays, type, prefs }) {
     const avgScore = totalRecs > 0 ? totalScore / totalRecs : 0;
     scored.push({ label: chip.label, score: avgScore });
   }
-  
+
   // Sort by score (highest first) and take top 3
   scored.sort((a, b) => b.score - a.score);
   const top3 = scored.slice(0, 3).map(item => item.label);
-  
+
   return top3;
 }
 
@@ -1144,13 +1176,13 @@ async function applyFiltersAndShowRecommendations() {
   }
 
   renderIdeaList({ names: ideaNames, barangays, prefs, allowPins: true });
-  
+
   // Also fetch and display pins for the selected ideas using the pin count from slider
   const top = getFilteredPinCount();
   const barangayList = barangays && barangays.length ? barangays : [null];
   const allRecs = (await Promise.all(
-    ideaNames.map(idea => 
-      Promise.all(barangayList.map(b => 
+    ideaNames.map(idea =>
+      Promise.all(barangayList.map(b =>
         fetchIdeaLocations({
           idea: idea.trim(),
           barangay: b,
@@ -1161,7 +1193,7 @@ async function applyFiltersAndShowRecommendations() {
       ))
     )
   )).flat(2);
-  
+
   clearBusinessMarkers();
   plotLocations(allRecs);
 }
@@ -1178,6 +1210,39 @@ function showPasigToast(msg) {
   setTimeout(() => el.classList.remove('show'), 2500);
 }
 
+// ─── VERIFIED BARANGAY CENTERS ──────────────────────────────────────────────────
+const VERIFIED_BARANGAY_CENTERS = {
+  'Bagong Ilog':       [14.5740, 121.0860],
+  'Bagong Katipunan':  [14.5572, 121.0750],  // ← OFFICIAL Barangay Hall
+  'Bambang':           [14.5740, 121.0680],
+  'Buting':            [14.5720, 121.0770],
+  'Caniogan':          [14.5790, 121.0870],
+  'Dela Paz':          [14.5900, 121.0890],
+  'Kalawaan':          [14.5690, 121.0780],
+  'Kapasigan':         [14.5700, 121.0730],
+  'Kapitolyo':         [14.5830, 121.0630],
+  'Malinao':           [14.5810, 121.0890],
+  'Manggahan':         [14.5940, 121.0970],
+  'Maybunga':          [14.5770, 121.0920],
+  'Oranbo':            [14.5790, 121.0780],
+  'Palatiw':           [14.5820, 121.0960],
+  'Pinagbuhatan':      [14.5610, 121.0940],
+  'Pineda':            [14.5670, 121.0650],
+  'Rosario':           [14.5861, 121.0846],  // ← OFFICIAL Barangay Hall
+  'Sagad':             [14.5590, 121.0870],
+  'San Antonio':       [14.5890, 121.0870],
+  'San Joaquin':       [14.5521, 121.0798],  // ← OFFICIAL Barangay Hall
+  'San Jose':          [14.5594, 121.0734],  // ← OFFICIAL Barangay Hall
+  'San Miguel':        [14.5658, 121.0855],  // ← OFFICIAL Barangay Hall
+  'San Nicolas':       [14.5643, 121.0798],  // ← OFFICIAL Barangay Hall
+  'Santa Lucia':       [14.5843, 121.1013],  // ← OFFICIAL
+  'Santa Rosa':        [14.5589, 121.0729],  // ← OFFICIAL Barangay Hall
+  'Santolan':          [14.5950, 121.0800],
+  'Sumilang':          [14.5750, 121.0840],
+  'Ugong':             [14.5830, 121.0620]
+};
+
+// ─── FIXED handleLocationSelect ──────────────────────────────────────────────────
 async function handleLocationSelect(lat, lon, source = 'map') {
   hidePinRange();
   isFilterMode = false;
@@ -1241,22 +1306,41 @@ async function handleLocationSelect(lat, lon, source = 'map') {
   const badge = document.getElementById('loc-badge');
   const titleEl = document.getElementById('loc-panel-title');
   if (badge) badge.textContent = '📍 Locating…';
-  currentLocShortName = `${currentClickLat}, ${currentClickLng}`;
-  currentBarangayName = '';
-
+  
+  // ─── FIND NEAREST VERIFIED BARANGAY ──────────────────────────────────────────
+  let nearestBarangay = '';
+  let minDistance = Infinity;
+  
+  for (const [name, center] of Object.entries(VERIFIED_BARANGAY_CENTERS)) {
+    const dist = Math.sqrt(
+      Math.pow((latN - center[0]) * 111000, 2) + 
+      Math.pow((lonN - center[1]) * 111000 * Math.cos(center[0] * Math.PI / 180), 2)
+    );
+    if (dist < minDistance) {
+      minDistance = dist;
+      nearestBarangay = name;
+    }
+  }
+  
+  currentBarangayName = nearestBarangay;
+  
+  let displayName = nearestBarangay;
   try {
     const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${currentClickLat}&lon=${currentClickLng}&format=json`);
     const data = await res.json();
     const addr = data.address || {};
-    const area = addr.barangay || addr.suburb || addr.neighbourhood || addr.city_district || addr.village || addr.town || addr.county || '';
-    const city = addr.city || addr.municipality || addr.town || addr.county || '';
-    currentLocShortName = area ? (city ? `${area}, ${city}` : area) : (city || currentLocShortName);
-    currentBarangayName = area || '';
-    if (badge) badge.textContent = `📍 ${currentLocShortName}`;
-    if (titleEl) titleEl.textContent = `Recommended Businesses in ${area || city || 'this Area'}`;
-  } catch {
-    if (badge) badge.textContent = `📍 ${currentClickLat}, ${currentClickLng}`;
+    const city = addr.city || addr.municipality || '';
+    if (city) {
+      displayName = `${nearestBarangay}, ${city}`;
+    }
+  } catch (e) {
+    // If Nominatim fails, just use barangay name
   }
+  
+  currentLocShortName = displayName;
+  
+  if (badge) badge.textContent = `📍 ${displayName}`;
+  if (titleEl) titleEl.textContent = `Recommended Businesses in ${nearestBarangay}`;
 
   if (source !== 'search') {
     await reportLogSearchOrPin({
@@ -1271,6 +1355,8 @@ async function handleLocationSelect(lat, lon, source = 'map') {
   const type = selectedTypes[0] || industryDerivedType || null;
   const prefs = getPrefs();
 
+  console.log('🔍 Fetching ideas for:', nearestBarangay);
+  
   const ideasRes = await fetch(`/api/ideas-by-point?lat=${currentClickLat}&lon=${currentClickLng}&category=${type || ''}&prefs=${prefs.join(',')}`);
   const ideasData = await ideasRes.json();
   const listEl = document.getElementById('rec-list');
@@ -1278,14 +1364,33 @@ async function handleLocationSelect(lat, lon, source = 'map') {
 
   loadAreaDemographics(currentBarangayName);
 
-  if (!ideasData.success || !ideasData.data.length) {
+  if (!ideasData.success || !ideasData.data || !ideasData.data.length) {
     listEl.innerHTML = '<div class="rec-item">No recommendations found.</div>';
     return;
   }
 
   const top3 = ideasData.data.slice(0, 3);
 
-  listEl.innerHTML = top3.map((name, i) => `
+  // ─── REMOVE DUPLICATES ──────────────────────────────────────────────────────
+  const uniqueNames = [];
+  const seenNames = new Set();
+  for (const name of top3) {
+    if (!seenNames.has(name)) {
+      seenNames.add(name);
+      uniqueNames.push(name);
+    }
+  }
+  // Fill up to 3 if we lost some to deduplication
+  if (uniqueNames.length < 3 && ideasData.data.length > 3) {
+    for (const name of ideasData.data.slice(3)) {
+      if (!seenNames.has(name) && uniqueNames.length < 3) {
+        seenNames.add(name);
+        uniqueNames.push(name);
+      }
+    }
+  }
+
+  listEl.innerHTML = uniqueNames.map((name, i) => `
     <div class="rec-item" data-idx="${i}" data-idea="${escapeHtml(name)}" style="cursor:pointer;">
       <span class="rec-item-num">${i + 1}.</span>
       <span class="rec-item-name">${escapeHtml(formatBizName(name))}</span>
@@ -1327,6 +1432,8 @@ async function handleLocationSelect(lat, lon, source = 'map') {
       loadAreaDemographics(currentBarangayName, idea);
       hidePinRange();
 
+      console.log(`📍 Fetching pins for idea: ${idea} in barangay: ${currentBarangayName}`);
+      
       const recs = await fetchIdeaLocations({
         idea: idea.trim(),
         barangay: currentBarangayName,
@@ -1334,6 +1441,9 @@ async function handleLocationSelect(lat, lon, source = 'map') {
         prefs,
         _t: Date.now()
       });
+      
+      console.log(`📍 Got ${recs.length} pins`);
+      
       clearBusinessMarkers();
       plotLocations(recs);
     });
@@ -1522,9 +1632,9 @@ document.addEventListener('click', function (e) {
     profilePopup.classList.remove('open');
 });
 document.getElementById('logout-btn')?.addEventListener('click', () => {
-    currentUserId = null;
-    profilePopup?.classList.remove('open');
-    window.location.href = '/logout';
+  currentUserId = null;
+  profilePopup?.classList.remove('open');
+  window.location.href = '/logout';
 });
 document.getElementById('profile-link-btn')?.addEventListener('click', () => {
   profilePopup?.classList.remove('open');
@@ -2013,50 +2123,50 @@ function applyIndustryPersonalization(industry, industrySpecific) {
 
 // ─── DOM CONTENT LOADED ───────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
-    // Get current user ID first for report isolation
-    try {
-        const authRes = await fetch('/api/check-auth');
-        const authData = await authRes.json();
-        if (authData.authenticated && authData.user?.id) {
-            currentUserId = authData.user.id;
-            console.log('Reports initialized for user:', currentUserId);
-        }
-    } catch (err) {
-        console.warn('Failed to get user ID for reports:', err);
+  // Get current user ID first for report isolation
+  try {
+    const authRes = await fetch('/api/check-auth');
+    const authData = await authRes.json();
+    if (authData.authenticated && authData.user?.id) {
+      currentUserId = authData.user.id;
+      console.log('Reports initialized for user:', currentUserId);
+    }
+  } catch (err) {
+    console.warn('Failed to get user ID for reports:', err);
+  }
+
+  fetchSavedRecommendations();
+
+  try {
+    const jump = parseJumpTarget();
+    if (jump) {
+      localStorage.removeItem('mapJumpTarget');
+      map.setView([jump.lat, jump.lon], 16);
+      await handleLocationSelect(jump.lat, jump.lon, jump.source);
+    }
+  } catch (e) {
+    console.warn('Jump-to-map failed:', e);
+  }
+
+  try {
+    const res = await fetch('/api/me');
+    const data = await res.json();
+    const affiliation = (data.affiliation || '').toLowerCase().trim();
+    const industry = (data.industry || '').trim();
+    const industrySpecific = (data.industry_specific || '').trim();
+
+    userIndustry = industry;
+    userIndustrySpecific = industrySpecific;
+
+    if (affiliation === 'entrepreneur') {
+      document.querySelectorAll('.entrepreneur-only').forEach(el => { el.style.display = ''; });
+    } else {
+      document.querySelectorAll('.entrepreneur-only').forEach(el => { el.style.display = 'none'; });
     }
 
-    fetchSavedRecommendations();
-
-    try {
-        const jump = parseJumpTarget();
-        if (jump) {
-            localStorage.removeItem('mapJumpTarget');
-            map.setView([jump.lat, jump.lon], 16);
-            await handleLocationSelect(jump.lat, jump.lon, jump.source);
-        }
-    } catch (e) {
-        console.warn('Jump-to-map failed:', e);
-    }
-
-    try {
-        const res = await fetch('/api/me');
-        const data = await res.json();
-        const affiliation = (data.affiliation || '').toLowerCase().trim();
-        const industry = (data.industry || '').trim();
-        const industrySpecific = (data.industry_specific || '').trim();
-
-        userIndustry = industry;
-        userIndustrySpecific = industrySpecific;
-
-        if (affiliation === 'entrepreneur') {
-            document.querySelectorAll('.entrepreneur-only').forEach(el => { el.style.display = ''; });
-        } else {
-            document.querySelectorAll('.entrepreneur-only').forEach(el => { el.style.display = 'none'; });
-        }
-
-        applyIndustryPersonalization(industry, industrySpecific);
-    } catch (err) {
-        console.error('Failed to fetch user info:', err);
-        document.querySelectorAll('.entrepreneur-only').forEach(el => { el.style.display = 'none'; });
-    }
+    applyIndustryPersonalization(industry, industrySpecific);
+  } catch (err) {
+    console.error('Failed to fetch user info:', err);
+    document.querySelectorAll('.entrepreneur-only').forEach(el => { el.style.display = 'none'; });
+  }
 });

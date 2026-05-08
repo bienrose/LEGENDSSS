@@ -457,12 +457,13 @@ function ideaToDbSearchTerms(idea) {
     'pizza': ['RES RESTAURANT', 'RES PIZZA', 'RET FOOD RETAILER'],
     'pizza restaurant': ['RES RESTAURANT', 'RES PIZZA', 'RET FOOD RETAILER'],
     'pizza shop': ['RES RESTAURANT', 'RES PIZZA', 'RET FOOD RETAILER'],
-    'bakery': ['SSM BAKERY', 'RES BAKERY', 'RET BAKERY'],
-    'bakeshop': ['SSM BAKERY', 'RES BAKERY', 'RET BAKERY'],
+    'bakery': ['SSM BAKERY', 'RES BAKERY', 'RET BAKERY', 'SSM BAKESHOP', 'RES BAKESHOP'],
+    'bakeshop': ['SSM BAKERY', 'RES BAKERY', 'RET BAKERY', 'SSM BAKESHOP', 'RES BAKESHOP'],
     'coffee shop': ['RES COFFEE SHOP', 'RES CAFE', 'RET FOOD RETAILER'],
     'cafe': ['RES CAFE', 'RES COFFEE SHOP', 'RET FOOD RETAILER'],
     'sari-sari store': ['SAR SARI-SARI STORE', 'RET RETAILER'],
     'retail': ['RET RETAILER', 'RET TRADING', 'RET FOOD RETAILER', 'RET RETAIL'],
+    'retail store': ['RET RETAILER', 'RET TRADING', 'RET FOOD RETAILER', 'RET RETAIL'],
     'pharmacy': ['DRG DRUG STORE', 'RET RETAILER', 'RET DRUG STORE'],
     'drug store': ['DRG DRUG STORE', 'RET RETAILER'],
     'salon': ['SER BEAUTY PARLOR', 'SER SALON', 'SER BARBER SHOP'],
@@ -491,6 +492,7 @@ function ideaToDbSearchTerms(idea) {
     'lpg': ['FIX RETAILER - LIQUIFIED PETROLEUM GAS', 'RET LPG'],
     'lpg dealer': ['FIX RETAILER - LIQUIFIED PETROLEUM GAS', 'RET LPG'],
     'hotel': ['HOT HOTEL', 'MOT MOTEL', 'APT LESSOR'],
+    'hotel & lodging': ['HOT HOTEL', 'MOT MOTEL'],
     'school': ['EDU SCHOOL', 'EDU EDUCATIONAL INSTITUTION'],
     'education': ['EDU SCHOOL', 'EDU EDUCATIONAL INSTITUTION', 'SER TUTORIAL', 'SER TRAINING CENTER'],
     'printing shop': ['SER PRINTING', 'PRN PRINTING SERVICES'],
@@ -517,49 +519,34 @@ function ideaToDbSearchTerms(idea) {
     'trucking': ['SER TRUCKING', 'SER CARGO', 'SER LOGISTICS'],
     'trucking / cargo': ['SER TRUCKING', 'SER CARGO', 'SER LOGISTICS'],
     'logistics': ['SER LOGISTICS', 'SER TRUCKING', 'SER CARGO'],
-    'food business': ['RES RESTAURANT', 'RET FOOD RETAILER', 'RES EATERY', 'RET RETAILER'],
-    'general business': ['RET RETAILER', 'SER SERVICES', 'RES RESTAURANT'],
-    'general services': ['SER SERVICES', 'RET RETAILER'],
     'food': ['RES RESTAURANT', 'RET FOOD RETAILER', 'RES EATERY', 'SSM BAKERY'],
+    'food business': ['RES RESTAURANT', 'RET FOOD RETAILER', 'RES EATERY', 'RET RETAILER', 'SSM BAKERY'],
     'personal care': ['SER BEAUTY PARLOR', 'SER SALON', 'SER SPA', 'SER MASSAGE'],
     'tech': ['SER IT SERVICES', 'SER SOFTWARE', 'SER TECH'],
     'finance': ['BNK BANK', 'SER LENDING', 'IN6 INSURANCE', 'FRX FOREIGN EXCHANGE'],
     'energy': ['RET GAS STATION', 'FIX RETAILER - LIQUIFIED PETROLEUM GAS', 'RET WATER REFILLING'],
     'hospitality': ['HOT HOTEL', 'RES RESTAURANT', 'CAT CATERING'],
     'manufacturing': ['SSM MANUFACTURING', 'BSM MANUFACTURING', 'WSR WHOLESALER'],
-    // In the ideaToDbSearchTerms function, add these inside the mappings object:
-    'retail store': ['RET RETAILER', 'RET TRADING', 'RET FOOD RETAILER', 'RET RETAIL'],
-    'food business': ['RES RESTAURANT', 'RET FOOD RETAILER', 'RES EATERY', 'RET RETAILER'],
-    'services': ['SER SERVICES', 'SER CONSTRUCTION SERVICES'],
-    'salon & beauty': ['SER BEAUTY PARLOR', 'SER SALON', 'SER BARBER SHOP'],
-    'spa & massage': ['SER SPA', 'SER MASSAGE'],
-    'hotel & lodging': ['HOT HOTEL', 'MOT MOTEL'],
-    'gas station': ['RET GAS STATION', 'RET GASOLINE STATION'],
-    'water refilling': ['RET WATER REFILLING', 'RET WATER'],
-    'lpg dealer': ['FIX RETAILER - LIQUIFIED PETROLEUM GAS', 'RET LPG'],
-    'funeral services': ['SER FUNERAL PARLOR', 'SER FUNERAL'],
-    'printing services': ['SER PRINTING', 'PRN PRINTING SERVICES'],
-    'auto shop': ['SER AUTO REPAIR', 'SER VULCANIZING', 'SER SERVICES'],
-    'real estate': ['APT LESSOR', 'APT APARTMENT', 'APT COMMERCIAL UNIT', 'SER REAL ESTATE'],
     'trading': ['RET TRADING', 'WSR WHOLESALER', 'RET RETAILER'],
-    'wholesale': ['WSR WHOLESALER', 'WSR DISTRIBUTORS', 'WSR IMPORTER'],
-    'education': ['EDU SCHOOL', 'EDU EDUCATIONAL INSTITUTION', 'SER TUTORIAL', 'SER TRAINING CENTER'],
-    'healthcare': ['MED CLINIC', 'HOS HOSPITAL', 'DEN DENTAL CLINIC', 'DRG DRUG STORE'],
+    'auto shop': ['SER AUTO REPAIR', 'SER VULCANIZING', 'SER SERVICES'],
+    'general business': ['RET RETAILER', 'SER SERVICES', 'RES RESTAURANT'],
+    'general services': ['SER SERVICES', 'RET RETAILER'],
   };
-    // If no exact match, try to find partial matches
-  if (!mappings[ideaLower]) {
-    // Try matching key words
-    const words = ideaLower.split(/\s+/);
-    for (const key of Object.keys(mappings)) {
-      for (const word of words) {
-        if (key.includes(word) || word.includes(key)) {
-          return mappings[key];
-        }
+  
+  if (mappings[ideaLower]) return mappings[ideaLower];
+  
+  // Try partial match
+  const words = ideaLower.split(/\s+/);
+  for (const key of Object.keys(mappings)) {
+    for (const word of words) {
+      if (word.length > 2 && (key.includes(word) || word.includes(key))) {
+        return mappings[key];
       }
     }
   }
   
-  return mappings[ideaLower] || null;
+  // Fallback
+  return [idea, ideaLower.replace(/\s+/g, '%')];
 }
 
 // ─── ROUTES ───────────────────────────────────────────────────────────────────
@@ -1193,139 +1180,102 @@ function dbCodeToReadableName(dbCode) {
   
   const code = dbCode.toString().toUpperCase().trim();
   
-  // Extract the prefix (e.g., "RET", "SER", "RES")
-  const prefix = code.split(/\s+/)[0];
-  
-  // Map based on common patterns
-  if (code.includes('RESTAURANT') || code.includes('EATERY') || code.includes('FAST FOOD') || code.includes('CANTEEN') || code.includes('DINER')) return 'Restaurant';
+  // Specific food types (keep these)
   if (code.includes('PIZZA')) return 'Pizza Restaurant';
   if (code.includes('BAKERY') || code.includes('BAKESHOP')) return 'Bakery';
   if (code.includes('COFFEE') || code.includes('CAFE')) return 'Coffee Shop';
   if (code.includes('MILK TEA') || code.includes('MILKTEA')) return 'Milk Tea Shop';
+  if (code.includes('RESTAURANT') || code.includes('EATERY') || code.includes('CANTEEN') || code.includes('DINER')) return 'Restaurant';
+  if (code.includes('FAST FOOD')) return 'Fast Food Restaurant';
+  if (code.includes('CATERING')) return 'Catering';
+  
+  // Other specific types
   if (code.includes('SARI-SARI') || code.includes('SARI SARI')) return 'Sari-Sari Store';
   if (code.includes('GROCERY') || code.includes('SUPERMARKET')) return 'Grocery';
   if (code.includes('CONVENIENCE') || code.includes('MINIMART')) return 'Convenience Store';
   if (code.includes('DRUG') || code.includes('PHARMACY')) return 'Pharmacy';
-  if (code.includes('RETAILER') || code.includes('RETAIL') || code.includes('TRADING')) return 'Retail Store';
   if (code.includes('SALON') || code.includes('BEAUTY') || code.includes('BARBER')) return 'Salon & Beauty';
   if (code.includes('LAUNDRY') || code.includes('WASHING')) return 'Laundry Shop';
   if (code.includes('SPA') || code.includes('MASSAGE')) return 'Spa & Massage';
-  if (code.includes('CONSTRUCTION')) return 'Construction';
-  if (code.includes('WHOLESALE') || code.includes('DISTRIBUTOR') || code.includes('IMPORTER')) return 'Wholesale';
-  if (code.includes('BANK')) return 'Bank';
-  if (code.includes('HOTEL') || code.includes('MOTEL') || code.includes('INN') || code.includes('LODGE')) return 'Hotel & Lodging';
   if (code.includes('CLINIC') || code.includes('HOSPITAL') || code.includes('MEDICAL') || code.includes('DENTAL')) return 'Healthcare';
-  if (code.includes('SCHOOL') || code.includes('EDUCATION') || code.includes('TUTORIAL') || code.includes('TRAINING')) return 'Education';
-  if (code.includes('GAS') || code.includes('FUEL') || code.includes('PETROL')) return 'Gas Station';
+  if (code.includes('SCHOOL') || code.includes('TUTORIAL') || code.includes('TRAINING') || code.includes('EDUCATION')) return 'Education';
+  if (code.includes('HOTEL') || code.includes('MOTEL') || code.includes('INN') || code.includes('LODGE')) return 'Hotel & Lodging';
+  if (code.includes('HARDWARE')) return 'Hardware Store';
   if (code.includes('WATER')) return 'Water Refilling';
   if (code.includes('LPG')) return 'LPG Dealer';
+  if (code.includes('GAS') || code.includes('FUEL') || code.includes('PETROL')) return 'Gas Station';
+  if (code.includes('BANK')) return 'Bank';
+  if (code.includes('CONSTRUCTION')) return 'Construction';
+  if (code.includes('SECURITY') || code.includes('GUARD')) return 'Security Agency';
   if (code.includes('FUNERAL')) return 'Funeral Services';
   if (code.includes('PRINTING') || code.includes('PHOTOCOPY')) return 'Printing Services';
-  if (code.includes('AUTO') || code.includes('CAR') || code.includes('VEHICLE') || code.includes('VULCANIZING')) return 'Auto Shop';
-  if (code.includes('LESSOR') || code.includes('APARTMENT') || code.includes('RENTAL') || code.includes('REAL ESTATE')) return 'Real Estate';
-  if (code.includes('SECURITY') || code.includes('GUARD')) return 'Security Agency';
-  if (code.includes('CATERING')) return 'Catering';
+  if (code.includes('GYM') || code.includes('FITNESS')) return 'Gym / Fitness';
+  if (code.includes('CAR') || code.includes('AUTO') || code.includes('VEHICLE') || code.includes('VULCANIZING')) return 'Auto Shop';
   if (code.includes('TRAVEL')) return 'Travel Agency';
-  if (code.includes('LENDING') || code.includes('LOAN') || code.includes('MICROFINANCE')) return 'Lending';
+  if (code.includes('LENDING') || code.includes('LOAN')) return 'Lending';
   if (code.includes('PAWNSHOP')) return 'Pawnshop';
   if (code.includes('INSURANCE')) return 'Insurance';
   if (code.includes('REMITTANCE') || code.includes('MONEY')) return 'Money Remittance';
   if (code.includes('COOPERATIVE')) return 'Cooperative';
   if (code.includes('BPO') || code.includes('CALL CENTER')) return 'BPO / Call Center';
   if (code.includes('SOFTWARE') || code.includes('IT SERVICES') || code.includes('TECH')) return 'IT / Software';
-  if (code.includes('TRUCKING') || code.includes('CARGO') || code.includes('FREIGHT') || code.includes('LOGISTICS') || code.includes('COURIER')) return 'Logistics';
+  if (code.includes('TRUCKING') || code.includes('CARGO') || code.includes('COURIER') || code.includes('LOGISTICS')) return 'Logistics';
   if (code.includes('WAREHOUSE')) return 'Warehouse';
-  if (code.includes('MANUFACTURING') || code.includes('FACTORY') || code.includes('PRODUCTION')) return 'Manufacturing';
-  if (code.includes('HARDWARE')) return 'Hardware Store';
-  if (code.includes('APPLIANCE') || code.includes('ELECTRONICS')) return 'Appliance Store';
-  if (code.includes('CELLPHONE') || code.includes('MOBILE')) return 'Cellphone Store';
+  if (code.includes('REAL ESTATE') || code.includes('LESSOR') || code.includes('APARTMENT') || code.includes('RENTAL')) return 'Real Estate';
+  if (code.includes('LAW') || code.includes('LEGAL') || code.includes('ATTORNEY')) return 'Law Firm';
+  if (code.includes('CONSULTING') || code.includes('CONSULTANCY')) return 'Consulting';
+  if (code.includes('ACCOUNTING') || code.includes('AUDIT')) return 'Accounting';
+  if (code.includes('MARKETING') || code.includes('ADVERTISING')) return 'Marketing';
+  if (code.includes('MANPOWER') || code.includes('HR')) return 'Manpower Services';
+  if (code.includes('PHOTOGRAPHY') || code.includes('PHOTO STUDIO')) return 'Photo Studio';
+  if (code.includes('TAILORING') || code.includes('ALTERATION')) return 'Tailoring';
+  if (code.includes('NAIL')) return 'Nail Salon';
+  if (code.includes('OPTICAL') || code.includes('EYEWEAR')) return 'Optical Shop';
   if (code.includes('CLOTHING') || code.includes('BOUTIQUE') || code.includes('FASHION')) return 'Clothing Store';
   if (code.includes('SHOE') || code.includes('FOOTWEAR')) return 'Shoe Store';
   if (code.includes('BOOK') || code.includes('SCHOOL SUPPLY')) return 'Bookstore';
   if (code.includes('TOY') || code.includes('GAMES')) return 'Toy Store';
   if (code.includes('PET') || code.includes('VETERINARY')) return 'Pet Shop';
   if (code.includes('FLOWER') || code.includes('FLORIST')) return 'Flower Shop';
-  if (code.includes('OPTICAL') || code.includes('EYEWEAR')) return 'Optical Shop';
-  if (code.includes('GYM') || code.includes('FITNESS')) return 'Gym / Fitness';
-  if (code.includes('NAIL')) return 'Nail Salon';
-  if (code.includes('TAILORING') || code.includes('ALTERATION')) return 'Tailoring';
-  if (code.includes('PHOTOGRAPHY') || code.includes('PHOTO STUDIO')) return 'Photo Studio';
   if (code.includes('DAYCARE') || code.includes('CHILDCARE')) return 'Daycare';
   if (code.includes('CLEANING') || code.includes('JANITORIAL')) return 'Cleaning Services';
-  if (code.includes('REPAIR')) return 'Repair Shop';
   if (code.includes('PARKING')) return 'Parking';
   if (code.includes('EVENTS') || code.includes('VENUE') || code.includes('HALL')) return 'Events Place';
-  if (code.includes('LAW') || code.includes('LEGAL') || code.includes('ATTORNEY')) return 'Law Firm';
-  if (code.includes('CONSULTING') || code.includes('CONSULTANCY')) return 'Consulting';
-  if (code.includes('ACCOUNTING') || code.includes('AUDIT')) return 'Accounting';
-  if (code.includes('MARKETING') || code.includes('ADVERTISING')) return 'Marketing';
-  if (code.includes('MANPOWER') || code.includes('HR')) return 'Manpower Services';
-  if (code.includes('ADMIN')) return 'Admin Services';
   if (code.includes('FOREIGN EXCHANGE') || code.includes('FOREX')) return 'Foreign Exchange';
-  if (code.includes('STOCKBROKER') || code.includes('BROKER')) return 'Stockbroker';
-  if (code.includes('EXPORT')) return 'Export';
   if (code.includes('FRANCHISE')) return 'Franchise';
-  if (code.includes('FOOD')) return 'Food Business';
+  if (code.includes('EXPORT')) return 'Export';
+  if (code.includes('STOCKBROKER') || code.includes('BROKER')) return 'Stockbroker';
+  if (code.includes('REPAIR')) return 'Repair Shop';
   
-  // If prefix is known, return a generic category name
-  const prefixMap = {
-    'RES': 'Restaurant',
-    'RET': 'Retail Store',
-    'SER': 'Services',
-    'WSR': 'Wholesale',
-    'SSM': 'Manufacturing',
-    'BSM': 'Manufacturing',
-    'BNK': 'Bank',
-    'HOT': 'Hotel',
-    'MOT': 'Motel',
-    'APT': 'Real Estate',
-    'EDU': 'Education',
-    'HOS': 'Hospital',
-    'DEN': 'Dental Clinic',
-    'DRG': 'Pharmacy',
-    'MED': 'Healthcare',
-    'SCA': 'Security Agency',
-    'TA': 'Travel Agency',
-    'PRN': 'Printing Services',
-    'CAT': 'Catering',
-    'PWN': 'Pawnshop',
-    'IN6': 'Insurance',
-    'FRX': 'Foreign Exchange',
-    'SBR': 'Stockbroker',
-    'FTX': 'Franchise',
-    'BPO': 'BPO',
-    'EX1': 'Export',
-    'EX2': 'Export',
-    'EX3': 'Export',
-    'ADM': 'Admin Services',
-    'SAR': 'Sari-Sari Store',
-    'FIX': 'Retail Store',
-  };
-  
-  if (prefixMap[prefix]) return prefixMap[prefix];
-  
+  // DON'T return vague names - return the best match or 'Other Business'
   return 'Other Business';
 }
 
-// ─── /api/ideas — always return top 3 with READABLE names ─────────────────────
 app.get("/api/ideas", requireAuth, async (req, res) => {
   try {
     const { category, barangay, top = 3, prefs = "" } = req.query;
     const prefList = prefs ? prefs.split(",").filter(Boolean) : [];
-    const weights = prefWeights();
     const topN = parseInt(top) || 3;
 
-    // Helper: fetch idea rows with optional filters
+    // ─── Get category keywords for filtering ──────────────────────────────────
+    const mappedCategory = category ? (TYPE_TO_CATEGORY[category] || category) : null;
+    const categoryKeywords = mappedCategory ? getCategoryKeywords(mappedCategory) : [];
+
     async function fetchIdeaRows(opts = {}) {
       let sql = `SELECT line_of_business AS name, COUNT(*) AS cnt
                  FROM businesses
                  WHERE line_of_business IS NOT NULL AND line_of_business <> ''`;
       const p = [];
-      if (opts.category) {
-        const mappedCategory = TYPE_TO_CATEGORY[opts.category] || opts.category;
-        sql += " AND category = ?";
-        p.push(mappedCategory);
+      
+      if (opts.category && categoryKeywords.length > 0) {
+        // Filter by category keywords matching line_of_business
+        const keywordConditions = categoryKeywords.map(() => 
+          `LOWER(line_of_business) LIKE ?`
+        ).join(' OR ');
+        sql += ` AND (${keywordConditions})`;
+        categoryKeywords.forEach(kw => p.push(`%${kw.toLowerCase()}%`));
       }
+      
       if (opts.barangay) {
         sql += " AND LOWER(TRIM(barangay)) LIKE LOWER(TRIM(?))";
         p.push(`${normalizeBarangay(opts.barangay)}%`);
@@ -1335,17 +1285,18 @@ app.get("/api/ideas", requireAuth, async (req, res) => {
       return rows;
     }
 
-    // Progressive fallback: specific → relax category → relax barangay → city-wide
-    let ideaRows = await fetchIdeaRows({ category, barangay });
+    // Fetch with category and barangay filters
+    let ideaRows = await fetchIdeaRows({ category: mappedCategory, barangay });
 
-    if (ideaRows.length < topN && barangay && category) {
+    // Progressive fallback
+    if (ideaRows.length < topN && barangay && mappedCategory) {
       const wider = await fetchIdeaRows({ barangay });
       const existing = new Set(ideaRows.map(r => r.name));
       ideaRows = [...ideaRows, ...wider.filter(r => !existing.has(r.name))];
     }
 
     if (ideaRows.length < topN) {
-      const widest = await fetchIdeaRows({ category });
+      const widest = await fetchIdeaRows({ category: mappedCategory });
       const existing = new Set(ideaRows.map(r => r.name));
       ideaRows = [...ideaRows, ...widest.filter(r => !existing.has(r.name))];
     }
@@ -1358,11 +1309,25 @@ app.get("/api/ideas", requireAuth, async (req, res) => {
 
     if (!ideaRows.length) return res.json({ success: true, data: [] });
 
-    // FIXED: Convert DB codes to readable names
-    // Group by readable name and sum counts
+    // ─── Convert to readable names and filter out generic/irrelevant ──────────
+    const GENERIC_NAMES = ['Food Business', 'Other Business', 'General Business', 
+                           'Retail Store', 'Services', 'Wholesale', 'Manufacturing',
+                           'Admin Services', 'General Services'];
+    
     const readableNameMap = new Map();
     ideaRows.forEach(row => {
       const readableName = dbCodeToReadableName(row.name);
+      // Skip generic/vague names
+      if (GENERIC_NAMES.includes(readableName)) return;
+      
+      // If category is specified, check if the readable name matches
+      if (categoryKeywords.length > 0) {
+        const matchesCategory = categoryKeywords.some(kw => 
+          readableName.toLowerCase().includes(kw.toLowerCase())
+        );
+        if (!matchesCategory) return;
+      }
+      
       if (readableNameMap.has(readableName)) {
         readableNameMap.set(readableName, readableNameMap.get(readableName) + row.cnt);
       } else {
@@ -1370,185 +1335,117 @@ app.get("/api/ideas", requireAuth, async (req, res) => {
       }
     });
 
-    // Convert to array and sort by count
     let readableRows = [...readableNameMap.entries()]
       .map(([name, cnt]) => ({ name, cnt }))
       .sort((a, b) => b.cnt - a.cnt);
 
-    // Sub-category saturation check (use original ideaRows for this)
-    const userSubCategory = (req.session.user?.industry_specific || '').trim();
-    const ownBarangay = barangay || '';
-    let userSubCategoryIdea = null;
-    let filteredIdeaRows = readableRows;
-
-    if (userSubCategory && ownBarangay) {
-      const saturated = await isSubCategorySaturated(ownBarangay, userSubCategory);
-      const keywords = userSubCategory.toLowerCase().split(/\s+/).filter(w => w.length > 2);
-      if (!saturated) {
-        userSubCategoryIdea = readableRows.find(row =>
-          keywords.some(kw => (row.name || '').toLowerCase().includes(kw))
-        );
-        filteredIdeaRows = userSubCategoryIdea
-          ? readableRows.filter(row => row !== userSubCategoryIdea)
-          : readableRows;
-        if (!userSubCategoryIdea) {
-          const readableSub = dbCodeToReadableName(userSubCategory);
-          userSubCategoryIdea = { name: readableSub, cnt: 0 };
+    // If not enough results after filtering, relax the category filter
+    if (readableRows.length < topN && categoryKeywords.length > 0) {
+      // Re-process without category filter
+      const relaxedMap = new Map();
+      ideaRows.forEach(row => {
+        const readableName = dbCodeToReadableName(row.name);
+        if (GENERIC_NAMES.includes(readableName)) return;
+        if (relaxedMap.has(readableName)) {
+          relaxedMap.set(readableName, relaxedMap.get(readableName) + row.cnt);
+        } else {
+          relaxedMap.set(readableName, row.cnt);
         }
-      } else {
-        filteredIdeaRows = readableRows.filter(row =>
-          !keywords.some(kw => (row.name || '').toLowerCase().includes(kw))
-        );
-      }
-    }
-
-    if (!filteredIdeaRows.length && !userSubCategoryIdea) {
-      return res.json({ success: true, data: [] });
-    }
-
-    // If no preferences, return top N readable names
-    if (!prefList.length) {
-      let result = userSubCategoryIdea ? [userSubCategoryIdea.name] : [];
-      const remaining = filteredIdeaRows
-        .filter(r => r.name !== (userSubCategoryIdea ? userSubCategoryIdea.name : ''))
-        .slice(0, topN - result.length)
-        .map(r => r.name);
-      result = [...result, ...remaining];
-      return res.json({ success: true, data: result.slice(0, topN) });
-    }
-
-    // For preference-based scoring, use original DB codes for accuracy
-    const ideas = readableRows.map(r => r.name);
-    if (userSubCategoryIdea && !ideas.includes(userSubCategoryIdea.name)) {
-      ideas.unshift(userSubCategoryIdea.name);
-    }
-
-    const [allBiz] = await geoDB.query(
-      `SELECT barangay, line_of_business, CAST(lat AS DECIMAL(10,7)) AS lat, CAST(lon AS DECIMAL(10,7)) AS lon
-       FROM businesses
-       WHERE lat IS NOT NULL AND lon IS NOT NULL
-         AND lat <> 'null' AND lon <> 'null'
-         AND CAST(lat AS DECIMAL(10,7)) BETWEEN ? AND ?
-         AND CAST(lon AS DECIMAL(10,7)) BETWEEN ? AND ?`,
-      [PASIG_BOUNDS.minLat, PASIG_BOUNDS.maxLat, PASIG_BOUNDS.minLon, PASIG_BOUNDS.maxLon]
-    );
-
-    const [demoRows] = await geoDB.query(
-      `SELECT barangay_name, population, population_density, avg_income_max, gender_distribution, highest_age_group FROM demographic_pasig`
-    );
-    const demoMap = {};
-    demoRows.forEach(d => demoMap[normalizeBarangay(d.barangay_name)] = d);
-
-    const [totBizRows] = await geoDB.query(`SELECT barangay, COUNT(*) AS cnt FROM businesses GROUP BY barangay`);
-    const totalBizMap = {};
-    totBizRows.forEach(r => totalBizMap[normalizeBarangay(r.barangay)] = Number(r.cnt) || 0);
-
-    const centroidMap = {};
-    allBiz.forEach(b => {
-      const key = normalizeBarangay(b.barangay);
-      const lat = Number(b.lat), lon = Number(b.lon);
-      if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
-      if (!centroidMap[key]) centroidMap[key] = { lat: 0, lon: 0, n: 0 };
-      centroidMap[key].lat += lat;
-      centroidMap[key].lon += lon;
-      centroidMap[key].n += 1;
-    });
-    Object.keys(centroidMap).forEach(k => {
-      centroidMap[k].lat /= centroidMap[k].n;
-      centroidMap[k].lon /= centroidMap[k].n;
-    });
-
-    const radius = 500;
-    const ideaScores = [];
-    const evalBarangay = barangay ? normalizeBarangay(barangay) : null;
-
-    if (evalBarangay) {
-      let matchedKey = centroidMap[evalBarangay]
-        ? evalBarangay
-        : Object.keys(centroidMap).find(k => k.startsWith(evalBarangay) || evalBarangay.startsWith(k));
-
-      const c = matchedKey ? centroidMap[matchedKey] : null;
-      const demoKey = demoMap[evalBarangay]
-        ? evalBarangay
-        : Object.keys(demoMap).find(k => k.startsWith(evalBarangay) || evalBarangay.startsWith(k));
-      const demo = (demoKey ? demoMap[demoKey] : null) || {};
-      const totalBiz = totalBizMap[evalBarangay] || 0;
-      const bizDensity = demo.population ? totalBiz / (Number(demo.population) / 1000) : 0;
-
-      ideas.forEach(name => {
-        // Convert readable name back to DB codes for matching
-        const searchTerms = ideaToDbSearchTerms(name) || [name];
-        const ideaBiz = allBiz.filter(b =>
-          searchTerms.some(term => (b.line_of_business || '').toUpperCase().includes(term.toUpperCase())) &&
-          normalizeBarangay(b.barangay) === evalBarangay
-        );
-        let competitors = 0;
-        if (c) {
-          ideaBiz.forEach(b => {
-            if (haversineMeters(c.lat, c.lon, Number(b.lat), Number(b.lon)) <= radius)
-              competitors += 1;
-          });
-        }
-        ideaScores.push({
-          name,
-          totalpop: Number(demo.population) || 0,
-          popdensity: Number(demo.population_density) || 0,
-          income: Number(demo.avg_income_max) || 0,
-          gender: demo.gender_distribution === "Female" ? 1 : 0,
-          agedist: ageScore(demo.highest_age_group),
-          bizdensity: bizDensity,
-          bizcount: ideaBiz.length,
-          competitors
-        });
       });
-    } else {
-      ideas.forEach(name => {
-        let bestObj = null;
-        const searchTerms = ideaToDbSearchTerms(name) || [name];
-        Object.keys(centroidMap).forEach(bgy => {
-          const c = centroidMap[bgy];
-          const demo = demoMap[bgy] || {};
-          const totalBiz = totalBizMap[bgy] || 0;
-          const bizDensity = demo.population ? totalBiz / (Number(demo.population) / 1000) : 0;
-          const ideaBiz = allBiz.filter(b =>
-            searchTerms.some(term => (b.line_of_business || '').toUpperCase().includes(term.toUpperCase())) &&
-            normalizeBarangay(b.barangay) === bgy
-          );
-          let competitors = 0;
-          ideaBiz.forEach(b => {
-            if (haversineMeters(c.lat, c.lon, Number(b.lat), Number(b.lon)) <= radius)
-              competitors += 1;
-          });
-          const obj = {
-            name,
-            totalpop: Number(demo.population) || 0,
-            popdensity: Number(demo.population_density) || 0,
-            income: Number(demo.avg_income_max) || 0,
-            gender: demo.gender_distribution === "Female" ? 1 : 0,
-            agedist: ageScore(demo.highest_age_group),
-            bizdensity: bizDensity,
-            bizcount: ideaBiz.length,
-            competitors
-          };
-          if (!bestObj || obj.competitors < bestObj.competitors) bestObj = obj;
-        });
-        if (bestObj) ideaScores.push(bestObj);
-      });
+      const relaxedRows = [...relaxedMap.entries()]
+        .map(([name, cnt]) => ({ name, cnt }))
+        .filter(r => !readableRows.find(rr => rr.name === r.name))
+        .sort((a, b) => b.cnt - a.cnt);
+      readableRows = [...readableRows, ...relaxedRows];
     }
 
-    const finalScores = ideaScores.map(i => ({ name: i.name, score: 0 }));
-    prefList.forEach(pref => {
-      const values = ideaScores.map(i => Number(i[pref]) || 0);
-      const z = zscores(values);
-      z.forEach((val, idx) => { finalScores[idx].score += (weights[pref] || 0) * val; });
-    });
-    finalScores.sort((a, b) => b.score - a.score);
-    return res.json({ success: true, data: finalScores.slice(0, topN).map(r => r.name) });
+    const result = readableRows.slice(0, topN).map(r => r.name);
+    return res.json({ success: true, data: result });
 
   } catch (err) {
+    console.error("ideas error:", err);
     return res.status(500).json({ success: false, message: err.message });
   }
 });
+
+// Add this helper function to map categories to keywords
+function getCategoryKeywords(category) {
+  const catLower = (category || '').toLowerCase().trim();
+  
+  const CATEGORY_KEYWORDS = {
+    'food & beverage': [
+      'restaurant', 'eatery', 'cafe', 'coffee', 'bakery', 'bakeshop', 
+      'fast food', 'canteen', 'catering', 'pizza', 'burger', 'diner', 
+      'grill', 'milk tea', 'juice', 'snack', 'panciteria', 'ice cream', 
+      'donut', 'pastry', 'food', 'beverage', 'drink', 'bar', 'karaoke',
+      'refreshment', 'pares', 'silog', 'tapsi', 'lugaw', 'goto', 'ihaw',
+      'lechon', 'seafood', 'buffet', 'carinderia', 'turo-turo'
+    ],
+    'retail & trading': [
+      'store', 'retail', 'sari-sari', 'grocery', 'supermarket', 
+      'convenience', 'hardware', 'cellphone', 'appliance', 'clothing', 
+      'bookstore', 'optical', 'pharmacy', 'drug', 'shoe', 'toy', 
+      'pet', 'flower', 'trading', 'shop', 'mart'
+    ],
+    'beauty & wellness': [
+      'salon', 'barber', 'spa', 'massage', 'nail', 'wellness', 'beauty', 'hair'
+    ],
+    'healthcare': [
+      'clinic', 'hospital', 'dental', 'pharmacy', 'drug', 'laboratory', 
+      'medical', 'optical', 'veterinary'
+    ],
+    'hospitality': [
+      'hotel', 'motel', 'inn', 'lodge', 'pension', 'resort', 'catering', 'apartment'
+    ],
+    'education': [
+      'school', 'tutorial', 'training', 'review', 'daycare', 'academy'
+    ],
+    'finance & banking': [
+      'bank', 'lending', 'pawnshop', 'insurance', 'remittance', 
+      'cooperative', 'microfinance', 'money'
+    ],
+    'construction': [
+      'construction', 'hardware', 'contractor', 'supplies'
+    ],
+    'logistics & transport': [
+      'trucking', 'cargo', 'freight', 'courier', 'delivery', 'logistics', 'warehouse'
+    ],
+    'it & software': [
+      'software', 'it services', 'tech', 'internet', 'computer', 'web', 'app', 'digital'
+    ],
+    'bpo & call center': [
+      'bpo', 'call center', 'outsourcing'
+    ],
+    'manufacturing': [
+      'manufacturing', 'factory', 'production', 'fabrication'
+    ],
+    'wholesale & import': [
+      'wholesale', 'distributor', 'importer', 'trading'
+    ],
+    'energy & fuel': [
+      'gas station', 'lpg', 'fuel', 'energy', 'solar'
+    ],
+    'security': [
+      'security', 'guard', 'cctv', 'alarm'
+    ],
+    'legal & consulting': [
+      'law', 'legal', 'consulting', 'accounting', 'notary', 'attorney'
+    ],
+    'marketing & advertising': [
+      'marketing', 'advertising', 'printing', 'photography', 'videography'
+    ],
+    'hr & manpower': [
+      'manpower', 'admin', 'hr'
+    ],
+    'general services': [
+      'laundry', 'car wash', 'cleaning', 'repair', 'printing', 
+      'photography', 'travel', 'funeral', 'events', 'gym', 'fitness', 
+      'tailoring', 'parking', 'water'
+    ],
+  };
+  
+  return CATEGORY_KEYWORDS[catLower] || [];
+}
 
 // ─── Get actual business types in a barangay ──────────────────────────────────
 app.get("/api/barangay-business-types", requireAuth, async (req, res) => {
@@ -1676,104 +1573,79 @@ app.get("/api/verify-barangay-names", requireAuth, async (req, res) => {
   }
 });
 
-app.get("/api/ideas-by-point", requireAuth, async (req, res) => {
+app.get("/api/idea-locations", requireAuth, async (req, res) => {
   try {
-    const { lat, lon, category, top = 3, prefs = "" } = req.query;
-    if (!lat || !lon) return res.status(400).json({ success: false, message: "lat/lon required" });
-    const latNum = Number(lat), lonNum = Number(lon);
-    if (!inPasig(latNum, lonNum)) return res.json({ success: true, data: [] });
-    const prefList = prefs ? prefs.split(",").filter(Boolean) : [];
-    const weights = prefWeights();
-    let sql = `SELECT line_of_business AS name, COUNT(*) AS cnt FROM businesses WHERE line_of_business IS NOT NULL AND line_of_business <> ''`;
+    const { idea, barangay, top = 5 } = req.query;
+    if (!idea) return res.status(400).json({ success: false, message: "idea required" });
+
+    const topN = Math.min(parseInt(top, 10) || 5, 50);
+    const searchTerms = ideaToDbSearchTerms(idea);
+    
+    let sql = `SELECT id, barangay, CAST(lat AS DECIMAL(10,7)) AS lat, CAST(lon AS DECIMAL(10,7)) AS lon,
+                      business_trade_name, line_of_business
+               FROM businesses
+               WHERE lat IS NOT NULL AND lon IS NOT NULL
+                 AND lat != 'null' AND lon != 'null'`;
+    
     const params = [];
-    if (category) { const mappedCategory = TYPE_TO_CATEGORY[category] || category; sql += " AND category = ?"; params.push(mappedCategory); }
-    sql += " GROUP BY line_of_business ORDER BY cnt DESC";
-    const [ideaRows] = await geoDB.query(sql, params);
-
-    const userSubCategory = (req.session.user?.industry_specific || '').trim();
-    let userSubCategoryIdea = null;
-    let filteredIdeaRows = ideaRows;
-
-    if (userSubCategory) {
-      const nearestBrgy = await (async () => {
-        try {
-          const [barangays] = await geoDB.query(`SELECT barangay_name, center_lat, center_lon FROM demographic_pasig WHERE center_lat IS NOT NULL AND center_lon IS NOT NULL`);
-          let nearest = null, minDist = Infinity;
-          barangays.forEach(row => { const dist = haversineMeters(latNum, lonNum, Number(row.center_lat), Number(row.center_lon)); if (dist < minDist) { minDist = dist; nearest = row.barangay_name; } });
-          return nearest || '';
-        } catch { return ''; }
-      })();
-      if (nearestBrgy) {
-        const saturated = await isSubCategorySaturated(nearestBrgy, userSubCategory);
-        const keywords = userSubCategory.toLowerCase().split(/\s+/).filter(w => w.length > 2);
-        if (!saturated) {
-          userSubCategoryIdea = ideaRows.find(row => keywords.some(kw => (row.name || '').toLowerCase().includes(kw)));
-          if (userSubCategoryIdea) { filteredIdeaRows = ideaRows.filter(row => row !== userSubCategoryIdea); }
-          else { userSubCategoryIdea = { name: userSubCategory }; }
-        } else { filteredIdeaRows = ideaRows.filter(row => !keywords.some(kw => (row.name || '').toLowerCase().includes(kw))); }
-      }
+    
+    // FIX: Broader search - try multiple approaches
+    const searchConditions = [];
+    
+    // 1. Search by mapped DB codes
+    if (searchTerms && searchTerms.length > 0) {
+      const termConditions = searchTerms.map(() => 
+        `(LOWER(line_of_business) LIKE ? OR LOWER(business_trade_name) LIKE ?)`
+      ).join(' OR ');
+      searchConditions.push(`(${termConditions})`);
+      searchTerms.forEach(term => {
+        params.push(`%${term.toLowerCase()}%`, `%${term.toLowerCase()}%`);
+      });
     }
-    if (!filteredIdeaRows.length && !userSubCategoryIdea) return res.json({ success: true, data: [] });
+    
+    // 2. Search by the idea name directly
+    searchConditions.push(`(LOWER(line_of_business) LIKE ? OR LOWER(business_trade_name) LIKE ?)`);
+    params.push(`%${idea.toLowerCase()}%`, `%${idea.toLowerCase()}%`);
+    
+    // 3. For food-related searches, also search for common food codes
+    const foodIdeas = ['bakery', 'restaurant', 'eatery', 'canteen', 'coffee', 'cafe', 'fast food', 'bakeshop'];
+    if (foodIdeas.some(f => idea.toLowerCase().includes(f))) {
+      searchConditions.push(`(LOWER(line_of_business) LIKE '%bakery%' OR LOWER(line_of_business) LIKE '%bakeshop%' OR LOWER(line_of_business) LIKE '%restaurant%' OR LOWER(line_of_business) LIKE '%eatery%' OR LOWER(line_of_business) LIKE '%food%')`);
+    }
+    
+    sql += ` AND (${searchConditions.join(' OR ')})`;
 
-    if (!prefList.length) {
-      let result = userSubCategoryIdea ? [userSubCategoryIdea.name] : [];
-      const remaining = filteredIdeaRows.slice(0, parseInt(top) - result.length).map(r => r.name);
-      result = result.concat(remaining);
-      return res.json({ success: true, data: result.slice(0, parseInt(top)) });
+    // Barangay filter
+    if (barangay) {
+      sql += ` AND LOWER(TRIM(barangay)) = LOWER(TRIM(?))`;
+      params.push(barangay);
     }
 
-    const ideas = filteredIdeaRows.map(r => r.name);
-    if (userSubCategoryIdea && !ideas.includes(userSubCategoryIdea.name)) ideas.unshift(userSubCategoryIdea.name);
+    sql += ` ORDER BY RAND() LIMIT ${Math.min(topN * 3, 100)}`;
+    
+    console.log('📍 idea-locations SQL:', sql.substring(0, 200));
+    console.log('📍 Params:', params);
+    
+    const [rows] = await geoDB.query(sql, params);
+    console.log(`📍 Found ${rows.length} results for "${idea}" in ${barangay}`);
 
-    const [allBiz] = await geoDB.query(
-      `SELECT barangay, line_of_business, CAST(lat AS DECIMAL(10,7)) AS lat, CAST(lon AS DECIMAL(10,7)) AS lon
-       FROM businesses WHERE lat IS NOT NULL AND lon IS NOT NULL AND lat <> 'null' AND lon <> 'null'
-         AND CAST(lat AS DECIMAL(10,7)) BETWEEN ? AND ? AND CAST(lon AS DECIMAL(10,7)) BETWEEN ? AND ?`,
-      [PASIG_BOUNDS.minLat, PASIG_BOUNDS.maxLat, PASIG_BOUNDS.minLon, PASIG_BOUNDS.maxLon]
-    );
-    const [demoRows] = await geoDB.query(`SELECT barangay_name, population, population_density, avg_income_max, gender_distribution, highest_age_group FROM demographic_pasig`);
-    const demoMap = {};
-    demoRows.forEach(d => demoMap[normalizeBarangay(d.barangay_name)] = d);
-    const [totBizRows] = await geoDB.query(`SELECT barangay, COUNT(*) AS cnt FROM businesses GROUP BY barangay`);
-    const totalBizMap = {};
-    totBizRows.forEach(r => totalBizMap[normalizeBarangay(r.barangay)] = Number(r.cnt) || 0);
-    const centroidMap = {};
-    allBiz.forEach(b => {
-      const key = normalizeBarangay(b.barangay);
-      const latN = Number(b.lat), lonN = Number(b.lon);
-      if (!Number.isFinite(latN) || !Number.isFinite(lonN)) return;
-      if (!centroidMap[key]) centroidMap[key] = { lat: 0, lon: 0, n: 0 };
-      centroidMap[key].lat += latN; centroidMap[key].lon += lonN; centroidMap[key].n += 1;
+    let result = rows.map(r => ({
+      lat: Number(r.lat),
+      lon: Number(r.lon),
+      barangay_name: r.barangay,
+      suitability_score: 0.9,
+      business_type: idea,
+      business_name: r.business_trade_name,
+      is_predicted: false
+    })).filter(r => Number.isFinite(r.lat) && Number.isFinite(r.lon));
+
+    return res.json({ 
+      success: true, 
+      data: result.slice(0, topN),
+      total_found: rows.length
     });
-    Object.keys(centroidMap).forEach(k => { centroidMap[k].lat /= centroidMap[k].n; centroidMap[k].lon /= centroidMap[k].n; });
-
-    let nearestBarangay = null, minDist = Infinity;
-    Object.keys(centroidMap).forEach(b => { const c = centroidMap[b]; const d = haversineMeters(Number(lat), Number(lon), c.lat, c.lon); if (d < minDist) { minDist = d; nearestBarangay = b; } });
-
-    const radius = 500;
-    const ideaScores = [];
-    ideas.forEach(name => {
-      const ideaBiz = allBiz.filter(b => b.line_of_business === name);
-      let competitors = 0;
-      ideaBiz.forEach(b => { if (haversineMeters(Number(lat), Number(lon), Number(b.lat), Number(b.lon)) <= radius) competitors += 1; });
-      const demo = demoMap[nearestBarangay] || {};
-      const totalBiz = totalBizMap[nearestBarangay] || 0;
-      const bizDensity = demo.population ? totalBiz / (Number(demo.population) / 1000) : 0;
-      ideaScores.push({ name, totalpop: Number(demo.population) || 0, popdensity: Number(demo.population_density) || 0, income: Number(demo.avg_income_max) || 0, gender: demo.gender_distribution === "Female" ? 1 : 0, agedist: ageScore(demo.highest_age_group), bizdensity: bizDensity, bizcount: ideaBiz.filter(b => normalizeBarangay(b.barangay) === nearestBarangay).length, competitors });
-    });
-
-    if (!prefList.length) {
-      const values = ideaScores.map(i => Number(i.competitors) || 0);
-      const max = Math.max(...values), min = Math.min(...values);
-      const ranked = ideaScores.map(i => ({ name: i.name, score: (max - i.competitors) / ((max - min) || 1) })).sort((a, b) => b.score - a.score);
-      return res.json({ success: true, data: ranked.slice(0, parseInt(top)).map(r => r.name) });
-    }
-
-    const finalScores = ideaScores.map(i => ({ name: i.name, score: 0 }));
-    prefList.forEach(pref => { const values = ideaScores.map(i => Number(i[pref]) || 0); const z = zscores(values); z.forEach((val, idx) => { finalScores[idx].score += (weights[pref] || 0) * val; }); });
-    finalScores.sort((a, b) => b.score - a.score);
-    return res.json({ success: true, data: finalScores.slice(0, parseInt(top)).map(r => r.name) });
   } catch (err) {
+    console.error("idea-locations error:", err);
     return res.status(500).json({ success: false, message: err.message });
   }
 });
