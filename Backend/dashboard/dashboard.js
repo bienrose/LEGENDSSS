@@ -13,6 +13,13 @@ let lastFilteredIdea = null;
 let lastFilteredBarangay = null;
 let lastFilteredPrefs = null;
 let searchHistory = [];
+let currentUserId = null;
+let lastAppliedChips = [];
+let lastAppliedBarangays = null;
+let lastAppliedPrefs = [];
+let lastAppliedType = null;
+let isFilterApplied = false;
+let ideaPinsCache = new Map();
 const locSavedItems = new Set();
 
 // ─── ACTIVE IDEA STATE ────────────────────────────────────────────────────────
@@ -25,6 +32,37 @@ let activeIdeaPrefs = [];
 let userIndustry = '';
 let userIndustrySpecific = '';
 
+// ─── BARANGAY BOUNDS FOR MAP ──────────────────────────────────────────────────
+const BARANGAY_BOUNDS_MAP = {
+  'bagong ilog': { minLat: 14.5700, maxLat: 14.5780, minLon: 121.0820, maxLon: 121.0890 },
+  'bagong katipunan': { minLat: 14.5740, maxLat: 14.5840, minLon: 121.0620, maxLon: 121.0730 },
+  'bambang': { minLat: 14.5640, maxLat: 14.5850, minLon: 121.0570, maxLon: 121.0790 },
+  'buting': { minLat: 14.5620, maxLat: 14.5830, minLon: 121.0660, maxLon: 121.0880 },
+  'caniogan': { minLat: 14.5740, maxLat: 14.5820, minLon: 121.0830, maxLon: 121.0910 },
+  'dela paz': { minLat: 14.5780, maxLat: 14.6010, minLon: 121.0770, maxLon: 121.1010 },
+  'kalawaan': { minLat: 14.5580, maxLat: 14.5790, minLon: 121.0670, maxLon: 121.0890 },
+  'kapasigan': { minLat: 14.5590, maxLat: 14.5800, minLon: 121.0620, maxLon: 121.0840 },
+  'kapitolyo': { minLat: 14.5700, maxLat: 14.5950, minLon: 121.0500, maxLon: 121.0760 },
+  'malinao': { minLat: 14.5700, maxLat: 14.5910, minLon: 121.0780, maxLon: 121.1000 },
+  'manggahan': { minLat: 14.5810, maxLat: 14.6070, minLon: 121.0830, maxLon: 121.1110 },
+  'maybunga': { minLat: 14.5660, maxLat: 14.5880, minLon: 121.0800, maxLon: 121.1020 },
+  'oranbo': { minLat: 14.5680, maxLat: 14.5890, minLon: 121.0670, maxLon: 121.0890 },
+  'palatiw': { minLat: 14.5770, maxLat: 14.5860, minLon: 121.0920, maxLon: 121.1000 },
+  'pinagbuhatan': { minLat: 14.5480, maxLat: 14.5740, minLon: 121.0810, maxLon: 121.1080 },
+  'pineda': { minLat: 14.5560, maxLat: 14.5760, minLon: 121.0530, maxLon: 121.0760 },
+  'rosario': { minLat: 14.5620, maxLat: 14.5720, minLon: 121.0750, maxLon: 121.0850 },
+  'sagad': { minLat: 14.5480, maxLat: 14.5700, minLon: 121.0760, maxLon: 121.0980 },
+  'san antonio': { minLat: 14.5780, maxLat: 14.6000, minLon: 121.0760, maxLon: 121.0980 },
+  'san joaquin': { minLat: 14.5810, maxLat: 14.5910, minLon: 121.0710, maxLon: 121.0810 },
+  'san jose': { minLat: 14.5800, maxLat: 14.5890, minLon: 121.0640, maxLon: 121.0730 },
+  'san miguel': { minLat: 14.5690, maxLat: 14.5790, minLon: 121.0770, maxLon: 121.0850 },
+  'san nicolas': { minLat: 14.5660, maxLat: 14.5760, minLon: 121.0800, maxLon: 121.0890 },
+  'santa lucia': { minLat: 14.5760, maxLat: 14.5860, minLon: 121.0970, maxLon: 121.1050 },
+  'santa rosa': { minLat: 14.5600, maxLat: 14.5690, minLon: 121.0860, maxLon: 121.0940 },
+  'santolan': { minLat: 14.5830, maxLat: 14.6050, minLon: 121.0650, maxLon: 121.0920 },
+  'sumilang': { minLat: 14.5650, maxLat: 14.5800, minLon: 121.0760, maxLon: 121.0910 },
+  'ugong': { minLat: 14.5730, maxLat: 14.5880, minLon: 121.0570, maxLon: 121.0690 },
+};
 // ─── INDUSTRY → FILTER CHECKBOX MAP ─────────────────────────────────────────
 const INDUSTRY_FILTER_MAP = {
   'food and beverages': 'f-food',
@@ -94,10 +132,19 @@ const INDUSTRY_FILTER_MAP = {
   'general': 'f-general'
 };
 
-// ─── REPORT LOGGING ───────────────────────────────────────────────────────────
+// ─── REPORT LOGGING (FIXED - USER SPECIFIC) ──────────────────────────────────
+function getReportStorageKey() {
+  if (!currentUserId) {
+    return 'reportLogs_anonymous';
+  }
+  return `reportLogs_${currentUserId}`;
+}
+
 function reportLogRead() {
   try {
-    return JSON.parse(localStorage.getItem('reportLogs') || '{"searchPins":[],"recommendations":[],"saved":[]}') || {
+    const key = getReportStorageKey();
+    const data = localStorage.getItem(key);
+    return JSON.parse(data || '{"searchPins":[],"recommendations":[],"saved":[]}') || {
       searchPins: [], recommendations: [], saved: []
     };
   } catch {
@@ -106,7 +153,8 @@ function reportLogRead() {
 }
 
 function reportLogWrite(logs) {
-  localStorage.setItem('reportLogs', JSON.stringify(logs));
+  const key = getReportStorageKey();
+  localStorage.setItem(key, JSON.stringify(logs));
 }
 
 function reportNow() {
@@ -205,6 +253,25 @@ function isInPasig(lat, lon) {
     lon >= PASIG_BOUNDS.minLon && lon <= PASIG_BOUNDS.maxLon;
 }
 
+function getBarangayBoundsForMap(barangayName) {
+  if (!barangayName) return null;
+  const normalized = barangayName.toLowerCase().trim();
+
+  let bounds = BARANGAY_BOUNDS_MAP[normalized];
+
+  if (!bounds) {
+    const key = Object.keys(BARANGAY_BOUNDS_MAP).find(k =>
+      normalized.startsWith(k) || k.startsWith(normalized)
+    );
+    if (!key) return null;
+    bounds = BARANGAY_BOUNDS_MAP[key];
+  }
+
+  return L.latLngBounds(
+    [bounds.minLat, bounds.minLon],
+    [bounds.maxLat, bounds.maxLon]
+  );
+}
 const pinRangeEl = document.getElementById('pin-range');
 const pinCountInput = document.getElementById('pin-count');
 const pinCountLabel = document.getElementById('pin-count-label');
@@ -226,12 +293,82 @@ async function fetchIdeaLocations(filters = {}) {
   if (filters.top) params.append('top', filters.top);
   if (filters.prefs?.length) params.append('prefs', filters.prefs.join(','));
   if (filters._t) params.append('_t', filters._t);
+
+  // Create a cache key from the filters
+  const cacheKey = JSON.stringify({
+    idea: filters.idea?.trim(),
+    barangay: filters.barangay,
+    top: filters.top,
+    prefs: filters.prefs?.sort()
+  });
+
+  // Check if we have cached results
+  if (ideaPinsCache.has(cacheKey)) {
+    console.log('Using cached pins for:', filters.idea);
+    return ideaPinsCache.get(cacheKey);
+  }
+
+  // Fetch new results
   const res = await fetch(`/api/idea-locations?${params.toString()}`);
   const data = await res.json();
-  return data.success ? data.data : [];
+  const results = data.success ? data.data : [];
+
+  // Cache the results
+  ideaPinsCache.set(cacheKey, results);
+  console.log('Cached new pins for:', filters.idea);
+
+  return results;
+}
+function zoomToBarangay(barangayName) {
+  if (!barangayName) return false;
+
+  const bounds = getBarangayBoundsForMap(barangayName);
+  if (bounds && bounds.isValid()) {
+    map.fitBounds(bounds, { padding: [60, 60], maxZoom: 16 });
+    return true;
+  }
+
+  // VERIFIED CENTROIDS - matching the actual pin locations
+const CENTROID_FALLBACK_CLIENT = {
+  'bagong ilog':       [14.5740, 121.0860],
+  'bagong katipunan':  [14.5572, 121.0750],  // ← OFFICIAL
+  'bambang':           [14.5740, 121.0680],
+  'buting':            [14.5720, 121.0770],
+  'caniogan':          [14.5790, 121.0870],
+  'dela paz':          [14.5900, 121.0890],
+  'kalawaan':          [14.5690, 121.0780],
+  'kapasigan':         [14.5700, 121.0730],
+  'kapitolyo':         [14.5830, 121.0630],
+  'malinao':           [14.5810, 121.0890],
+  'manggahan':         [14.5940, 121.0970],
+  'maybunga':          [14.5770, 121.0920],
+  'oranbo':            [14.5790, 121.0780],
+  'palatiw':           [14.5820, 121.0960],
+  'pinagbuhatan':      [14.5610, 121.0940],
+  'pineda':            [14.5670, 121.0650],
+  'rosario':           [14.5861, 121.0846],  // ← OFFICIAL
+  'sagad':             [14.5590, 121.0870],
+  'san antonio':       [14.5890, 121.0870],
+  'san joaquin':       [14.5521, 121.0798],  // ← OFFICIAL
+  'san jose':          [14.5594, 121.0734],  // ← OFFICIAL
+  'san miguel':        [14.5658, 121.0855],  // ← OFFICIAL
+  'san nicolas':       [14.5643, 121.0798],  // ← OFFICIAL
+  'santa lucia':       [14.5843, 121.1013],  // ← OFFICIAL
+  'santa rosa':        [14.5589, 121.0729],  // ← OFFICIAL
+  'santolan':          [14.5950, 121.0800],
+  'sumilang':          [14.5750, 121.0840],
+  'ugong':             [14.5830, 121.0620],
+};
+
+  const key = barangayName.toLowerCase().trim();
+  const centroid = CENTROID_FALLBACK_CLIENT[key];
+  if (centroid) {
+    map.setView(centroid, 15);
+    return true;
+  }
+  return false;
 }
 
-// ─── REPLOT: only replots the currently active idea with new pin count ────────
 // ─── REPLOT: replots the currently active idea across ALL selected barangays ──
 async function replotFilteredPins() {
   if (!isFilterMode) return;
@@ -242,15 +379,18 @@ async function replotFilteredPins() {
 
   clearBusinessMarkers();
 
-  // activeIdeaBarangay is now an array (or null for "all")
-  const barangays = activeIdeaBarangay && activeIdeaBarangay.length ? activeIdeaBarangay : [null];
+  // Get the currently selected barangays from checkboxes
+  const barangayCheckboxes = document.querySelectorAll('[id^="b-"]:checked');
+  const selectedBarangays = [...barangayCheckboxes].map(cb => barangayMap[cb.id]).filter(Boolean);
+
+  let barangays = selectedBarangays.length ? selectedBarangays : [null];
 
   const allRecs = (await Promise.all(
     barangays.map(b => fetchIdeaLocations({
       idea: activeIdeaName,
       barangay: b,
       top,
-      prefs: activeIdeaPrefs
+      prefs: activeIdeaPrefs.length ? activeIdeaPrefs : getPrefs()
     }))
   )).flat();
 
@@ -267,9 +407,25 @@ if (pinCountInput && pinCountLabel) {
   });
 
   const fireSlider = async () => {
-    if (!isFilterMode) return;
     pinCountLabel.textContent = String(getFilteredPinCount());
-    await replotFilteredPins();
+
+    if (isFilterMode) {
+      // Filter panel mode — replot across selected barangays
+      await replotFilteredPins();
+    } else if (activeIdeaName) {
+      // Map-click mode — replot for the active idea at clicked location
+      const top = getFilteredPinCount();
+      const prefs = getPrefs();
+      const recs = await fetchIdeaLocations({
+        idea: activeIdeaName.trim(),
+        barangay: currentBarangayName,
+        top,
+        prefs,
+        _t: Date.now()
+      });
+      clearBusinessMarkers();
+      plotLocations(recs);
+    }
   };
 
   pinCountInput.addEventListener('change', fireSlider);
@@ -306,28 +462,37 @@ function clearClickedMarker() {
 document.getElementById('close-saved-panel')?.addEventListener('click', () => savedPanel.classList.remove('open'));
 document.getElementById('close-loc-panel')?.addEventListener('click', () => locPanel.classList.remove('open'));
 
-document.getElementById('close-filter-panel')?.addEventListener('click', () => {
-  filterPanel.classList.remove('open');
-  activeRequestId++;
+// RESET FILTER BUTTON HANDLER - clears all pins and resets selections
+document.getElementById('filter-btn')?.addEventListener('click', function (e) {
+  e.stopPropagation();
+
+  // Clear all pins from map
+  clearBusinessMarkers();
+  clearClickedMarker();
+
+  // Reset filter mode
   isFilterMode = false;
   allowIdeaPins = false;
-  lastFilteredIdea = null;
-  lastFilteredBarangay = null;
-  lastFilteredPrefs = null;
   activeIdeaIdx = -1;
   activeIdeaName = null;
   activeIdeaBarangay = null;
   activeIdeaPrefs = [];
-  clearBusinessMarkers();
-  clearClickedMarker();
+  lastFilteredIdea = null;
+  lastFilteredBarangay = null;
+  lastFilteredPrefs = null;
+
+  // Reset pin range slider to default
   hidePinRange();
   setPinDefault();
+
+  // Clear the recommendations list
   const listEl = document.getElementById('rec-list');
   if (listEl) listEl.innerHTML = '';
-});
 
-document.getElementById('filter-btn')?.addEventListener('click', function (e) {
-  e.stopPropagation();
+  // Close location panel if open
+  locPanel?.classList.remove('open');
+
+  // Open filter panel
   const isOpen = filterPanel.classList.contains('open');
   closeAllPanels();
   if (!isOpen) filterPanel.classList.add('open');
@@ -502,18 +667,68 @@ function escapeHtml(str) {
 
 function plotLocations(recs) {
   clearBusinessMarkers();
-  const bounds = L.latLngBounds();
+
+  if (!recs || recs.length === 0) {
+    console.log('📍 No pins to plot');
+    // Don't move the map if no pins
+    return;
+  }
+
+  const pinBounds = L.latLngBounds();
+
   recs.forEach((rec) => {
     if (!rec.lat || !rec.lon) return;
     const lat = Number(rec.lat);
     const lon = Number(rec.lon);
-    const brgy = rec.barangay_name || '';
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+
+    const brgy = rec.barangay_name || currentBarangayName || '';
     const marker = L.marker([lat, lon]).addTo(map)
-      .bindPopup(`<b>${escapeHtml(brgy)}</b><br>${lat.toFixed(6)}, ${lon.toFixed(6)}<br><span style="color:#2e7d32;">🎯 Suitability: ${Math.round((rec.suitability_score || 0) * 100)}%</span>`);
+      .bindPopup(
+        `<b>${escapeHtml(brgy)}</b><br>${lat.toFixed(6)}, ${lon.toFixed(6)}<br>` +
+        `<span style="color:#2e7d32;">🎯 Suitability: ${Math.round((rec.suitability_score || 0) * 100)}%</span>`
+      );
     businessMarkers.push(marker);
-    bounds.extend(marker.getLatLng());
+    pinBounds.extend([lat, lon]);
   });
-  if (bounds.isValid()) map.fitBounds(bounds.pad(0.2));
+
+  if (businessMarkers.length === 0) return;
+
+  console.log(`📍 Plotted ${businessMarkers.length} pins`);
+
+  // ─── FIX: Smart zoom - don't zoom out too far ───────────────────────────────
+  if (pinBounds.isValid()) {
+    // Check if bounds are too large (spread across multiple barangays)
+    const boundsCenter = pinBounds.getCenter();
+    const boundsWidth = pinBounds.getEast() - pinBounds.getWest();
+    const boundsHeight = pinBounds.getNorth() - pinBounds.getSouth();
+    
+    // If bounds are too large (>0.02 degrees ≈ 2km), zoom to center instead
+    if (boundsWidth > 0.02 || boundsHeight > 0.02) {
+      // Zoom to center with appropriate zoom level based on spread
+      const maxSpread = Math.max(boundsWidth, boundsHeight);
+      let zoomLevel = 16;
+      if (maxSpread > 0.05) zoomLevel = 14;
+      else if (maxSpread > 0.03) zoomLevel = 15;
+      
+      map.flyTo([boundsCenter.lat, boundsCenter.lng], zoomLevel, { duration: 0.8 });
+    } else {
+      // Normal zoom with padding
+      map.flyToBounds(pinBounds, { 
+        padding: [60, 60], 
+        maxZoom: 16, 
+        duration: 0.8 
+      });
+    }
+  } else if (recs.length === 1) {
+    map.flyTo([Number(recs[0].lat), Number(recs[0].lon)], 16, { duration: 0.8 });
+  }
+  
+  // ─── ENSURE we stay within Pasig bounds ─────────────────────────────────────
+  map.setMaxBounds([
+    [PASIG_BOUNDS.minLat - 0.01, PASIG_BOUNDS.minLon - 0.01],
+    [PASIG_BOUNDS.maxLat + 0.01, PASIG_BOUNDS.maxLon + 0.01]
+  ]);
 }
 
 function getPrefs() {
@@ -559,7 +774,6 @@ async function fetchSavedRecommendations() {
     console.error('Error fetching saved recommendations:', err);
   }
 }
-
 async function saveRecommendationToDB(business_type, barangay, lat, lon) {
   try {
     const res = await fetch('/api/saved-recommendations', {
@@ -648,24 +862,24 @@ async function saveRowClickHandler(e) {
   }
 }
 
-// ─── RENDER IDEA LIST ─────────────────────────────────────────────────────────
 // ─── RENDER IDEA LIST (multi-barangay aware) ──────────────────────────────────
 function renderIdeaList({ names, barangays, prefs, allowPins }) {
-  // Keep backward-compat: accept old single `barangay` string too
   if (typeof barangays === 'string') barangays = barangays ? [barangays] : null;
 
   const listEl = document.getElementById('rec-list');
   if (!listEl) return;
 
-  if (!names || !names.length) {
+  // ─── REMOVE DUPLICATES ──────────────────────────────────────────────────────
+  const uniqueNames = [...new Set(names)];
+
+  if (!uniqueNames || !uniqueNames.length) {
     listEl.innerHTML = '<div class="rec-item" style="color:#888;font-size:13px;">No recommendations found.</div>';
     return;
   }
 
-  // For save-row display use the first barangay label (or empty)
   const primaryBarangay = barangays && barangays.length ? barangays[0] : '';
 
-  listEl.innerHTML = names.map((name, i) => `
+  listEl.innerHTML = uniqueNames.map((name, i) => `
     <div class="rec-item" data-idx="${i}" data-idea="${escapeHtml(name)}" style="cursor:pointer;">
       <span class="rec-item-num">${i + 1}.</span>
       <span class="rec-item-name">${escapeHtml(formatBizName(name))}</span>
@@ -677,91 +891,115 @@ function renderIdeaList({ names, barangays, prefs, allowPins }) {
 
   attachSaveRowListeners();
 
+  const onIdeaSelect = async (el) => {
+    const idea = el.dataset.idea;
+    const idx = parseInt(el.dataset.idx);
+    const prevIdeaName = activeIdeaName;
+    const prevIdeaBarangays = activeIdeaBarangay ? [...activeIdeaBarangay] : null;
+    const prevIdeaPrefs = activeIdeaPrefs ? [...activeIdeaPrefs] : [];
+
+    activeIdeaIdx = idx;
+    activeIdeaName = idea;
+    activeIdeaBarangay = barangays || null;
+    activeIdeaPrefs = prefs || [];
+
+    listEl.querySelectorAll('.rec-item').forEach(r => r.classList.remove('active'));
+    el.classList.add('active');
+
+    const sameIdea =
+      prevIdeaName === activeIdeaName &&
+      JSON.stringify(prevIdeaBarangays || []) === JSON.stringify(activeIdeaBarangay || []) &&
+      JSON.stringify(prevIdeaPrefs || []) === JSON.stringify(activeIdeaPrefs || []);
+    if (sameIdea) return;
+
+    await reportLogRecommendation({
+      idea,
+      area: barangays ? barangays.join(', ') : (currentBarangayName || currentLocShortName),
+      pinCount: getFilteredPinCount(),
+      lat: currentClickLat,
+      lon: currentClickLng
+    });
+
+    loadAreaDemographics(primaryBarangay || currentBarangayName, idea);
+
+    const top = getFilteredPinCount();
+
+    const barangayList = barangays && barangays.length ? barangays : [null];
+    const allRecs = (await Promise.all(
+      barangayList.map(b => fetchIdeaLocations({
+        idea: idea.trim(),
+        barangay: b,
+        top,
+        prefs,
+        _t: Date.now()
+      }))
+    )).flat();
+
+    clearBusinessMarkers();
+    plotLocations(allRecs);
+  };
+
   listEl.querySelectorAll('.rec-item').forEach(el => {
     el.addEventListener('click', async (e) => {
       if (e.target.closest('.save-row')) return;
       if (!allowPins) return;
-
-      const idea = el.dataset.idea;
-      const idx = parseInt(el.dataset.idx);
-
-      if (activeIdeaIdx === idx) {
-        activeIdeaIdx = -1;
-        activeIdeaName = null;
-        activeIdeaBarangay = null;
-        activeIdeaPrefs = [];
-        clearBusinessMarkers();
-        listEl.querySelectorAll('.rec-item').forEach(r => r.classList.remove('active'));
-        return;
-      }
-
-      activeIdeaIdx = idx;
-      activeIdeaName = idea;
-      activeIdeaBarangay = barangays || null;  // ✅ store the full array
-      activeIdeaPrefs = prefs || [];
-
-      listEl.querySelectorAll('.rec-item').forEach(r => r.classList.remove('active'));
-      el.classList.add('active');
-
-      await reportLogRecommendation({
-        idea,
-        area: barangays ? barangays.join(', ') : (currentBarangayName || currentLocShortName),
-        pinCount: getFilteredPinCount(),
-        lat: currentClickLat,
-        lon: currentClickLng
-      });
-
-      loadAreaDemographics(primaryBarangay || currentBarangayName, idea);
-
-      const top = getFilteredPinCount();
-
-      // ✅ Fetch from every selected barangay, then plot all combined
-      const barangayList = barangays && barangays.length ? barangays : [null];
-      const allRecs = (await Promise.all(
-        barangayList.map(b => fetchIdeaLocations({
-          idea: idea.trim(),
-          barangay: b,
-          top,
-          prefs,
-          _t: Date.now()
-        }))
-      )).flat();
-
-      clearBusinessMarkers();
-      plotLocations(allRecs);
+      await onIdeaSelect(el);
     });
   });
 
   markSavedInCurrentList();
+
+  if (allowPins && activeIdeaIdx === -1) {
+    const firstItem = listEl.querySelector('.rec-item');
+    if (firstItem) {
+      void onIdeaSelect(firstItem);
+    }
+  }
 }
 
-// ✅ FIXED: resolveChipIdeas – ranks chips by suitability, returns top 3 chip labels
-// ✅ FIXED resolveChipIdeas — scores across ALL selected barangays
+// ─── RESOLVE CHIP IDEAS ───────────────────────────────────────────────────────
 async function resolveChipIdeas({ selectedChips, barangays, type, prefs }) {
   const barangayList = barangays && barangays.length ? barangays : [null];
+  const primaryBarangay = barangayList[0] || null;
 
+  // ── No chips, no type: fetch top ideas globally/by barangay
   if (selectedChips.length === 0 && !type) {
-    const ideas = await fetchIdeas({ barangay: barangayList[0], prefs });
+    const ideas = await fetchIdeas({ barangay: primaryBarangay, prefs });
     return ideas.slice(0, 3);
   }
 
+  // ── No chips but type filter selected: fetch by type, backfill if needed
   if (selectedChips.length === 0 && type) {
-    const ideas = await fetchIdeas({ barangay: barangayList[0], type, prefs });
+    const ideas = await fetchIdeas({ barangay: primaryBarangay, type, prefs });
     if (ideas.length >= 3) return ideas.slice(0, 3);
-    const general = await fetchIdeas({ barangay: barangayList[0], prefs });
+    const general = await fetchIdeas({ barangay: primaryBarangay, prefs });
     const extra = general.filter(n => !ideas.includes(n));
     return [...ideas, ...extra].slice(0, 3);
   }
 
-  // Score each chip across all selected barangays
-  const chipLabels = selectedChips.map(c => c.label);
+  // ── 1 chip: return exactly 1 chip (no backfill)
+  if (selectedChips.length === 1) {
+    return [selectedChips[0].label];
+  }
+
+  // ── 2 chips: return exactly 2 chips (no backfill)
+  if (selectedChips.length === 2) {
+    return selectedChips.map(c => c.label);
+  }
+
+  // ── 3 chips: return exactly 3 chips (no backfill)
+  if (selectedChips.length === 3) {
+    return selectedChips.map(c => c.label);
+  }
+
+  // ── 4+ chips: score each chip label by suitability, keep top 3
   const scored = [];
-  for (const label of chipLabels) {
+  for (const chip of selectedChips) {
     let totalScore = 0;
     let totalRecs = 0;
     for (const b of barangayList) {
       const recs = await fetchIdeaLocations({
-        idea: label.trim(),
+        idea: chip.label.trim(),
         barangay: b,
         top: 3,
         prefs,
@@ -772,10 +1010,31 @@ async function resolveChipIdeas({ selectedChips, barangays, type, prefs }) {
         totalRecs += recs.length;
       }
     }
-    scored.push({ label, score: totalRecs > 0 ? totalScore / totalRecs : 0 });
+    // If no recs found, give a default low score
+    const avgScore = totalRecs > 0 ? totalScore / totalRecs : 0;
+    scored.push({ label: chip.label, score: avgScore });
   }
+
+  // Sort by score (highest first) and take top 3
   scored.sort((a, b) => b.score - a.score);
-  return scored.slice(0, 3).map(item => item.label);
+  const top3 = scored.slice(0, 3).map(item => item.label);
+
+  return top3;
+}
+
+async function debugBarangayData(barangayName) {
+  try {
+    const res = await fetch(`/api/debug-barangay-check?barangay=${encodeURIComponent(barangayName || 'Santa Lucia')}`);
+    const data = await res.json();
+    console.log('=== BARANGAY DEBUG ===');
+    console.log('All barangays in DB:', data.allBarangaysInDB);
+    console.log('Matching businesses:', data.matchingBusinesses);
+    console.log('Demographic data:', data.demographicData);
+    console.log('Businesses in Santa Lucia bounds:', data.businessesInSantaLuciaBounds);
+    return data;
+  } catch (err) {
+    console.error('Debug error:', err);
+  }
 }
 
 const barangayMap = {
@@ -803,44 +1062,82 @@ async function applyFiltersAndShowRecommendations() {
 
   activeIdeaIdx = -1;
   activeIdeaName = null;
-  activeIdeaBarangay = null;   // will become string[] | null
+  activeIdeaBarangay = null;
   activeIdeaPrefs = [];
   lastFilteredIdea = null;
 
   setPinDefault();
   showPinRange();
   clearBusinessMarkers();
+  clearClickedMarker();
 
   const barangayCheckboxes = document.querySelectorAll('[id^="b-"]:checked');
   const typeCheckboxes = document.querySelectorAll('[id^="f-"]:checked');
 
-  // ✅ Collect ALL selected barangays
   const selectedBarangays = [...barangayCheckboxes].map(cb => barangayMap[cb.id]).filter(Boolean);
   const selectedTypes = [...typeCheckboxes].map(cb => typeMap[cb.id]).filter(Boolean);
 
-  // null means "all barangays" (no filter)
   const barangays = selectedBarangays.length ? selectedBarangays : null;
+  const type = selectedTypes[0] || null;
   const prefs = getPrefs();
 
+  // Get ALL selected chips (from all sections)
   const selectedChipEls = document.querySelectorAll('.filter-chip.selected');
   const selectedChips = [...selectedChipEls].map(el => ({
     label: el.dataset.chip || el.textContent.trim(),
     category: el.dataset.category || ''
   }));
 
-  const type = selectedChips.length === 0 ? (selectedTypes[0] || null) : null;
+  // SAVE the applied filters
+  lastAppliedChips = [...selectedChips];
+  lastAppliedBarangays = barangays;
+  lastAppliedPrefs = [...prefs];
+  lastAppliedType = type;
+  isFilterApplied = true;
 
-  if (!barangays && !type && !prefs.length && selectedChips.length === 0) return;
+  // Require at least one filter
+  if (!barangays && !type && !prefs.length && selectedChips.length === 0) {
+    return;
+  }
 
-  // For demographics, load the first barangay (or all if none selected)
-  if (barangays) loadAreaDemographics(barangays[0]);
+  // Set current barangay context
+  if (barangays && barangays.length > 0) {
+    currentBarangayName = barangays[0];
+  }
 
-  const titleEl = document.getElementById('loc-panel-title');
-  const badgeEl = document.getElementById('loc-badge');
+  // Zoom map to barangay
+  if (currentBarangayName) {
+    const bounds = getBarangayBoundsForMap(currentBarangayName);
+    if (bounds && bounds.isValid()) {
+      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+    } else {
+      const CENTROID_FALLBACK = {
+        'bagong ilog': [14.5720, 121.0855], 'bagong katipunan': [14.5785, 121.0670],
+        'bambang': [14.5745, 121.0680], 'buting': [14.5720, 121.0770],
+        'caniogan': [14.5785, 121.0870], 'dela paz': [14.5895, 121.0890],
+        'kalawaan': [14.5685, 121.0780], 'kapasigan': [14.5695, 121.0730],
+        'kapitolyo': [14.5825, 121.0630], 'malinao': [14.5805, 121.0890],
+        'manggahan': [14.5940, 121.0970], 'maybunga': [14.5770, 121.0915],
+        'oranbo': [14.5785, 121.0780], 'palatiw': [14.5815, 121.0960],
+        'pinagbuhatan': [14.5610, 121.0945], 'pineda': [14.5665, 121.0645],
+        'rosario': [14.5670, 121.0805], 'sagad': [14.5590, 121.0870],
+        'san antonio': [14.5890, 121.0870], 'san joaquin': [14.5865, 121.0755],
+        'san jose': [14.5835, 121.0680], 'san miguel': [14.5745, 121.0810],
+        'san nicolas': [14.5715, 121.0850], 'santa lucia': [14.5815, 121.1015],
+        'santa rosa': [14.5640, 121.0920], 'santolan': [14.5945, 121.0800],
+        'sumilang': [14.5745, 121.0840], 'ugong': [14.5825, 121.0620],
+      };
+      const c = CENTROID_FALLBACK[currentBarangayName.toLowerCase().trim()];
+      if (c) map.setView(c, 15);
+    }
+  }
+
   const areaLabel = barangays
     ? (barangays.length === 1 ? barangays[0] : `${barangays.length} Barangays`)
     : 'All Barangays';
 
+  const titleEl = document.getElementById('loc-panel-title');
+  const badgeEl = document.getElementById('loc-badge');
   if (titleEl) titleEl.textContent = `Top Businesses in ${areaLabel}`;
   if (badgeEl) badgeEl.textContent = `📍 ${areaLabel}`;
 
@@ -849,15 +1146,58 @@ async function applyFiltersAndShowRecommendations() {
   const listEl = document.getElementById('rec-list');
   if (listEl) listEl.innerHTML = '<div class="rec-item" style="color:#888;font-size:13px;">Loading recommendations…</div>';
 
-  lastFilteredBarangay = barangays;   // now an array or null
+  lastFilteredBarangay = barangays;
   lastFilteredPrefs = prefs;
 
-  // ✅ Pass full array to resolveChipIdeas
-  const ideaNames = await resolveChipIdeas({ selectedChips, barangays, type, prefs });
+  // Chips override type filter; type only used when no chips selected
+  const resolvedType = selectedChips.length === 0 ? type : null;
 
-  // Render — pass barangays array through
+  // Get idea names via resolveChipIdeas (handles all cases)
+  let ideaNames = await resolveChipIdeas({
+    selectedChips,
+    barangays,
+    type: resolvedType,
+    prefs
+  });
+
+  // If we have selected chips, DO NOT backfill - keep exactly what resolveChipIdeas returned
+  // If no chips and we have type, keep what we got
+  // If no chips and no type, ensure we have 3
+  if (selectedChips.length === 0 && !type) {
+    if (ideaNames.length < 3) {
+      const general = await fetchIdeas({ barangay: barangays ? barangays[0] : null, prefs });
+      const extra = general.filter(n => !ideaNames.includes(n));
+      ideaNames = [...ideaNames, ...extra].slice(0, 3);
+    }
+  }
+
+  if (barangays) {
+    loadAreaDemographics(barangays[0]);
+  }
+
   renderIdeaList({ names: ideaNames, barangays, prefs, allowPins: true });
+
+  // Also fetch and display pins for the selected ideas using the pin count from slider
+  const top = getFilteredPinCount();
+  const barangayList = barangays && barangays.length ? barangays : [null];
+  const allRecs = (await Promise.all(
+    ideaNames.map(idea =>
+      Promise.all(barangayList.map(b =>
+        fetchIdeaLocations({
+          idea: idea.trim(),
+          barangay: b,
+          top: top,
+          prefs,
+          _t: Date.now()
+        })
+      ))
+    )
+  )).flat(2);
+
+  clearBusinessMarkers();
+  plotLocations(allRecs);
 }
+
 document.getElementById('done-btn')?.addEventListener('click', async () => {
   await applyFiltersAndShowRecommendations();
 });
@@ -870,6 +1210,39 @@ function showPasigToast(msg) {
   setTimeout(() => el.classList.remove('show'), 2500);
 }
 
+// ─── VERIFIED BARANGAY CENTERS ──────────────────────────────────────────────────
+const VERIFIED_BARANGAY_CENTERS = {
+  'Bagong Ilog':       [14.5740, 121.0860],
+  'Bagong Katipunan':  [14.5572, 121.0750],  // ← OFFICIAL Barangay Hall
+  'Bambang':           [14.5740, 121.0680],
+  'Buting':            [14.5720, 121.0770],
+  'Caniogan':          [14.5790, 121.0870],
+  'Dela Paz':          [14.5900, 121.0890],
+  'Kalawaan':          [14.5690, 121.0780],
+  'Kapasigan':         [14.5700, 121.0730],
+  'Kapitolyo':         [14.5830, 121.0630],
+  'Malinao':           [14.5810, 121.0890],
+  'Manggahan':         [14.5940, 121.0970],
+  'Maybunga':          [14.5770, 121.0920],
+  'Oranbo':            [14.5790, 121.0780],
+  'Palatiw':           [14.5820, 121.0960],
+  'Pinagbuhatan':      [14.5610, 121.0940],
+  'Pineda':            [14.5670, 121.0650],
+  'Rosario':           [14.5861, 121.0846],  // ← OFFICIAL Barangay Hall
+  'Sagad':             [14.5590, 121.0870],
+  'San Antonio':       [14.5890, 121.0870],
+  'San Joaquin':       [14.5521, 121.0798],  // ← OFFICIAL Barangay Hall
+  'San Jose':          [14.5594, 121.0734],  // ← OFFICIAL Barangay Hall
+  'San Miguel':        [14.5658, 121.0855],  // ← OFFICIAL Barangay Hall
+  'San Nicolas':       [14.5643, 121.0798],  // ← OFFICIAL Barangay Hall
+  'Santa Lucia':       [14.5843, 121.1013],  // ← OFFICIAL
+  'Santa Rosa':        [14.5589, 121.0729],  // ← OFFICIAL Barangay Hall
+  'Santolan':          [14.5950, 121.0800],
+  'Sumilang':          [14.5750, 121.0840],
+  'Ugong':             [14.5830, 121.0620]
+};
+
+// ─── FIXED handleLocationSelect ──────────────────────────────────────────────────
 async function handleLocationSelect(lat, lon, source = 'map') {
   hidePinRange();
   isFilterMode = false;
@@ -933,22 +1306,41 @@ async function handleLocationSelect(lat, lon, source = 'map') {
   const badge = document.getElementById('loc-badge');
   const titleEl = document.getElementById('loc-panel-title');
   if (badge) badge.textContent = '📍 Locating…';
-  currentLocShortName = `${currentClickLat}, ${currentClickLng}`;
-  currentBarangayName = '';
-
+  
+  // ─── FIND NEAREST VERIFIED BARANGAY ──────────────────────────────────────────
+  let nearestBarangay = '';
+  let minDistance = Infinity;
+  
+  for (const [name, center] of Object.entries(VERIFIED_BARANGAY_CENTERS)) {
+    const dist = Math.sqrt(
+      Math.pow((latN - center[0]) * 111000, 2) + 
+      Math.pow((lonN - center[1]) * 111000 * Math.cos(center[0] * Math.PI / 180), 2)
+    );
+    if (dist < minDistance) {
+      minDistance = dist;
+      nearestBarangay = name;
+    }
+  }
+  
+  currentBarangayName = nearestBarangay;
+  
+  let displayName = nearestBarangay;
   try {
     const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${currentClickLat}&lon=${currentClickLng}&format=json`);
     const data = await res.json();
     const addr = data.address || {};
-    const area = addr.barangay || addr.suburb || addr.neighbourhood || addr.city_district || addr.village || addr.town || addr.county || '';
-    const city = addr.city || addr.municipality || addr.town || addr.county || '';
-    currentLocShortName = area ? (city ? `${area}, ${city}` : area) : (city || currentLocShortName);
-    currentBarangayName = area || '';
-    if (badge) badge.textContent = `📍 ${currentLocShortName}`;
-    if (titleEl) titleEl.textContent = `Recommended Businesses in ${area || city || 'this Area'}`;
-  } catch {
-    if (badge) badge.textContent = `📍 ${currentClickLat}, ${currentClickLng}`;
+    const city = addr.city || addr.municipality || '';
+    if (city) {
+      displayName = `${nearestBarangay}, ${city}`;
+    }
+  } catch (e) {
+    // If Nominatim fails, just use barangay name
   }
+  
+  currentLocShortName = displayName;
+  
+  if (badge) badge.textContent = `📍 ${displayName}`;
+  if (titleEl) titleEl.textContent = `Recommended Businesses in ${nearestBarangay}`;
 
   if (source !== 'search') {
     await reportLogSearchOrPin({
@@ -963,6 +1355,8 @@ async function handleLocationSelect(lat, lon, source = 'map') {
   const type = selectedTypes[0] || industryDerivedType || null;
   const prefs = getPrefs();
 
+  console.log('🔍 Fetching ideas for:', nearestBarangay);
+  
   const ideasRes = await fetch(`/api/ideas-by-point?lat=${currentClickLat}&lon=${currentClickLng}&category=${type || ''}&prefs=${prefs.join(',')}`);
   const ideasData = await ideasRes.json();
   const listEl = document.getElementById('rec-list');
@@ -970,14 +1364,33 @@ async function handleLocationSelect(lat, lon, source = 'map') {
 
   loadAreaDemographics(currentBarangayName);
 
-  if (!ideasData.success || !ideasData.data.length) {
+  if (!ideasData.success || !ideasData.data || !ideasData.data.length) {
     listEl.innerHTML = '<div class="rec-item">No recommendations found.</div>';
     return;
   }
 
   const top3 = ideasData.data.slice(0, 3);
 
-  listEl.innerHTML = top3.map((name, i) => `
+  // ─── REMOVE DUPLICATES ──────────────────────────────────────────────────────
+  const uniqueNames = [];
+  const seenNames = new Set();
+  for (const name of top3) {
+    if (!seenNames.has(name)) {
+      seenNames.add(name);
+      uniqueNames.push(name);
+    }
+  }
+  // Fill up to 3 if we lost some to deduplication
+  if (uniqueNames.length < 3 && ideasData.data.length > 3) {
+    for (const name of ideasData.data.slice(3)) {
+      if (!seenNames.has(name) && uniqueNames.length < 3) {
+        seenNames.add(name);
+        uniqueNames.push(name);
+      }
+    }
+  }
+
+  listEl.innerHTML = uniqueNames.map((name, i) => `
     <div class="rec-item" data-idx="${i}" data-idea="${escapeHtml(name)}" style="cursor:pointer;">
       <span class="rec-item-num">${i + 1}.</span>
       <span class="rec-item-name">${escapeHtml(formatBizName(name))}</span>
@@ -1019,6 +1432,8 @@ async function handleLocationSelect(lat, lon, source = 'map') {
       loadAreaDemographics(currentBarangayName, idea);
       hidePinRange();
 
+      console.log(`📍 Fetching pins for idea: ${idea} in barangay: ${currentBarangayName}`);
+      
       const recs = await fetchIdeaLocations({
         idea: idea.trim(),
         barangay: currentBarangayName,
@@ -1026,6 +1441,9 @@ async function handleLocationSelect(lat, lon, source = 'map') {
         prefs,
         _t: Date.now()
       });
+      
+      console.log(`📍 Got ${recs.length} pins`);
+      
       clearBusinessMarkers();
       plotLocations(recs);
     });
@@ -1214,6 +1632,7 @@ document.addEventListener('click', function (e) {
     profilePopup.classList.remove('open');
 });
 document.getElementById('logout-btn')?.addEventListener('click', () => {
+  currentUserId = null;
   profilePopup?.classList.remove('open');
   window.location.href = '/logout';
 });
@@ -1286,6 +1705,9 @@ async function loadAreaDemographics(barangay, businessLine) {
         const genderLabel = demo.gender_distribution
           ? `a predominantly ${demo.gender_distribution.toLowerCase()} population`
           : 'a balanced gender distribution';
+        const businessCountText = businessLine
+          ? `, <strong>${sameLineCount.toLocaleString()}</strong> of which are in the same line of business`
+          : '';
         summary = `<p>
           <strong>${escapeHtml(demo.barangay_name || barangay)}</strong> is a ${densityLabel} barangay in Pasig
           with a total population of <strong>${demo.population ? demo.population.toLocaleString() : 'N/A'}</strong>
@@ -1294,7 +1716,7 @@ async function loadAreaDemographics(barangay, businessLine) {
           Households in this barangay have an average income range of
           <strong>${demo.avg_income_min ? '₱' + demo.avg_income_min.toLocaleString() : 'N/A'} – ${demo.avg_income_max ? '₱' + demo.avg_income_max.toLocaleString() : 'N/A'}</strong>,
           making it an area ${incomeLabel}.
-          There are <strong>${totalBiz.toLocaleString()}</strong> registered businesses operating in the area${businessLine ? `, <strong>${sameLineCount.toLocaleString()}</strong> of which are in the same line of business` : ''}.
+          There are <strong>${totalBiz.toLocaleString()}</strong> registered businesses operating in the area${businessCountText}.
           This barangay is well-suited for businesses targeting the <strong>${ageLabel}</strong> age group.
         </p>`;
       }
@@ -1327,7 +1749,7 @@ function parseJumpTarget() {
 }
 
 // ============================================================================
-// SMART FILTER PERSONALIZATION SYSTEM - CHIPS FILTER IDEAS (NO PINS)
+// SMART FILTER PERSONALIZATION SYSTEM
 // ============================================================================
 
 const INDUSTRY_CHIP_MAP = {
@@ -1527,7 +1949,10 @@ function buildFilterChips(industry, subcategory) {
   if (trulyCrossIndustry.length) {
     html += `<div class="chip-group-label">Matched to your business</div><div class="chip-row">`;
     trulyCrossIndustry.forEach(label => {
-      html += `<span class="filter-chip filter-chip--cross" data-chip="${escapeHtml(label)}">${escapeHtml(label)}</span>`;
+      // Check if this chip was previously selected
+      const isPreviouslySelected = lastAppliedChips.some(c => c.label === label);
+      const selectedClass = isPreviouslySelected ? 'selected' : '';
+      html += `<span class="filter-chip filter-chip--cross ${selectedClass}" data-chip="${escapeHtml(label)}" data-category="${escapeHtml(subcategory)}">${escapeHtml(label)}</span>`;
     });
     html += `</div>`;
   }
@@ -1535,7 +1960,9 @@ function buildFilterChips(industry, subcategory) {
   if (boostedChips.length) {
     html += `<div class="chip-group-label">Top matches for your industry</div><div class="chip-row">`;
     boostedChips.forEach(label => {
-      html += `<span class="filter-chip filter-chip--boosted" data-chip="${escapeHtml(label)}">${escapeHtml(label)}</span>`;
+      const isPreviouslySelected = lastAppliedChips.some(c => c.label === label);
+      const selectedClass = isPreviouslySelected ? 'selected' : '';
+      html += `<span class="filter-chip filter-chip--boosted ${selectedClass}" data-chip="${escapeHtml(label)}" data-category="${escapeHtml(industry)}">${escapeHtml(label)}</span>`;
     });
     html += `</div>`;
   }
@@ -1544,7 +1971,9 @@ function buildFilterChips(industry, subcategory) {
     const groupLabel = (boostedChips.length || trulyCrossIndustry.length) ? 'Other suggestions' : 'Suggested for your industry';
     html += `<div class="chip-group-label">${groupLabel}</div><div class="chip-row">`;
     regularChips.forEach(label => {
-      html += `<span class="filter-chip" data-chip="${escapeHtml(label)}">${escapeHtml(label)}</span>`;
+      const isPreviouslySelected = lastAppliedChips.some(c => c.label === label);
+      const selectedClass = isPreviouslySelected ? 'selected' : '';
+      html += `<span class="filter-chip ${selectedClass}" data-chip="${escapeHtml(label)}" data-category="${escapeHtml(industry)}">${escapeHtml(label)}</span>`;
     });
     html += `</div>`;
   }
@@ -1552,7 +1981,9 @@ function buildFilterChips(industry, subcategory) {
   if (industryChips.full.length) {
     html += `<div class="chip-divider">more</div><div class="chip-row">`;
     industryChips.full.forEach(label => {
-      html += `<span class="filter-chip" data-chip="${escapeHtml(label)}">${escapeHtml(label)}</span>`;
+      const isPreviouslySelected = lastAppliedChips.some(c => c.label === label);
+      const selectedClass = isPreviouslySelected ? 'selected' : '';
+      html += `<span class="filter-chip ${selectedClass}" data-chip="${escapeHtml(label)}" data-category="${escapeHtml(industry)}">${escapeHtml(label)}</span>`;
     });
     html += `</div>`;
   }
@@ -1560,7 +1991,14 @@ function buildFilterChips(industry, subcategory) {
   chipContainer.innerHTML = html;
   if (chipSection) chipSection.style.display = 'block';
 
-  // ── Chip click: JUST TOGGLE SELECTION - NO PINS ──
+  // Restore the activeCustomChips from lastAppliedChips
+  activeCustomChips.clear();
+  lastAppliedChips.forEach(chip => {
+    if (chip.label) {
+      activeCustomChips.add(chip.label);
+    }
+  });
+
   chipContainer.querySelectorAll('.filter-chip').forEach(chip => {
     const chipValue = chip.dataset.chip || '';
 
@@ -1577,10 +2015,6 @@ function buildFilterChips(industry, subcategory) {
         activeCustomChips.delete(chipValue);
       }
       updateChipSelectionCounter();
-      if (activeCustomChips.size === 0) {
-        clearBusinessMarkers();
-        hidePinRange();
-      }
     });
   });
 
@@ -1689,6 +2123,18 @@ function applyIndustryPersonalization(industry, industrySpecific) {
 
 // ─── DOM CONTENT LOADED ───────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
+  // Get current user ID first for report isolation
+  try {
+    const authRes = await fetch('/api/check-auth');
+    const authData = await authRes.json();
+    if (authData.authenticated && authData.user?.id) {
+      currentUserId = authData.user.id;
+      console.log('Reports initialized for user:', currentUserId);
+    }
+  } catch (err) {
+    console.warn('Failed to get user ID for reports:', err);
+  }
+
   fetchSavedRecommendations();
 
   try {
