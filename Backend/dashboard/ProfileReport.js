@@ -27,11 +27,25 @@ function renderList(id,items,renderItem){
 }
 
 function readLocalLogs(){
-  try{
-    const v=JSON.parse(localStorage.getItem('reportLogs')||'{"searchPins":[],"recommendations":[],"saved":[]}');
-    return v||{searchPins:[],recommendations:[],saved:[]};
-  }catch{
-    return {searchPins:[],recommendations:[],saved:[]};
+  // Try to find the user-specific key first
+  const keys = Object.keys(localStorage).filter(k => k.startsWith('reportLogs_'));
+  
+  // If we found a user-specific log, use it
+  if (keys.length > 0) {
+    try {
+      const v = JSON.parse(localStorage.getItem(keys[0]) || '{"searchPins":[],"recommendations":[],"saved":[]}');
+      return v || {searchPins:[], recommendations:[], saved:[]};
+    } catch {
+      return {searchPins:[], recommendations:[], saved:[]};
+    }
+  }
+  
+  // Fallback to old key for backward compatibility
+  try {
+    const v = JSON.parse(localStorage.getItem('reportLogs') || '{"searchPins":[],"recommendations":[],"saved":[]}');
+    return v || {searchPins:[], recommendations:[], saved:[]};
+  } catch {
+    return {searchPins:[], recommendations:[], saved:[]};
   }
 }
 
@@ -151,10 +165,14 @@ async function renderReports(){
 
 window.renderReports=renderReports;
 
-// 🧹 CLEAR BUTTON
-const clearBtn=document.getElementById('clear-reports-btn');
+// CLEAR BUTTON
+const clearBtn = document.getElementById('clear-reports-btn');
 
-clearBtn?.addEventListener('click',async()=>{
-  localStorage.setItem('reportLogs','{"searchPins":[],"recommendations":[],"saved":[]}');
+clearBtn?.addEventListener('click', async () => {
+  // Clear ALL report-related localStorage keys
+  const keys = Object.keys(localStorage).filter(k => k.startsWith('reportLogs'));
+  keys.forEach(k => localStorage.removeItem(k));
+  // Also clear the old key
+  localStorage.removeItem('reportLogs');
   await renderReports();
 });
