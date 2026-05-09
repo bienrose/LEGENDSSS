@@ -1446,6 +1446,166 @@ function getCategoryKeywords(category) {
   
   return CATEGORY_KEYWORDS[catLower] || [];
 }
+app.get("/api/ideas-by-point", requireAuth, async (req, res) => {
+  try {
+    const { lat, lon, category, top = 3, prefs = "" } = req.query;
+    if (!lat || !lon) return res.status(400).json({ success: false, message: "lat/lon required" });
+
+    const latNum = Number(lat), lonNum = Number(lon);
+    if (!inPasig(latNum, lonNum)) return res.json({ success: true, data: [] });
+
+    const prefList = prefs ? prefs.split(",").filter(Boolean) : [];
+    const weights = prefWeights();
+    const GENERIC_NAMES = [
+      'Food Business', 'Other Business', 'General Business',
+      'Retail Store', 'Services', 'Wholesale', 'Manufacturing',
+      'Admin Services', 'General Services'
+    ];
+
+    let sql = `SELECT line_of_business AS name, COUNT(*) AS cnt
+               FROM businesses
+               WHERE line_of_business IS NOT NULL AND line_of_business <> ''`;
+    const params = [];
+
+    if (category) {
+      const mappedCategory = TYPE_TO_CATEGORY[category] || category;
+      sql += " AND category = ?";
+      params.push(mappedCategory);
+    }
+
+    sql += " GROUP BY line_of_business ORDER BY cnt DESC";
+    const [ideaRows] = await geoDB.query(sql, params);
+
+    // ─── DEDUPE by readable name, sum counts ─────────────────────────────────
+    const readableMap = new Map();
+    ideaRows.forEach(row => {
+      const readable = dbCodeToReadableName(row.name);
+      if (GENERIC_NAMES.includes(readable)) return;
+      if (readableMap.has(readable)) {
+        readableMap.set(readable, readableMap.get(readable) + Number(row.cnt));
+      } else {
+        readableMap.set(readable, Number(row.cnt));
+      }
+    });
+
+    let readableIdeaRows = [...readableMap.entries()]
+      .map(([name, cnt]) => ({ name, cnt }))
+      .sort((a, b) => b.cnt - a.cnt);
+
+    if (!readableIdeaRows.length) return res.json({ success: true, data: [] });
+
+    const topN = parseInt(top) || 3;
+
+    if (!prefList.length) {
+      return res.json({
+        success: true,
+        data: readableIdeaRows.slice(0, topN).map(r => r.name)
+      });
+    }
+
+    // ─── Preference-based scoring ─────────────────────────────────────────────
+    const ideas = readableIdeaRows.map(r => r.name);
+
+    const [allBiz] = await geoDB.query(
+      `SELECT barangay, line_of_business,
+              CAST(lat AS DECIMAL(10,7)) AS lat,
+              CAST(lon AS DECIMAL(10,7)) AS lon
+       FROM businesses
+       WHERE lat IS NOT NULL AND lon IS NOT NULL
+         AND lat <> 'null' AND lon <> 'null'
+         AND CAST(lat AS DECIMAL(10,7)) BETWEEN ? AND ?
+         AND CAST(lon AS DECIMAL(10,7)) BETWEEN ? AND ?`,
+      [PASIG_BOUNDS.minLat, PASIG_BOUNDS.maxLat, PASIG_BOUNDS.minLon, PASIG_BOUNDS.maxLon]
+    );
+
+    const [demoRows] = await geoDB.query(
+      `SELECT barangay_name, population, population_density,
+              avg_income_max, gender_distribution, highest_age_group
+       FROM demographic_pasig`
+    );
+    const demoMap = {};
+    demoRows.forEach(d => { demoMap[normalizeBarangay(d.barangay_name)] = d; });
+
+    const [totBizRows] = await geoDB.query(
+      `SELECT barangay, COUNT(*) AS cnt FROM businesses GROUP BY barangay`
+    );
+    const totalBizMap = {};
+    totBizRows.forEach(r => { totalBizMap[normalizeBarangay(r.barangay)] = Number(r.cnt) || 0; });
+
+    const centroidMap = {};
+    allBiz.forEach(b => {
+      const key = normalizeBarangay(b.barangay);
+      const latN = Number(b.lat), lonN = Number(b.lon);
+      if (!Number.isFinite(latN) || !Number.isFinite(lonN)) return;
+      if (!centroidMap[key]) centroidMap[key] = { lat: 0, lon: 0, n: 0 };
+      centroidMap[key].lat += latN;
+      centroidMap[key].lon += lonN;
+      centroidMap[key].n += 1;
+    });
+    Object.keys(centroidMap).forEach(k => {
+      centroidMap[k].lat /= centroidMap[k].n;
+      centroidMap[k].lon /= centroidMap[k].n;
+    });
+
+    let nearestBarangay = null, minDist = Infinity;
+    Object.keys(centroidMap).forEach(b => {
+      const c = centroidMap[b];
+      const d = haversineMeters(latNum, lonNum, c.lat, c.lon);
+      if (d < minDist) { minDist = d; nearestBarangay = b; }
+    });
+
+    const radius = 500;
+    const ideaScores = [];
+    ideas.forEach(name => {
+      const searchTerms = ideaToDbSearchTerms(name) || [name];
+      const ideaBiz = allBiz.filter(b =>
+        searchTerms.some(term =>
+          (b.line_of_business || '').toUpperCase().includes(term.toUpperCase())
+        )
+      );
+      let competitors = 0;
+      ideaBiz.forEach(b => {
+        if (haversineMeters(latNum, lonNum, Number(b.lat), Number(b.lon)) <= radius) competitors += 1;
+      });
+      const demo = demoMap[nearestBarangay] || {};
+      const totalBiz = totalBizMap[nearestBarangay] || 0;
+      const bizDensity = demo.population
+        ? totalBiz / (Number(demo.population) / 1000)
+        : 0;
+      ideaScores.push({
+        name,
+        totalpop:    Number(demo.population) || 0,
+        popdensity:  Number(demo.population_density) || 0,
+        income:      Number(demo.avg_income_max) || 0,
+        gender:      demo.gender_distribution === "Female" ? 1 : 0,
+        agedist:     ageScore(demo.highest_age_group),
+        bizdensity:  bizDensity,
+        bizcount:    ideaBiz.filter(b => normalizeBarangay(b.barangay) === nearestBarangay).length,
+        competitors
+      });
+    });
+
+    const finalScores = ideaScores.map(i => ({ name: i.name, score: 0 }));
+    prefList.forEach(pref => {
+      const values = ideaScores.map(i => Number(i[pref]) || 0);
+      const z = zscores(values);
+      z.forEach((val, idx) => { finalScores[idx].score += (weights[pref] || 0) * val; });
+    });
+    finalScores.sort((a, b) => b.score - a.score);
+
+    return res.json({
+      success: true,
+      data: finalScores
+        .filter(r => !GENERIC_NAMES.includes(r.name))
+        .slice(0, topN)
+        .map(r => r.name)
+    });
+
+  } catch (err) {
+    console.error("ideas-by-point error:", err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
 
 // ─── Get actual business types in a barangay ──────────────────────────────────
 app.get("/api/barangay-business-types", requireAuth, async (req, res) => {

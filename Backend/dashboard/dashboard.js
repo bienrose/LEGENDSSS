@@ -1249,10 +1249,6 @@ async function handleLocationSelect(lat, lon, source = 'map') {
   lastFilteredIdea = null;
   lastFilteredBarangay = null;
   lastFilteredPrefs = null;
-  activeIdeaIdx = -1;
-  activeIdeaName = null;
-  activeIdeaBarangay = null;
-  activeIdeaPrefs = [];
 
   const latN = Number(lat);
   const lonN = Number(lon);
@@ -1306,14 +1302,45 @@ async function handleLocationSelect(lat, lon, source = 'map') {
   const badge = document.getElementById('loc-badge');
   const titleEl = document.getElementById('loc-panel-title');
   if (badge) badge.textContent = '📍 Locating…';
-  
-  // ─── FIND NEAREST VERIFIED BARANGAY ──────────────────────────────────────────
+
+  // ─── FIND NEAREST VERIFIED BARANGAY ────────────────────────────────────────
+  const VERIFIED_BARANGAY_CENTERS = {
+    'Bagong Ilog':      [14.5740, 121.0860],
+    'Bagong Katipunan': [14.5572, 121.0750],
+    'Bambang':          [14.5740, 121.0680],
+    'Buting':           [14.5720, 121.0770],
+    'Caniogan':         [14.5790, 121.0870],
+    'Dela Paz':         [14.5900, 121.0890],
+    'Kalawaan':         [14.5690, 121.0780],
+    'Kapasigan':        [14.5700, 121.0730],
+    'Kapitolyo':        [14.5830, 121.0630],
+    'Malinao':          [14.5810, 121.0890],
+    'Manggahan':        [14.5940, 121.0970],
+    'Maybunga':         [14.5770, 121.0920],
+    'Oranbo':           [14.5790, 121.0780],
+    'Palatiw':          [14.5820, 121.0960],
+    'Pinagbuhatan':     [14.5610, 121.0940],
+    'Pineda':           [14.5670, 121.0650],
+    'Rosario':          [14.5861, 121.0846],
+    'Sagad':            [14.5590, 121.0870],
+    'San Antonio':      [14.5890, 121.0870],
+    'San Joaquin':      [14.5521, 121.0798],
+    'San Jose':         [14.5594, 121.0734],
+    'San Miguel':       [14.5658, 121.0855],
+    'San Nicolas':      [14.5643, 121.0798],
+    'Santa Lucia':      [14.5843, 121.1013],
+    'Santa Rosa':       [14.5589, 121.0729],
+    'Santolan':         [14.5950, 121.0800],
+    'Sumilang':         [14.5750, 121.0840],
+    'Ugong':            [14.5830, 121.0620],
+  };
+
   let nearestBarangay = '';
   let minDistance = Infinity;
-  
+
   for (const [name, center] of Object.entries(VERIFIED_BARANGAY_CENTERS)) {
     const dist = Math.sqrt(
-      Math.pow((latN - center[0]) * 111000, 2) + 
+      Math.pow((latN - center[0]) * 111000, 2) +
       Math.pow((lonN - center[1]) * 111000 * Math.cos(center[0] * Math.PI / 180), 2)
     );
     if (dist < minDistance) {
@@ -1321,24 +1348,22 @@ async function handleLocationSelect(lat, lon, source = 'map') {
       nearestBarangay = name;
     }
   }
-  
+
   currentBarangayName = nearestBarangay;
-  
+
   let displayName = nearestBarangay;
   try {
     const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${currentClickLat}&lon=${currentClickLng}&format=json`);
     const data = await res.json();
     const addr = data.address || {};
     const city = addr.city || addr.municipality || '';
-    if (city) {
-      displayName = `${nearestBarangay}, ${city}`;
-    }
-  } catch (e) {
+    if (city) displayName = `${nearestBarangay}, ${city}`;
+  } catch {
     // If Nominatim fails, just use barangay name
   }
-  
+
   currentLocShortName = displayName;
-  
+
   if (badge) badge.textContent = `📍 ${displayName}`;
   if (titleEl) titleEl.textContent = `Recommended Businesses in ${nearestBarangay}`;
 
@@ -1356,7 +1381,7 @@ async function handleLocationSelect(lat, lon, source = 'map') {
   const prefs = getPrefs();
 
   console.log('🔍 Fetching ideas for:', nearestBarangay);
-  
+
   const ideasRes = await fetch(`/api/ideas-by-point?lat=${currentClickLat}&lon=${currentClickLng}&category=${type || ''}&prefs=${prefs.join(',')}`);
   const ideasData = await ideasRes.json();
   const listEl = document.getElementById('rec-list');
@@ -1369,29 +1394,11 @@ async function handleLocationSelect(lat, lon, source = 'map') {
     return;
   }
 
-  const top3 = ideasData.data.slice(0, 3);
+  const uniqueNames = [...new Set(ideasData.data)].slice(0, 3);
 
-  // ─── REMOVE DUPLICATES ──────────────────────────────────────────────────────
-  const uniqueNames = [];
-  const seenNames = new Set();
-  for (const name of top3) {
-    if (!seenNames.has(name)) {
-      seenNames.add(name);
-      uniqueNames.push(name);
-    }
-  }
-  // Fill up to 3 if we lost some to deduplication
-  if (uniqueNames.length < 3 && ideasData.data.length > 3) {
-    for (const name of ideasData.data.slice(3)) {
-      if (!seenNames.has(name) && uniqueNames.length < 3) {
-        seenNames.add(name);
-        uniqueNames.push(name);
-      }
-    }
-  }
-
+  // ─── RENDER 3 IDEAS — DISPLAY ONLY, NO CLICK LISTENERS ────────────────────
   listEl.innerHTML = uniqueNames.map((name, i) => `
-    <div class="rec-item" data-idx="${i}" data-idea="${escapeHtml(name)}" style="cursor:pointer;">
+    <div class="rec-item" data-idx="${i}" data-idea="${escapeHtml(name)}" style="cursor:default;">
       <span class="rec-item-num">${i + 1}.</span>
       <span class="rec-item-name">${escapeHtml(formatBizName(name))}</span>
       <div class="save-row" data-name="${escapeHtml(name)}" data-barangay="${escapeHtml(currentBarangayName)}">
@@ -1401,56 +1408,9 @@ async function handleLocationSelect(lat, lon, source = 'map') {
   `).join('');
 
   attachSaveRowListeners();
-
-  listEl.querySelectorAll('.rec-item').forEach(el => {
-    el.addEventListener('click', async (e) => {
-      if (e.target.closest('.save-row')) return;
-      if (!allowIdeaPins) allowIdeaPins = true;
-
-      const idea = el.dataset.idea;
-      const idx = parseInt(el.dataset.idx);
-
-      if (activeIdeaIdx === idx) {
-        activeIdeaIdx = -1;
-        activeIdeaName = null;
-        clearBusinessMarkers();
-        listEl.querySelectorAll('.rec-item').forEach(r => r.classList.remove('active'));
-        return;
-      }
-
-      activeIdeaIdx = idx;
-      activeIdeaName = idea;
-
-      listEl.querySelectorAll('.rec-item').forEach(r => r.classList.remove('active'));
-      el.classList.add('active');
-
-      await reportLogRecommendation({
-        idea, area: currentBarangayName || currentLocShortName,
-        pinCount: 5, lat: currentClickLat, lon: currentClickLng
-      });
-
-      loadAreaDemographics(currentBarangayName, idea);
-      hidePinRange();
-
-      console.log(`📍 Fetching pins for idea: ${idea} in barangay: ${currentBarangayName}`);
-      
-      const recs = await fetchIdeaLocations({
-        idea: idea.trim(),
-        barangay: currentBarangayName,
-        top: 5,
-        prefs,
-        _t: Date.now()
-      });
-      
-      console.log(`📍 Got ${recs.length} pins`);
-      
-      clearBusinessMarkers();
-      plotLocations(recs);
-    });
-  });
-
   markSavedInCurrentList();
 }
+
 
 map.on('click', async function (e) {
   hidePinRange();
@@ -1492,6 +1452,37 @@ async function doSearch(query) {
     showPasigToast('Something went wrong.');
   }
 }
+function showPasigToast(msg) {
+  const el = document.getElementById('pasig-toast');
+  if (!el) return;
+  el.textContent = msg || 'Location not found in Pasig.';
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+function isInPasig(lat, lon) {
+  return lat >= PASIG_BOUNDS.minLat && lat <= PASIG_BOUNDS.maxLat &&
+    lon >= PASIG_BOUNDS.minLon && lon <= PASIG_BOUNDS.maxLon;
+}
+
+const searchInput = document.getElementById('search-input');
+searchInput?.addEventListener('focus', () => { if (searchHistory.length) renderHistory(); });
+searchInput?.addEventListener('input', function () {
+  if (!this.value.trim() && searchHistory.length) renderHistory();
+  else document.getElementById('search-history')?.classList.remove('open');
+});
+document.addEventListener('click', function (e) {
+  const wrapper = document.getElementById('search-wrapper');
+  if (wrapper && !wrapper.contains(e.target)) document.getElementById('search-history')?.classList.remove('open');
+});
+searchInput?.addEventListener('keydown', async function (e) {
+  if (e.key !== 'Enter') return;
+  const query = searchInput.value.trim();
+  if (!query) return;
+  document.getElementById('search-history')?.classList.remove('open');
+  searchHistory = [query, ...searchHistory.filter(h => h !== query)].slice(0, 5);
+  await doSearch(query);
+});
 
 function renderHistory() {
   const container = document.getElementById('search-history');
@@ -1524,25 +1515,6 @@ function renderHistory() {
     });
   });
 }
-
-const searchInput = document.getElementById('search-input');
-searchInput?.addEventListener('focus', () => { if (searchHistory.length) renderHistory(); });
-searchInput?.addEventListener('input', function () {
-  if (!this.value.trim() && searchHistory.length) renderHistory();
-  else document.getElementById('search-history')?.classList.remove('open');
-});
-document.addEventListener('click', function (e) {
-  const wrapper = document.getElementById('search-wrapper');
-  if (wrapper && !wrapper.contains(e.target)) document.getElementById('search-history')?.classList.remove('open');
-});
-searchInput?.addEventListener('keydown', async function (e) {
-  if (e.key !== 'Enter') return;
-  const query = searchInput.value.trim();
-  if (!query) return;
-  document.getElementById('search-history')?.classList.remove('open');
-  searchHistory = [query, ...searchHistory.filter(h => h !== query)].slice(0, 5);
-  await doSearch(query);
-});
 
 function renderSavedPanel() {
   const body = document.getElementById('saved-panel-body');
@@ -2120,6 +2092,34 @@ function applyIndustryPersonalization(industry, industrySpecific) {
   renderPersonalizationBanner(industry, industrySpecific);
   buildFilterChips(industry, industrySpecific);
 }
+// Close filter panel when clicking X button
+document.getElementById('close-filter-panel')?.addEventListener('click', () => {
+  filterPanel.classList.remove('open');
+});
+
+// Reset filter button inside panel
+document.getElementById('reset-filter-btn')?.addEventListener('click', () => {
+  // Uncheck all checkboxes
+  document.querySelectorAll('.filter-panel-body input[type="checkbox"]').forEach(cb => cb.checked = false);
+  // Clear chips
+  clearChipSelections();
+  // Clear pins
+  clearBusinessMarkers();
+  clearClickedMarker();
+  // Reset state
+  isFilterMode = false;
+  isFilterApplied = false;
+  lastAppliedChips = [];
+  lastAppliedBarangays = null;
+  lastAppliedPrefs = [];
+  lastAppliedType = null;
+  hidePinRange();
+  setPinDefault();
+  // Clear recommendations
+  const listEl = document.getElementById('rec-list');
+  if (listEl) listEl.innerHTML = '';
+  locPanel?.classList.remove('open');
+});
 
 // ─── DOM CONTENT LOADED ───────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
