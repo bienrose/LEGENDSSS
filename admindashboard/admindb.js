@@ -74,7 +74,6 @@ async function loadReportHistory() {
         const recRows = (recRes.data || []).map(r => ({ ...r, _type: 'recommendation' }));
         const savedRows = (savedRes.data || []).map(r => ({ ...r, _type: 'saved' }));
 
-        // Merge and sort by date descending
         const all = [...searchRows, ...recRows, ...savedRows].sort((a, b) => {
             const dateA = new Date(a.created_at || a.saved_at || 0);
             const dateB = new Date(b.created_at || b.saved_at || 0);
@@ -244,7 +243,6 @@ function initEventListeners() {
         });
     });
 
-    // Report filter buttons
     document.getElementById('report-filter-all')?.addEventListener('click', () => setReportFilter('all'));
     document.getElementById('report-filter-search')?.addEventListener('click', () => setReportFilter('search'));
     document.getElementById('report-filter-rec')?.addEventListener('click', () => setReportFilter('recommendation'));
@@ -274,6 +272,8 @@ function openModal(mode) {
 
     currentTable = 'businesses';
     selectedRecord = null;
+    
+    // Reset tabs
     document.querySelectorAll('.modal-tab').forEach(t => {
         t.classList.toggle('active', t.dataset.tab === 'businesses');
     });
@@ -290,6 +290,8 @@ function openModal(mode) {
         form.style.display = 'none';
         initialActions.style.display = 'flex';
         document.getElementById('crud-search-input').value = '';
+        document.getElementById('crud-results').style.display = 'none';
+        
         const filterSelect = document.getElementById('crud-filter-barangay');
         if (mode === 'edit') {
             filterSelect.style.display = 'inline-block';
@@ -306,6 +308,7 @@ function closeCrudModal() {
     document.getElementById('crud-modal').classList.remove('open');
     currentMode = null;
     selectedRecord = null;
+    pendingDelete = null;
 }
 
 function switchTab(table) {
@@ -313,9 +316,16 @@ function switchTab(table) {
     document.querySelectorAll('.modal-tab').forEach(t => {
         t.classList.toggle('active', t.dataset.tab === table);
     });
+    
     if (currentMode !== 'add') {
         document.getElementById('crud-search-input').value = '';
         document.getElementById('crud-results').style.display = 'none';
+        
+        const filterSelect = document.getElementById('crud-filter-barangay');
+        if (currentMode === 'edit') {
+            filterSelect.style.display = table === 'businesses' ? 'inline-block' : 'inline-block';
+            populateBarangayFilter();
+        }
     } else {
         renderForm();
     }
@@ -335,19 +345,55 @@ function populateBarangayFilter() {
 async function performSearch() {
     const searchTerm = document.getElementById('crud-search-input').value.trim();
     const barangayFilter = document.getElementById('crud-filter-barangay')?.value || '';
-    let url = `${API_BASE}/${currentTable}`;
-    let params = new URLSearchParams();
+    
     if (currentTable === 'businesses') {
+        // Businesses - server-side search
+        let url = `${API_BASE}/businesses`;
+        let params = new URLSearchParams();
         params.append('limit', '50');
         if (searchTerm) params.append('search', searchTerm);
         if (barangayFilter) params.append('barangay', barangayFilter);
-    }
-    try {
-        const response = await fetch(`${url}?${params.toString()}`);
-        const data = await response.json();
-        displaySearchResults(data.data);
-    } catch (error) {
-        alert('Error searching. Please try again.');
+        
+        try {
+            const response = await fetch(`${url}?${params.toString()}`);
+            const data = await response.json();
+            displaySearchResults(data.data || []);
+        } catch (error) {
+            alert('Error searching businesses. Please try again.');
+        }
+    } else {
+        // Demographics - client-side filtering
+        try {
+            const response = await fetch(`${API_BASE}/demographics`);
+            const data = await response.json();
+            let results = data.data || [];
+            
+            // Filter by search term (barangay name)
+            if (searchTerm) {
+                results = results.filter(d => 
+                    d.barangay_name && 
+                    d.barangay_name.toLowerCase().includes(searchTerm.toLowerCase())
+                );
+            }
+            
+            // Filter by barangay dropdown
+            if (barangayFilter && !searchTerm) {
+                results = results.filter(d => 
+                    d.barangay_name && 
+                    d.barangay_name.toLowerCase() === barangayFilter.toLowerCase()
+                );
+            } else if (barangayFilter && searchTerm) {
+                results = results.filter(d => 
+                    d.barangay_name && 
+                    d.barangay_name.toLowerCase() === barangayFilter.toLowerCase() &&
+                    d.barangay_name.toLowerCase().includes(searchTerm.toLowerCase())
+                );
+            }
+            
+            displaySearchResults(results);
+        } catch (error) {
+            alert('Error searching demographics. Please try again.');
+        }
     }
 }
 
@@ -580,6 +626,10 @@ async function handleFormSubmit(e) {
         if (result.success) {
             alert(selectedRecord ? 'Record updated successfully!' : 'Record added successfully!');
             closeCrudModal();
+            // Refresh data if needed
+            if (currentTable === 'businesses') {
+                loadDashboardStats();
+            }
         } else {
             alert('Error: ' + (result.message || 'Operation failed'));
         }
@@ -595,5 +645,10 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+// Make functions available globally
 window.editRecord = editRecord;
 window.deleteRecord = deleteRecord;
+window.focusSavedLocation = function(id) {
+    // Placeholder for any saved location focus functionality
+    console.log('Focus saved location:', id);
+};
