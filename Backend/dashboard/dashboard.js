@@ -1604,9 +1604,9 @@ document.addEventListener('click', function (e) {
     profilePopup.classList.remove('open');
 });
 document.getElementById('logout-btn')?.addEventListener('click', () => {
-  currentUserId = null;
-  profilePopup?.classList.remove('open');
-  window.location.href = '/logout';
+    currentUserId = null;
+    profilePopup?.classList.remove('open');
+    window.location.href = '/logout'; // destroys session → goes to login
 });
 document.getElementById('profile-link-btn')?.addEventListener('click', () => {
   profilePopup?.classList.remove('open');
@@ -1615,9 +1615,18 @@ document.getElementById('profile-link-btn')?.addEventListener('click', () => {
 document.getElementById('cancel-profile')?.addEventListener('click', () => {
   profileModal?.classList.remove('open');
 });
-document.getElementById('confirm-profile')?.addEventListener('click', () => {
+document.getElementById('confirm-profile')?.addEventListener('click', async () => {
   profileModal?.classList.remove('open');
-  window.location.href = '/dashboard/Profile.html';
+  
+  // Check role from /api/check-auth
+  const res = await fetch('/api/check-auth');
+  const data = await res.json();
+  
+  if (data.isAdmin) {
+    window.location.href = '/admin/profile'; // admin profile page
+  } else {
+    window.location.href = '/dashboard/Profile.html'; // user profile page
+  }
 });
 profileModal?.addEventListener('click', (e) => {
   if (e.target === profileModal) profileModal.classList.remove('open');

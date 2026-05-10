@@ -618,7 +618,7 @@ app.post("/login", async (req, res) => {
       affiliation: user.affiliation, industry: user.industry || '',
       industry_specific: user.industry_specific || '', role: user.role || "user"
     };
-    const redirectUrl = user.role === "admin" ? "/admin" : "/dashboard";
+    const redirectUrl = user.role === "admin" ? "/dashboard" : "/dashboard";
     res.json({ success: true, redirect: redirectUrl, isAdmin: user.role === "admin" });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -675,7 +675,7 @@ app.post("/reset-password", async (req, res) => {
 app.get("/logout", (req, res) => {
   req.session.destroy((err) => {
     if (err) return res.status(500).json({ success: false });
-    res.redirect("/");
+    res.redirect("/"); // ← must be "/" not "/dashboard"
   });
 });
 
@@ -715,6 +715,41 @@ app.get("/api/me", requireAuth, async (req, res) => {
     });
   } catch (err) {
     res.json({ success: true, affiliation: '', industry: '', industry_specific: '' });
+  }
+});
+app.get("/api/admin/test-report-tables", requireAdmin, async (req, res) => {
+  try {
+    const [tables] = await legendDB.query(`
+      SELECT TABLE_NAME 
+      FROM information_schema.TABLES 
+      WHERE TABLE_SCHEMA = DATABASE() 
+      AND TABLE_NAME IN ('search_pin_history', 'recommendation_history', 'saved_history')
+    `);
+
+    const [searchCount] = await legendDB.query(`SELECT COUNT(*) as cnt FROM search_pin_history`);
+    const [recCount] = await legendDB.query(`SELECT COUNT(*) as cnt FROM recommendation_history`);
+    const [savedCount] = await legendDB.query(`SELECT COUNT(*) as cnt FROM saved_history`);
+
+    res.json({
+      tablesFound: tables.map(t => t.TABLE_NAME),
+      counts: {
+        search_pin_history: searchCount[0].cnt,
+        recommendation_history: recCount[0].cnt,
+        saved_history: savedCount[0].cnt
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+app.get("/api/admin/users", requireAdmin, async (req, res) => {
+  try {
+    const [rows] = await legendDB.query(
+      "SELECT id, fullname, username, email, affiliation FROM users WHERE role != 'admin' ORDER BY fullname"
+    );
+    res.json({ success: true, users: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
@@ -863,6 +898,11 @@ app.post("/api/user-profile", requireAuth, async (req, res) => {
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
+});
+
+app.get("/admin/profile", requireAdminPage, (req, res) => {
+  res.sendFile(path.join(adminDashboardPath, "admindb.html")); 
+  // or a separate admin profile HTML if you have one
 });
 
 app.get("/api/check-auth", (req, res) => {
