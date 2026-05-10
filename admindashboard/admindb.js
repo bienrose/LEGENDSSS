@@ -27,6 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadReportHistory();
     loadAllUsers();
     initModernDatePicker();
+    initExportModal();
 });
 
 async function checkAuth() {
@@ -73,7 +74,7 @@ function populateUserFilter() {
     if (!container) return;
     container.innerHTML = `
         <div class="user-search-wrap">
-            <input type="text" id="user-search-input" class="user-search-input" placeholder="Search users…" autocomplete="off">
+            <input type="text" id="user-search-input" class="user-search-input" placeholder="Search users..." autocomplete="off">
             <div id="user-search-dropdown" class="user-search-dropdown hidden"></div>
         </div>
         <div id="selected-user-chip" class="selected-user-chip hidden">
@@ -169,7 +170,7 @@ function initModernDatePicker() {
 }
 
 let mdpState = {
-    selecting: null, // 'from' | 'to'
+    selecting: null,
     viewYear: new Date().getFullYear(),
     viewMonth: new Date().getMonth(),
     from: null,
@@ -363,7 +364,6 @@ function injectDatePickerStyles() {
         }
         .mdp-cancel:hover { background:#dde8f5; }
 
-        /* User search */
         .user-search-wrap { position:relative; }
         .user-search-input {
             padding:8px 14px; border:1.5px solid #dde3ee; border-radius:10px;
@@ -429,15 +429,12 @@ function renderReportList(rows) {
     const listEl = document.getElementById('user-history-list');
     if (!listEl) return;
 
-    // Multi-select type filter
     let filtered = reportTypeFilters.size === 3
         ? rows
         : rows.filter(r => reportTypeFilters.has(r._type));
 
-    // User filter
     if (reportUserFilter !== 'all') filtered = filtered.filter(r => String(r.user_id) === String(reportUserFilter));
 
-    // Date filters
     if (reportDateFrom) {
         const from = new Date(reportDateFrom); from.setHours(0,0,0,0);
         filtered = filtered.filter(r => new Date(r.created_at || r.saved_at || 0) >= from);
@@ -498,36 +495,316 @@ function renderReportList(rows) {
     }).join('');
 }
 
-// ─── CSV EXPORT ───────────────────────────────────────────────────────────────
-function exportReportToCSV() {
-    if (!window._allReportRows) { alert('No data to export.'); return; }
-    let filtered = reportTypeFilters.size === 3 ? window._allReportRows : window._allReportRows.filter(r => reportTypeFilters.has(r._type));
-    if (reportUserFilter !== 'all') filtered = filtered.filter(r => String(r.user_id) === String(reportUserFilter));
-    if (reportDateFrom) { const from = new Date(reportDateFrom); from.setHours(0,0,0,0); filtered = filtered.filter(r => new Date(r.created_at || r.saved_at || 0) >= from); }
-    if (reportDateTo) { const to = new Date(reportDateTo); to.setHours(23,59,59,999); filtered = filtered.filter(r => new Date(r.created_at || r.saved_at || 0) <= to); }
-    if (!filtered.length) { alert('No records match the current filters.'); return; }
+// ─── ADVANCED CSV EXPORT ─────────────────────────────────────────────────────
+function initExportModal() {
+    const exportBtn = document.getElementById('export-csv-btn');
+    const closeBtn = document.getElementById('close-export-modal');
+    const cancelBtn = document.getElementById('cancel-export');
+    const confirmBtn = document.getElementById('confirm-export');
+    const exportAll = document.getElementById('export-all');
+    const exportSearch = document.getElementById('export-search');
+    const exportRecs = document.getElementById('export-recommendations');
+    const exportSaved = document.getElementById('export-saved');
+    const fromDate = document.getElementById('export-date-from');
+    const toDate = document.getElementById('export-date-to');
 
-    const headers = ['Type','User','Username','User ID','Detail','Date'];
-    const escape = (val) => `"${String(val).replace(/"/g,'""')}"`;
-    const rows = filtered.map(r => {
-        let type = '', detail = '';
-        if (r._type === 'search') { type='Map Search'; detail=r.query?`Searched: ${r.query}`:'Dropped a pin'; if(r.is_pinned) detail+=' (pinned)'; }
-        else if (r._type === 'recommendation') { type='Recommendation'; detail=`Clicked: ${r.recommended_item_id||'an idea'}${r.source?` in ${r.source}`:''}`; }
-        else if (r._type === 'saved') { type=r.was_removed==1?'Unsaved':'Saved'; detail=`${type} ${r.business_type||'a business'}${r.barangay?` in ${r.barangay}`:''}`; }
-        return [type, r.fullname||'', r.username||'', r.user_id||'', detail, r.created_at||r.saved_at||''].map(escape).join(',');
+    if (exportBtn) exportBtn.addEventListener('click', openExportModal);
+    if (closeBtn) closeBtn.addEventListener('click', closeExportModal);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeExportModal);
+    if (confirmBtn) confirmBtn.addEventListener('click', exportToCSVAdvanced);
+
+    if (exportAll) exportAll.addEventListener('change', selectAllHistory);
+    if (exportSearch) exportSearch.addEventListener('change', updateExportPreview);
+    if (exportRecs) exportRecs.addEventListener('change', updateExportPreview);
+    if (exportSaved) exportSaved.addEventListener('change', updateExportPreview);
+    if (fromDate) fromDate.addEventListener('change', updateExportPreview);
+    if (toDate) toDate.addEventListener('change', updateExportPreview);
+
+    const modal = document.getElementById('export-report-modal');
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeExportModal();
+        });
+    }
+}
+
+function openExportModal() {
+    const modal = document.getElementById('export-report-modal');
+    if (!modal) return;
+
+    const selectAllCheckbox = document.getElementById('export-all');
+    const searchCheckbox = document.getElementById('export-search');
+    const recsCheckbox = document.getElementById('export-recommendations');
+    const savedCheckbox = document.getElementById('export-saved');
+    const fromInput = document.getElementById('export-date-from');
+    const toInput = document.getElementById('export-date-to');
+
+    if (selectAllCheckbox) selectAllCheckbox.checked = true;
+    if (searchCheckbox) searchCheckbox.checked = true;
+    if (recsCheckbox) recsCheckbox.checked = true;
+    if (savedCheckbox) savedCheckbox.checked = true;
+    if (fromInput) fromInput.value = '';
+    if (toInput) toInput.value = '';
+
+    updateExportPreview();
+    modal.classList.add('open');
+}
+
+function closeExportModal() {
+    const modal = document.getElementById('export-report-modal');
+    if (modal) modal.classList.remove('open');
+}
+
+function selectAllHistory() {
+    const selectAll = document.getElementById('export-all');
+    const searchCheckbox = document.getElementById('export-search');
+    const recsCheckbox = document.getElementById('export-recommendations');
+    const savedCheckbox = document.getElementById('export-saved');
+
+    if (selectAll && selectAll.checked) {
+        if (searchCheckbox) searchCheckbox.checked = true;
+        if (recsCheckbox) recsCheckbox.checked = true;
+        if (savedCheckbox) savedCheckbox.checked = true;
+    } else {
+        if (searchCheckbox) searchCheckbox.checked = false;
+        if (recsCheckbox) recsCheckbox.checked = false;
+        if (savedCheckbox) savedCheckbox.checked = false;
+    }
+
+    updateExportPreview();
+}
+
+function updateExportPreview() {
+    const exportSearch = document.getElementById('export-search')?.checked || false;
+    const exportRecs = document.getElementById('export-recommendations')?.checked || false;
+    const exportSaved = document.getElementById('export-saved')?.checked || false;
+
+    const fromDate = document.getElementById('export-date-from')?.value;
+    const toDate = document.getElementById('export-date-to')?.value;
+
+    let from = fromDate ? new Date(fromDate) : null;
+    let to = toDate ? new Date(toDate) : null;
+
+    if (from) from.setHours(0, 0, 0, 0);
+    if (to) to.setHours(23, 59, 59, 999);
+
+    const allRows = window._allReportRows || [];
+    let totalCount = 0;
+    let details = [];
+
+    if (exportSearch) {
+        const filtered = filterRowsByTypeAndDate(allRows, 'search', from, to);
+        totalCount += filtered.length;
+        if (filtered.length > 0) details.push(`Search/Pin: ${filtered.length} records`);
+    }
+
+    if (exportRecs) {
+        const filtered = filterRowsByTypeAndDate(allRows, 'recommendation', from, to);
+        totalCount += filtered.length;
+        if (filtered.length > 0) details.push(`Recommendations: ${filtered.length} records`);
+    }
+
+    if (exportSaved) {
+        const filtered = filterRowsByTypeAndDate(allRows, 'saved', from, to);
+        totalCount += filtered.length;
+        if (filtered.length > 0) details.push(`Saved: ${filtered.length} records`);
+    }
+
+    const previewCount = document.getElementById('preview-count');
+    const previewDetails = document.getElementById('preview-details');
+    const noDataWarning = document.getElementById('no-data-warning');
+
+    if (previewCount) {
+        previewCount.textContent = totalCount;
+        previewCount.style.color = totalCount === 0 ? '#e74c3c' : '#1a3a5c';
+    }
+
+    if (previewDetails) {
+        if (details.length > 0) {
+            previewDetails.innerHTML = details.join('<br>');
+            previewDetails.style.display = 'block';
+            previewDetails.style.color = '#4a6a85';
+            if (noDataWarning) noDataWarning.style.display = 'none';
+        } else {
+            previewDetails.innerHTML = 'No records match the selected criteria';
+            previewDetails.style.color = '#e74c3c';
+            previewDetails.style.display = 'block';
+            if (noDataWarning) noDataWarning.style.display = 'block';
+        }
+    }
+
+    const confirmBtn = document.getElementById('confirm-export');
+    if (confirmBtn) {
+        if (totalCount === 0 || (!exportSearch && !exportRecs && !exportSaved)) {
+            confirmBtn.disabled = true;
+        } else {
+            confirmBtn.disabled = false;
+        }
+    }
+}
+
+function filterRowsByTypeAndDate(rows, type, fromDate, toDate) {
+    return rows.filter(row => {
+        if (row._type !== type) return false;
+        const rowDate = new Date(row.created_at || row.saved_at || 0);
+        if (fromDate && rowDate < fromDate) return false;
+        if (toDate && rowDate > toDate) return false;
+        return true;
     });
+}
 
-    const csv = [headers.join(','), ...rows].join('\n');
-    const blob = new Blob([csv], { type:'text/csv;charset=utf-8;' });
+function exportToCSVAdvanced() {
+    const exportSearch = document.getElementById('export-search')?.checked || false;
+    const exportRecs = document.getElementById('export-recommendations')?.checked || false;
+    const exportSaved = document.getElementById('export-saved')?.checked || false;
+
+    const fromDate = document.getElementById('export-date-from')?.value;
+    const toDate = document.getElementById('export-date-to')?.value;
+
+    let from = fromDate ? new Date(fromDate) : null;
+    let to = toDate ? new Date(toDate) : null;
+
+    if (from) from.setHours(0, 0, 0, 0);
+    if (to) to.setHours(23, 59, 59, 999);
+
+    if (!exportSearch && !exportRecs && !exportSaved) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'warning',
+                title: 'No Selection',
+                text: 'Please select at least one history type to export.',
+                confirmButtonColor: '#1a3a5c'
+            });
+        } else {
+            alert('Please select at least one history type to export.');
+        }
+        return;
+    }
+
+    const allRows = window._allReportRows || [];
+    const csvRows = [];
+
+    // CSV Headers
+    csvRows.push(['Type', 'Timestamp', 'User', 'Username', 'User ID', 'Location/Name', 'Details'].join(','));
+
+    let totalExported = 0;
+
+    // Add Search/Pin Records
+    if (exportSearch) {
+        const filtered = filterRowsByTypeAndDate(allRows, 'search', from, to);
+        filtered.forEach(item => {
+            csvRows.push([
+                'Search/Pin',
+                item.created_at || '',
+                `"${(item.fullname || '').replace(/"/g, '""')}"`,
+                `"${(item.username || '').replace(/"/g, '""')}"`,
+                item.user_id || '',
+                `"${(item.query || item.locationName || '').replace(/"/g, '""')}"`,
+                `"Source: ${item.source || 'map'}${item.is_pinned ? ' | Pinned' : ''}"`
+            ].join(','));
+            totalExported++;
+        });
+    }
+
+    // Add Recommendation Records
+    if (exportRecs) {
+        const filtered = filterRowsByTypeAndDate(allRows, 'recommendation', from, to);
+        filtered.forEach(item => {
+            csvRows.push([
+                'Recommendation',
+                item.created_at || '',
+                `"${(item.fullname || '').replace(/"/g, '""')}"`,
+                `"${(item.username || '').replace(/"/g, '""')}"`,
+                item.user_id || '',
+                `"${(item.recommended_item_id || '').replace(/"/g, '""')}"`,
+                `"Area: ${(item.source || '').replace(/"/g, '""')}"`
+            ].join(','));
+            totalExported++;
+        });
+    }
+
+    // Add Saved Records
+    if (exportSaved) {
+        const filtered = filterRowsByTypeAndDate(allRows, 'saved', from, to);
+        filtered.forEach(item => {
+            csvRows.push([
+                item.was_removed == 1 ? 'Unsaved' : 'Saved',
+                item.saved_at || item.created_at || '',
+                `"${(item.fullname || '').replace(/"/g, '""')}"`,
+                `"${(item.username || '').replace(/"/g, '""')}"`,
+                item.user_id || '',
+                `"${(item.business_type || '').replace(/"/g, '""')}"`,
+                `"Barangay: ${(item.barangay || '').replace(/"/g, '""')}"`
+            ].join(','));
+            totalExported++;
+        });
+    }
+
+    if (csvRows.length <= 1) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'warning',
+                title: 'No Data',
+                text: 'No records match the selected criteria.',
+                confirmButtonColor: '#1a3a5c'
+            });
+        } else {
+            alert('No records match the selected criteria.');
+        }
+        return;
+    }
+
+    // Create and download CSV
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    const dateStr = new Date().toISOString().slice(0,10);
-    const userLabel = reportUserFilter !== 'all' ? `_user${reportUserFilter}` : '_allusers';
-    const typeLabel = reportTypeFilters.size === 3 ? '' : `_${[...reportTypeFilters].join('-')}`;
-    a.download = `spot_report${typeLabel}${userLabel}_${dateStr}.csv`;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    const link = document.createElement('a');
+
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+    let filename = `spot_admin_report_${timestamp}`;
+
+    const types = [];
+    if (exportSearch) types.push('search');
+    if (exportRecs) types.push('recommendations');
+    if (exportSaved) types.push('saved');
+
+    if (types.length === 3) {
+        filename += '_all';
+    } else if (types.length === 1) {
+        filename += `_${types[0]}`;
+    } else {
+        filename += `_${types.join('-')}`;
+    }
+
+    if (fromDate) filename += `_from-${fromDate}`;
+    if (toDate) filename += `_to-${toDate}`;
+
+    filename += '.csv';
+
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
     URL.revokeObjectURL(url);
+
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            icon: 'success',
+            title: 'Export Successful!',
+            html: `Exported <strong>${totalExported}</strong> records to<br><strong>${filename}</strong>`,
+            timer: 2500,
+            showConfirmButton: false
+        });
+    }
+
+    closeExportModal();
+}
+
+// ─── LEGACY CSV EXPORT (kept for compatibility) ───────────────────────────────
+function exportReportToCSV() {
+    openExportModal();
 }
 
 function formatDate(raw) {
@@ -616,18 +893,15 @@ function initEventListeners() {
         overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.classList.remove('open'); });
     });
 
-    // Multi-select type filter buttons
     document.querySelectorAll('.report-type-btn').forEach(btn => {
         btn.addEventListener('click', () => toggleTypeFilter(btn.dataset.type));
     });
 
     document.getElementById('report-refresh')?.addEventListener('click', loadReportHistory);
-    document.getElementById('report-export-csv')?.addEventListener('click', exportReportToCSV);
 }
 
 function toggleTypeFilter(type) {
     if (type === 'all') {
-        // Toggle: if all 3 active → deselect all, else select all
         if (reportTypeFilters.size === 3) {
             reportTypeFilters.clear();
         } else {
@@ -738,7 +1012,7 @@ function displaySearchResults(results) {
     const thead = document.getElementById('crud-table-header');
     const tbody = document.getElementById('crud-table-body');
     if (!results?.length) {
-        tbody.innerHTML = '<td><td colspan="14" style="text-align:center;padding:20px;">No results found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:20px;">No results found</td></tr>';
         resultsSection.style.display = 'block'; return;
     }
     if (currentTable === 'businesses') {
@@ -881,6 +1155,7 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+// Make functions available globally
 window.editRecord = editRecord;
 window.deleteRecord = deleteRecord;
 window.toggleDatePanel = toggleDatePanel;

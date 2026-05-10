@@ -38,16 +38,16 @@
 
   <main class="main">
 
-    <!-- ── PROFILE VIEW ── -->
+    <!-- PROFILE VIEW -->
     <div id="view-profile" class="view-panel" style="display:none;">
       <div style="color:#aaa;padding:24px;">Loading profile...</div>
     </div>
 
-    <!-- ── REPORT MODULE VIEW ── -->
+    <!-- REPORT MODULE VIEW -->
     <div id="view-report" class="view-panel" style="flex-direction: column;">
       <div class="section-title">User Activity History</div>
 
-      <!-- Type filter pill buttons (matches .report-type-btn in CSS + JS) -->
+      <!-- Type filter pill buttons -->
       <div class="report-toolbar">
         <div class="report-type-group">
           <button class="report-type-btn active" data-type="all">
@@ -74,17 +74,17 @@
 
       <!-- Meta row: user search + modern date picker + count + export -->
       <div class="report-meta-row">
-        <!-- User filter: JS populates #user-filter-chips -->
+        <!-- User filter -->
         <div id="user-filter-chips"></div>
 
-        <!-- Modern date picker: JS populates #modern-date-picker -->
+        <!-- Modern date picker -->
         <div id="modern-date-picker" style="position:relative;"></div>
 
         <!-- Record count badge -->
         <span id="report-count" class="report-count-badge"></span>
 
-        <!-- CSV Export -->
-        <button id="report-export-csv" class="report-action-btn report-export-btn">
+        <!-- CSV Export Button -->
+        <button id="export-csv-btn" class="report-action-btn report-export-btn">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8">
             <path d="M10 3v10M6 9l4 4 4-4M4 17h12"/>
           </svg>
@@ -100,7 +100,7 @@
       </div>
     </div>
 
-    <!-- ── USERS & DATA VIEW ── -->
+    <!-- USERS & DATA VIEW -->
     <div id="view-users" class="view-panel" style="display:none;">
       <div class="section-title">User Profiling</div>
       <div class="profiling-row">
@@ -217,7 +217,100 @@
     </div>
   </div>
 
+  <!-- Export Report Modal -->
+  <div class="modal-overlay" id="export-report-modal">
+    <div class="export-modal-box">
+      <div class="export-modal-header">
+        <h3>Export Reports to CSV</h3>
+        <button class="modal-close" id="close-export-modal">&times;</button>
+      </div>
+      <div class="export-modal-body">
+        <div class="export-section">
+          <label class="export-label">Select History Types:</label>
+          <div class="checkbox-group">
+            <label class="checkbox-item checkbox-all">
+              <input type="checkbox" id="export-all" checked>
+              <span class="checkmark"></span>
+              <span class="checkbox-text">
+                <strong>Select All History</strong>
+                <small>Search, Recommendations, and Saved</small>
+              </span>
+            </label>
+            <div class="checkbox-divider"></div>
+            <label class="checkbox-item">
+              <input type="checkbox" id="export-search" checked>
+              <span class="checkmark"></span>
+              <span class="checkbox-text">
+                <strong>Search / Pin History</strong>
+                <small>Map searches and pinned locations</small>
+              </span>
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="export-recommendations" checked>
+              <span class="checkmark"></span>
+              <span class="checkbox-text">
+                <strong>Recommendation History</strong>
+                <small>AI-powered business recommendations</small>
+              </span>
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="export-saved" checked>
+              <span class="checkmark"></span>
+              <span class="checkbox-text">
+                <strong>Saved History</strong>
+                <small>Bookmarked businesses and locations</small>
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <div class="export-section">
+          <label class="export-label">Date Range (Optional):</label>
+          <div class="date-range-selectors">
+            <div class="date-input-group">
+              <label>From:</label>
+              <input type="date" id="export-date-from" class="export-date-input">
+            </div>
+            <div class="date-input-group">
+              <label>To:</label>
+              <input type="date" id="export-date-to" class="export-date-input">
+            </div>
+          </div>
+        </div>
+
+        <div class="export-section">
+          <label class="export-label">Export Preview:</label>
+          <div class="export-preview">
+            <div class="preview-header">
+              <span class="preview-icon"></span>
+              <span>Ready to export:</span>
+            </div>
+            <div class="preview-item">
+              Total Records: <strong id="preview-count">0</strong>
+            </div>
+            <div class="preview-details" id="preview-details"></div>
+            <div id="no-data-warning" style="display:none;" class="no-data-warning">
+              No data found with the selected criteria
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="export-modal-footer">
+        <button class="btn-cancel" id="cancel-export">Cancel</button>
+        <button class="btn-export" id="confirm-export">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          Export CSV
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script src="/admin/admindb.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </body>
 
 </html>

@@ -3,7 +3,7 @@
 
 <head>
   <title>SPOT - Profile</title>
-   <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/dashboard/Profile.css">
 </head>
 
@@ -28,8 +28,8 @@
         <div class="card-header">
           <h2>Profile Information</h2>
           <div class="card-actions">
-            <button class="edit-btn" id="edit-btn">✎ Edit</button>
-            <button class="save-btn" id="save-btn" style="display:none;">✓ Save</button>
+            <button class="edit-btn" id="edit-btn">Edit</button>
+            <button class="save-btn" id="save-btn" style="display:none;">Save</button>
           </div>
         </div>
 
@@ -66,7 +66,7 @@
           <div class="form-group">
             <label for="industry">Industry</label>
             <select id="industry" name="industry" disabled>
-              <option value="">— Select industry —</option>
+              <option value="">Select industry</option>
               <option value="Food and Beverages">Food and Beverages</option>
               <option value="Retail">Retail</option>
               <option value="Personal Care and Services">Personal Care and Services</option>
@@ -108,27 +108,149 @@
         <div class="card-header">
           <h2>Report Module</h2>
           <div class="card-actions">
-            <button class="clear-btn" id="clear-reports-btn">Clear</button>
+            <button class="export-all-btn" id="export-all-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Export CSV
+            </button>
+            <button class="clear-btn" id="clear-reports-btn">Clear All</button>
+          </div>
+        </div>
+
+        <!-- Date Filter Bar -->
+        <div class="date-filter-bar">
+          <div class="filter-group">
+            <label>Date Range:</label>
+            <div class="date-inputs">
+              <input type="date" id="filter-date-from" class="date-input" placeholder="From">
+              <span class="date-sep">to</span>
+              <input type="date" id="filter-date-to" class="date-input" placeholder="To">
+            </div>
+            <button class="filter-clear-btn" id="clear-date-filter">Clear</button>
+          </div>
+          <div class="filter-stats" id="filter-stats"></div>
+        </div>
+
+        <!-- Export Modal -->
+        <div class="modal-overlay" id="export-modal">
+          <div class="export-modal-box">
+            <div class="export-modal-header">
+              <h3>Export Reports to CSV</h3>
+              <button class="modal-close" id="close-export-modal">&times;</button>
+            </div>
+            <div class="export-modal-body">
+
+              <div class="export-section">
+                <label class="export-label">Select History Types:</label>
+                <div class="checkbox-group">
+                  <label class="checkbox-item checkbox-all">
+                    <input type="checkbox" id="export-all" checked>
+                    <span class="checkmark"></span>
+                    <span class="checkbox-text">
+                      <strong>Select All History</strong>
+                      <small>Search, Recommendations, and Saved</small>
+                    </span>
+                  </label>
+                  <div class="checkbox-divider"></div>
+                  <label class="checkbox-item">
+                    <input type="checkbox" id="export-search" checked>
+                    <span class="checkmark"></span>
+                    <span class="checkbox-text">
+                      <strong>Search / Pin History</strong>
+                      <small>Map searches and pinned locations</small>
+                    </span>
+                  </label>
+                  <label class="checkbox-item">
+                    <input type="checkbox" id="export-recommendations" checked>
+                    <span class="checkmark"></span>
+                    <span class="checkbox-text">
+                      <strong>Recommendation History</strong>
+                      <small>AI-powered business recommendations</small>
+                    </span>
+                  </label>
+                  <label class="checkbox-item">
+                    <input type="checkbox" id="export-saved" checked>
+                    <span class="checkmark"></span>
+                    <span class="checkbox-text">
+                      <strong>Saved History</strong>
+                      <small>Bookmarked businesses and locations</small>
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="export-section">
+                <label class="export-label">Date Range (Optional):</label>
+                <div class="date-range-selectors">
+                  <div class="date-input-group">
+                    <label>From:</label>
+                    <input type="date" id="export-date-from" class="export-date-input">
+                  </div>
+                  <div class="date-input-group">
+                    <label>To:</label>
+                    <input type="date" id="export-date-to" class="export-date-input">
+                  </div>
+                </div>
+              </div>
+
+              <div class="export-section">
+                <label class="export-label">Export Preview:</label>
+                <div class="export-preview">
+                  <div class="preview-header">
+                    <span class="preview-icon">📊</span>
+                    <span>Ready to export:</span>
+                  </div>
+                  <div class="preview-item">
+                    Total Records: <strong id="preview-count">0</strong>
+                  </div>
+                  <div class="preview-details" id="preview-details"></div>
+                  <div id="no-data-warning" style="display:none;" class="no-data-warning">
+                    No data found with the selected criteria
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="export-modal-footer">
+              <button class="btn-cancel" id="cancel-export">Cancel</button>
+              <button class="btn-export" id="confirm-export">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                Export CSV
+              </button>
+            </div>
           </div>
         </div>
 
         <div class="reports-grid">
-
           <div class="report-block">
-            <div class="report-block-title">Search / Pin History</div>
+            <div class="report-block-title">
+              Search / Pin History
+              <span class="report-count" id="search-count"></span>
+            </div>
             <div class="report-list scrollable" id="report-searchpins"></div>
           </div>
 
           <div class="report-block">
-            <div class="report-block-title">Recommendation History</div>
+            <div class="report-block-title">
+              Recommendation History
+              <span class="report-count" id="rec-count"></span>
+            </div>
             <div class="report-list scrollable" id="report-recs"></div>
           </div>
 
           <div class="report-block">
-            <div class="report-block-title">Saved History</div>
+            <div class="report-block-title">
+              Saved History
+              <span class="report-count" id="saved-count"></span>
+            </div>
             <div class="report-list scrollable" id="report-saved"></div>
           </div>
-
         </div>
       </section>
     </main>
