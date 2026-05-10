@@ -5,156 +5,216 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SPOT — Admin Dashboard</title>
-  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="/admin/admindb.css">
 </head>
 
 <body>
 
-  <aside class="sidebar">
-    <div class="sidebar-avatar">
-      <img src="/admin/whiteprofile.png" alt="Admin">
-    </div>
-    <div class="sidebar-name">Admin</div>
+  <div class="layout">
 
-    <nav class="sidebar-nav">
-      <a class="nav-item active" href="#" data-view="report">
-        <img src="/admin/dashboard.png" class="nav-icon" alt="">
-        Report<br>Module
-      </a>
-      <a class="nav-item" href="#" data-view="users">
-        <img src="/admin/dashboard.png" class="nav-icon" alt="">
-        Users &<br>Data
-      </a>
-    </nav>
-
-    <div class="sidebar-bottom">
-      <button class="nav-item" id="logout-nav-btn">
-        <img src="/admin/logout.png" class="nav-icon" alt="">
-        <span>Back to Dashboard</span>
-      </button>
-    </div>
-  </aside>
-
-  <main class="main">
-
-    <!-- PROFILE VIEW -->
-    <div id="view-profile" class="view-panel" style="display:none;">
-      <div style="color:#aaa;padding:24px;">Loading profile...</div>
-    </div>
-
-    <!-- REPORT MODULE VIEW -->
-    <div id="view-report" class="view-panel" style="flex-direction: column;">
-      <div class="section-title">User Activity History</div>
-
-      <!-- Type filter pill buttons -->
-      <div class="report-toolbar">
-        <div class="report-type-group">
-          <button class="report-type-btn active" data-type="all">
-            <span class="btn-dot btn-dot-all"></span>All
-          </button>
-          <button class="report-type-btn active" data-type="search">
-            <span class="btn-dot btn-dot-search"></span>Map Searches
-          </button>
-          <button class="report-type-btn active" data-type="recommendation">
-            <span class="btn-dot btn-dot-rec"></span>Recommendations
-          </button>
-          <button class="report-type-btn active" data-type="saved">
-            <span class="btn-dot btn-dot-saved"></span>Saved / Unsaved
-          </button>
+    <!-- ═══════════════ SIDEBAR ═══════════════ -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-mark">
+          <img src="/admin/whiteprofile.png" alt="SPOT Logo" class="brand-logo">
         </div>
+      </div>
 
-        <button class="report-action-btn" id="report-refresh">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8">
-            <path d="M4 10a6 6 0 1 0 1.1-3.4M4 6v4h4"/>
-          </svg>
-          Refresh
+      <div class="sidebar-user">
+        <div class="sidebar-avatar">
+          <img src="/admin/whiteprofile.png" alt="Admin">
+        </div>
+        <div class="sidebar-name">Admin</div>
+      </div>
+
+      <nav class="nav">
+        <button class="nav-item active" data-view="report">
+          <i class="fa-solid fa-chart-bar"></i>
+          <span>Report Module</span>
+        </button>
+        <button class="nav-item" data-view="users">
+          <i class="fa-solid fa-users"></i>
+          <span>Users & Data</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <button class="logout-btn" id="logout-nav-btn">
+          <i class="fa-solid fa-arrow-left"></i>
+          Back to Dashboard
         </button>
       </div>
+    </aside>
 
-      <!-- Meta row: user search + modern date picker + count + export -->
-      <div class="report-meta-row">
-        <!-- User filter -->
-        <div id="user-filter-chips"></div>
+    <!-- ═══════════════ MAIN ═══════════════ -->
+    <main class="main">
 
-        <!-- Modern date picker -->
-        <div id="modern-date-picker" style="position:relative;"></div>
-
-        <!-- Record count badge -->
-        <span id="report-count" class="report-count-badge"></span>
-
-        <!-- CSV Export Button -->
-        <button id="export-csv-btn" class="report-action-btn report-export-btn">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8">
-            <path d="M10 3v10M6 9l4 4 4-4M4 17h12"/>
-          </svg>
-          Export CSV
-        </button>
+      <!-- PROFILE VIEW -->
+      <div id="view-profile" class="view-panel" style="display:none;">
+        <div style="color:#aaa;padding:24px;">Loading profile...</div>
       </div>
 
-      <!-- Report list -->
-      <div class="report-list-container">
-        <ul class="user-history-list" id="user-history-list">
-          <li style="color:#aaa;padding:24px;list-style:none;text-align:center;">Loading...</li>
-        </ul>
-      </div>
-    </div>
-
-    <!-- USERS & DATA VIEW -->
-    <div id="view-users" class="view-panel" style="display:none;">
-      <div class="section-title">User Profiling</div>
-      <div class="profiling-row">
-        <div class="users-card">
-          <div class="users-count" id="total-users">--</div>
-          <div class="users-label">Users</div>
+      <!-- REPORT MODULE VIEW -->
+      <div id="view-report" class="view-panel">
+        <div class="page-header">
+          <h1 class="page-title">User Activity History</h1>
+          <p class="page-subtitle">Monitor and export user interactions</p>
         </div>
 
-        <div class="chart-card">
-          <div class="axis-row">
-            <div class="axis-labels">
-              <span>0%</span>
-              <span>50%</span>
-              <span>100%</span>
+        <section class="card reports-card">
+          <div class="card-header">
+            <div class="card-header-left">
+              <div class="card-icon">
+                <i class="fa-solid fa-chart-bar"></i>
+              </div>
+              <h2>Report Module</h2>
+            </div>
+            <div class="card-actions">
+              <button class="export-all-btn" id="export-csv-btn">
+                <i class="fa-solid fa-download"></i>
+                Export CSV
+              </button>
             </div>
           </div>
 
-          <div class="bar-chart">
-            <div class="bar-row">
-              <div class="bar-label">Entrepreneur</div>
-              <div class="bar-track">
-                <div class="bar-fill" id="bar-entrepreneur" style="width:0%">
-                  <span class="bar-pct" id="pct-entrepreneur"></span>
-                </div>
-                <span class="bar-pct-outside" id="outside-entrepreneur" style="display:none">0%</span>
-              </div>
+          <!-- Type filter pill buttons -->
+          <div class="report-toolbar">
+            <div class="report-type-group">
+              <button class="report-type-btn active" data-type="all">
+                <span class="btn-dot btn-dot-all"></span>All
+              </button>
+              <button class="report-type-btn active" data-type="search">
+                <span class="btn-dot btn-dot-search"></span>Map Searches
+              </button>
+              <button class="report-type-btn active" data-type="recommendation">
+                <span class="btn-dot btn-dot-rec"></span>Recommendations
+              </button>
+              <button class="report-type-btn active" data-type="saved">
+                <span class="btn-dot btn-dot-saved"></span>Saved / Unsaved
+              </button>
             </div>
 
-            <div class="bar-row">
-              <div class="bar-label">Aspiring Entrepreneur</div>
-              <div class="bar-track">
-                <div class="bar-fill" id="bar-aspiring" style="width:0%">
-                  <span class="bar-pct" id="pct-aspiring"></span>
+            <button class="report-action-btn" id="report-refresh">
+              <i class="fa-solid fa-rotate"></i>
+              Refresh
+            </button>
+          </div>
+
+          <!-- Meta row: user search + modern date picker + count -->
+          <div class="report-meta-row">
+            <!-- User filter -->
+            <div id="user-filter-chips"></div>
+
+            <!-- Modern date picker -->
+            <div id="modern-date-picker" style="position:relative;"></div>
+
+            <!-- Record count badge -->
+            <span id="report-count" class="report-count-badge"></span>
+          </div>
+
+          <!-- Report list -->
+          <div class="report-list-container">
+            <ul class="user-history-list" id="user-history-list">
+              <li style="color:#aaa;padding:24px;list-style:none;text-align:center;">Loading...</li>
+            </ul>
+          </div>
+        </section>
+      </div>
+
+      <!-- USERS & DATA VIEW -->
+      <div id="view-users" class="view-panel" style="display:none;">
+        <div class="page-header">
+          <h1 class="page-title">User Profiling</h1>
+          <p class="page-subtitle">Manage user data and analytics</p>
+        </div>
+
+        <section class="card">
+          <div class="card-header">
+            <div class="card-header-left">
+              <div class="card-icon">
+                <i class="fa-solid fa-users"></i>
+              </div>
+              <h2>User Statistics</h2>
+            </div>
+          </div>
+
+          <div class="profiling-row">
+            <div class="users-card">
+              <div class="users-count" id="total-users">--</div>
+              <div class="users-label">Users</div>
+            </div>
+
+            <div class="chart-card">
+              <div class="axis-row">
+                <div class="axis-labels">
+                  <span>0%</span>
+                  <span>50%</span>
+                  <span>100%</span>
                 </div>
-                <span class="bar-pct-outside" id="outside-aspiring" style="display:none">0%</span>
+              </div>
+
+              <div class="bar-chart">
+                <div class="bar-row">
+                  <div class="bar-label">Entrepreneur</div>
+                  <div class="bar-track">
+                    <div class="bar-fill" id="bar-entrepreneur" style="width:0%">
+                      <span class="bar-pct" id="pct-entrepreneur"></span>
+                    </div>
+                    <span class="bar-pct-outside" id="outside-entrepreneur" style="display:none">0%</span>
+                  </div>
+                </div>
+
+                <div class="bar-row">
+                  <div class="bar-label">Aspiring Entrepreneur</div>
+                  <div class="bar-track">
+                    <div class="bar-fill" id="bar-aspiring" style="width:0%">
+                      <span class="bar-pct" id="pct-aspiring"></span>
+                    </div>
+                    <span class="bar-pct-outside" id="outside-aspiring" style="display:none">0%</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </section>
+
+        <section class="card" style="margin-top: 20px;">
+          <div class="card-header">
+            <div class="card-header-left">
+              <div class="card-icon">
+                <i class="fa-solid fa-database"></i>
+              </div>
+              <h2>Update Dataset</h2>
+            </div>
+          </div>
+          <div class="action-btns">
+            <button class="action-btn" id="add-data-btn">
+              <i class="fa-solid fa-plus"></i>
+              Add data
+            </button>
+            <button class="action-btn" id="edit-data-btn">
+              <i class="fa-solid fa-pen-to-square"></i>
+              Edit data
+            </button>
+            <button class="action-btn" id="delete-data-btn">
+              <i class="fa-solid fa-trash-can"></i>
+              Delete data
+            </button>
+          </div>
+        </section>
       </div>
 
-      <div class="section-title" style="margin-top:20px;">Update Dataset</div>
-      <div class="action-btns">
-        <button class="action-btn" id="add-data-btn">Add data</button>
-        <button class="action-btn" id="edit-data-btn">Edit data</button>
-        <button class="action-btn" id="delete-data-btn">Delete data</button>
-      </div>
-    </div>
-
-  </main>
+    </main>
+  </div>
 
   <!-- Back to Dashboard Modal -->
   <div class="modal-overlay" id="logout-modal">
     <div class="modal-box">
+      <div class="modal-icon-circle">
+        <i class="fa-solid fa-arrow-left"></i>
+      </div>
       <h3>Back to Dashboard</h3>
       <p>Are you sure you want to go back to the dashboard?</p>
       <div class="modal-actions">
@@ -208,6 +268,9 @@
   <!-- Delete Confirm Modal -->
   <div class="modal-overlay" id="delete-confirm-modal">
     <div class="modal-box">
+      <div class="modal-icon-circle modal-icon-danger">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </div>
       <h3>Confirm Delete</h3>
       <p id="delete-confirm-message">Are you sure you want to delete this record?</p>
       <div class="modal-actions">
@@ -221,8 +284,15 @@
   <div class="modal-overlay" id="export-report-modal">
     <div class="export-modal-box">
       <div class="export-modal-header">
-        <h3>Export Reports to CSV</h3>
-        <button class="modal-close" id="close-export-modal">&times;</button>
+        <div class="modal-header-content">
+          <div class="modal-icon">
+            <i class="fa-solid fa-file-csv"></i>
+          </div>
+          <h3>Export Reports to CSV</h3>
+        </div>
+        <button class="modal-close" id="close-export-modal">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
       </div>
       <div class="export-modal-body">
         <div class="export-section">
@@ -282,7 +352,9 @@
           <label class="export-label">Export Preview:</label>
           <div class="export-preview">
             <div class="preview-header">
-              <span class="preview-icon"></span>
+              <span class="preview-icon">
+                <i class="fa-solid fa-chart-pie"></i>
+              </span>
               <span>Ready to export:</span>
             </div>
             <div class="preview-item">
@@ -290,6 +362,7 @@
             </div>
             <div class="preview-details" id="preview-details"></div>
             <div id="no-data-warning" style="display:none;" class="no-data-warning">
+              <i class="fa-solid fa-triangle-exclamation"></i>
               No data found with the selected criteria
             </div>
           </div>
@@ -298,11 +371,7 @@
       <div class="export-modal-footer">
         <button class="btn-cancel" id="cancel-export">Cancel</button>
         <button class="btn-export" id="confirm-export">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="7 10 12 15 17 10" />
-            <line x1="12" y1="15" x2="12" y2="3" />
-          </svg>
+          <i class="fa-solid fa-download"></i>
           Export CSV
         </button>
       </div>

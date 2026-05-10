@@ -1,16 +1,20 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SPOT</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/dashboard/dashboard.css">
 </head>
 
 <body>
+
+  <!-- ═══════════════ SIDEBAR ═══════════════ -->
   <div class="sidebar">
     <div class="sidebar-top">
-      <button class="icon-btn" id="saved-btn">
+      <button class="icon-btn" id="saved-btn" title="Saved">
         <img src="/dashboard/save.png" alt="Saved">
       </button>
       <span class="icon-label">Saved</span>
@@ -26,17 +30,19 @@
     </div>
   </div>
 
+  <!-- ═══════════════ SEARCH BAR ═══════════════ -->
   <div class="search-wrapper" id="search-wrapper">
     <div class="search-bar">
       <span class="search-icon">🔍</span>
       <input id="search-input" placeholder="Search location..." autocomplete="off">
-      <button class="filter-btn" id="filter-btn">
+      <button class="filter-btn" id="filter-btn" title="Filters">
         <img src="/dashboard/filter.png" alt="Filter">
       </button>
     </div>
     <div class="search-history" id="search-history"></div>
   </div>
 
+  <!-- ═══════════════ PIN RANGE ═══════════════ -->
   <div class="pin-range" id="pin-range">
     <div class="pin-range-label">
       Pins: <span id="pin-count-label">5</span>
@@ -44,9 +50,11 @@
     <input type="range" id="pin-count" min="1" max="25" value="5" />
   </div>
 
+  <!-- ═══════════════ MAP ═══════════════ -->
   <div id="map"></div>
   <div id="street-view"></div>
 
+  <!-- ═══════════════ SAVED PANEL ═══════════════ -->
   <div class="slide-panel" id="saved-panel">
     <div class="panel-header-row">
       <div class="panel-title">Saved</div>
@@ -57,6 +65,7 @@
     </div>
   </div>
 
+  <!-- ═══════════════ LOCATION PANEL ═══════════════ -->
   <div class="slide-panel" id="loc-panel">
     <div class="panel-header-row">
       <div class="panel-title" id="loc-panel-title">Recommended Businesses</div>
@@ -98,6 +107,7 @@
     </div>
   </div>
 
+  <!-- ═══════════════ FILTER PANEL ═══════════════ -->
   <div class="slide-panel" id="filter-panel">
     <div class="filter-panel-header">
       <span>Filter search by:</span>
@@ -106,8 +116,8 @@
 
     <div class="filter-panel-body">
 
-      <!-- ══ PERSONALIZATION BANNER ══ -->
-      <div id="personalization-banner" style="display:none; margin-bottom:14px;">
+      <!-- PERSONALIZATION BANNER -->
+      <div id="personalization-banner" style="display:none; margin-bottom:12px;">
         <div style="
           background:#e8f4fd;
           border-left:3px solid #378ADD;
@@ -122,11 +132,11 @@
         </div>
       </div>
 
-      <!-- ══ CROSS-INDUSTRY NOTE ══ -->
+      <!-- CROSS-INDUSTRY NOTE -->
       <div id="cross-industry-note" style="display:none;"></div>
 
-      <!-- ══ SMART CHIP SECTION ══ -->
-      <div id="smart-chip-section" style="display:none; margin-bottom:14px;">
+      <!-- SMART CHIP SECTION -->
+      <div id="smart-chip-section" style="display:none; margin-bottom:12px;">
         <div id="chip-container"></div>
       </div>
 
@@ -136,97 +146,78 @@
         <input type="checkbox" id="f-food">
         <label for="f-food">Food and Beverages</label>
       </div>
-
       <div class="filter-option">
         <input type="checkbox" id="f-retail">
         <label for="f-retail">Retail</label>
       </div>
-
       <div class="filter-option">
         <input type="checkbox" id="f-personal">
         <label for="f-personal">Personal Care and Services</label>
       </div>
-
       <div class="filter-option">
         <input type="checkbox" id="f-tech">
         <label for="f-tech">Technology Digital Service</label>
       </div>
-
       <div class="filter-option entrepreneur-only">
         <input type="checkbox" id="f-wholesale">
         <label for="f-wholesale">Wholesale &amp; Import</label>
       </div>
-
       <div class="filter-option entrepreneur-only">
         <input type="checkbox" id="f-manufacturing">
         <label for="f-manufacturing">Manufacturing</label>
       </div>
-
       <div class="filter-option entrepreneur-only">
         <input type="checkbox" id="f-it">
         <label for="f-it">IT &amp; Software</label>
       </div>
-
       <div class="filter-option entrepreneur-only">
         <input type="checkbox" id="f-bpo">
         <label for="f-bpo">BPO &amp; Call Center</label>
       </div>
-
       <div class="filter-option entrepreneur-only">
         <input type="checkbox" id="f-construction">
         <label for="f-construction">Construction</label>
       </div>
-
       <div class="filter-option entrepreneur-only">
         <input type="checkbox" id="f-finance">
         <label for="f-finance">Finance &amp; Banking</label>
       </div>
-
       <div class="filter-option entrepreneur-only">
         <input type="checkbox" id="f-education">
         <label for="f-education">Education</label>
       </div>
-
       <div class="filter-option entrepreneur-only">
         <input type="checkbox" id="f-healthcare">
         <label for="f-healthcare">Healthcare</label>
       </div>
-
       <div class="filter-option entrepreneur-only">
         <input type="checkbox" id="f-energy">
         <label for="f-energy">Energy and Fuel</label>
       </div>
-
       <div class="filter-option entrepreneur-only">
         <input type="checkbox" id="f-logistics">
         <label for="f-logistics">Logistics &amp; Transport</label>
       </div>
-
       <div class="filter-option entrepreneur-only">
         <input type="checkbox" id="f-hospitality">
         <label for="f-hospitality">Hospitality</label>
       </div>
-
       <div class="filter-option entrepreneur-only">
         <input type="checkbox" id="f-security">
         <label for="f-security">Security Services</label>
       </div>
-
       <div class="filter-option entrepreneur-only">
         <input type="checkbox" id="f-legal">
         <label for="f-legal">Legal &amp; Consulting</label>
       </div>
-
       <div class="filter-option entrepreneur-only">
         <input type="checkbox" id="f-marketing">
         <label for="f-marketing">Marketing &amp; Advertising</label>
       </div>
-
       <div class="filter-option entrepreneur-only">
         <input type="checkbox" id="f-admin">
         <label for="f-admin">Admin &amp; Management</label>
       </div>
-
       <div class="filter-option entrepreneur-only">
         <input type="checkbox" id="f-general">
         <label for="f-general">General Services</label>
@@ -284,6 +275,7 @@
     </div>
   </div>
 
+  <!-- ═══════════════ MODALS ═══════════════ -->
   <div class="modal-overlay" id="profile-modal">
     <div class="modal-box">
       <h3>Profile</h3>
@@ -306,9 +298,8 @@
     </div>
   </div>
 
+  <!-- ═══════════════ TOASTS ═══════════════ -->
   <div id="pasig-toast" class="pasig-toast">Location not found in Pasig.</div>
-
-  <!-- Filter rebuild confirmation toast -->
   <div id="filter-rebuild-toast">✓ Filter updated to match your profile</div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

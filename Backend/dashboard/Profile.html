@@ -1,135 +1,215 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
   <title>SPOT - Profile</title>
-  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <!-- Public Sans -->
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <!-- Font Awesome 6 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="/dashboard/Profile.css">
 </head>
-
 <body>
+
   <div class="layout">
+
+    <!-- ═══════════════ SIDEBAR ═══════════════ -->
     <aside class="sidebar">
+
+      <div class="sidebar-brand">
+        <div class="brand-mark">
+          <img src="Spot.png" alt="SPOT Logo" class="brand-logo">
+        </div>
+      </div>
+
       <nav class="nav">
-        <button class="nav-item active" id="nav-profile">Profile</button>
-        <button class="nav-item" id="nav-reports">Report Module</button>
+        <button class="nav-item active" id="nav-profile">
+          <i class="fa-solid fa-circle-user"></i>
+          <span>Profile</span>
+        </button>
+        <button class="nav-item" id="nav-reports">
+          <i class="fa-solid fa-chart-bar"></i>
+          <span>Report Module</span>
+        </button>
       </nav>
 
       <div class="sidebar-bottom">
-        <button class="logout-btn" id="logout-btn">Back to Dashboard</button>
+        <button class="logout-btn" id="logout-btn">
+          <i class="fa-solid fa-arrow-left"></i>
+          Back to Dashboard
+        </button>
       </div>
+
     </aside>
 
+    <!-- ═══════════════ MAIN ═══════════════ -->
     <main class="main">
-      <h1 class="page-title" id="page-title">My Profile</h1>
 
-      <!-- PROFILE -->
+      <div class="page-header">
+        <h1 class="page-title" id="page-title">My Profile</h1>
+        <p class="page-subtitle">Manage your personal information and settings</p>
+      </div>
+
+      <!-- ── PROFILE SECTION ── -->
       <section class="card profile-card" id="profile-section">
+
         <div class="card-header">
-          <h2>Profile Information</h2>
+          <div class="card-header-left">
+            <div class="card-icon">
+              <i class="fa-solid fa-circle-user"></i>
+            </div>
+            <h2>Profile Information</h2>
+          </div>
           <div class="card-actions">
-            <button class="edit-btn" id="edit-btn">Edit</button>
-            <button class="save-btn" id="save-btn" style="display:none;">Save</button>
+            <button class="edit-btn" id="edit-btn">
+              <i class="fa-solid fa-pen-to-square"></i>
+              Edit
+            </button>
+            <button class="save-btn" id="save-btn" style="display:none;">
+              <i class="fa-solid fa-floppy-disk"></i>
+              Save Changes
+            </button>
           </div>
         </div>
 
         <form id="profile-form" class="profile-form">
-          <div class="form-group">
-            <label for="fullname">Full Name</label>
-            <input type="text" id="fullname" name="fullname" readonly>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="fullname">Full Name</label>
+              <div class="input-wrapper">
+                <i class="fa-solid fa-user input-icon"></i>
+                <input type="text" id="fullname" name="fullname" readonly placeholder="Your full name">
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="email">Email Address</label>
+              <div class="input-wrapper">
+                <i class="fa-solid fa-envelope input-icon"></i>
+                <input type="email" id="email" name="email" readonly placeholder="your@email.com">
+              </div>
+            </div>
           </div>
 
-          <div class="form-group">
-            <label for="email">Email</label>
-            <input type="email" id="email" name="email" readonly>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="username">Username</label>
+              <div class="input-wrapper">
+                <i class="fa-solid fa-at input-icon"></i>
+                <input type="text" id="username" name="username" readonly placeholder="@username">
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="password">Password</label>
+              <div class="input-wrapper">
+                <i class="fa-solid fa-lock input-icon"></i>
+                <input type="password" id="password" name="password" readonly placeholder="Leave blank to keep current">
+              </div>
+            </div>
           </div>
 
-          <div class="form-group">
-            <label for="username">Username</label>
-            <input type="text" id="username" name="username" readonly>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="affiliation">Affiliation</label>
+              <div class="input-wrapper select-wrapper">
+                <i class="fa-solid fa-users input-icon"></i>
+                <select id="affiliation" name="affiliation" disabled>
+                  <option value="" disabled selected>Select your affiliation</option>
+                  <option value="Aspiring Entrepreneur">Aspiring Entrepreneur</option>
+                  <option value="Entrepreneur">Entrepreneur</option>
+                </select>
+                <i class="fa-solid fa-chevron-down select-arrow"></i>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="industry">Industry</label>
+              <div class="input-wrapper select-wrapper">
+                <i class="fa-solid fa-building input-icon"></i>
+                <select id="industry" name="industry" disabled>
+                  <option value="">Select industry</option>
+                  <option value="Food and Beverages">Food and Beverages</option>
+                  <option value="Retail">Retail</option>
+                  <option value="Personal Care and Services">Personal Care and Services</option>
+                  <option value="Technology Digital Service">Technology Digital Service</option>
+                  <option value="Wholesale & Import">Wholesale &amp; Import</option>
+                  <option value="Manufacturing">Manufacturing</option>
+                  <option value="IT & Software">IT &amp; Software</option>
+                  <option value="BPO & Call Center">BPO &amp; Call Center</option>
+                  <option value="Construction">Construction</option>
+                  <option value="Finance & Banking">Finance &amp; Banking</option>
+                  <option value="Education">Education</option>
+                  <option value="Healthcare">Healthcare</option>
+                  <option value="Energy and Fuel">Energy and Fuel</option>
+                  <option value="Logistics & Transport">Logistics &amp; Transport</option>
+                  <option value="Hospitality">Hospitality</option>
+                  <option value="Security Services">Security Services</option>
+                  <option value="Legal & Consulting">Legal &amp; Consulting</option>
+                  <option value="Marketing & Advertising">Marketing &amp; Advertising</option>
+                  <option value="Admin & Management">Admin &amp; Management</option>
+                  <option value="General Services">General Services</option>
+                </select>
+                <i class="fa-solid fa-chevron-down select-arrow"></i>
+              </div>
+            </div>
           </div>
 
-          <div class="form-group">
-            <label for="password">Password</label>
-            <input type="password" id="password" name="password" readonly placeholder="Leave blank to keep current">
-          </div>
-
-          <div class="form-group">
-            <label for="affiliation">Affiliation</label>
-            <select id="affiliation" name="affiliation" disabled>
-              <option value="" disabled selected>Select your affiliation</option>
-              <option value="Aspiring Entrepreneur">Aspiring Entrepreneur</option>
-              <option value="Entrepreneur">Entrepreneur</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="industry">Industry</label>
-            <select id="industry" name="industry" disabled>
-              <option value="">Select industry</option>
-              <option value="Food and Beverages">Food and Beverages</option>
-              <option value="Retail">Retail</option>
-              <option value="Personal Care and Services">Personal Care and Services</option>
-              <option value="Technology Digital Service">Technology Digital Service</option>
-              <option value="Wholesale & Import">Wholesale &amp; Import</option>
-              <option value="Manufacturing">Manufacturing</option>
-              <option value="IT & Software">IT &amp; Software</option>
-              <option value="BPO & Call Center">BPO &amp; Call Center</option>
-              <option value="Construction">Construction</option>
-              <option value="Finance & Banking">Finance &amp; Banking</option>
-              <option value="Education">Education</option>
-              <option value="Healthcare">Healthcare</option>
-              <option value="Energy and Fuel">Energy and Fuel</option>
-              <option value="Logistics & Transport">Logistics &amp; Transport</option>
-              <option value="Hospitality">Hospitality</option>
-              <option value="Security Services">Security Services</option>
-              <option value="Legal & Consulting">Legal &amp; Consulting</option>
-              <option value="Marketing & Advertising">Marketing &amp; Advertising</option>
-              <option value="Admin & Management">Admin &amp; Management</option>
-              <option value="General Services">General Services</option>
-            </select>
-          </div>
-
-          <div class="form-group">
+          <div class="form-group form-group-full">
             <label for="industry_specific">Specific Business / Sub-category</label>
-            <input type="text" id="industry_specific" name="industry_specific" readonly
-              placeholder="e.g. Pizza Resto, Coffee Shop, Barbershop">
+            <div class="input-wrapper">
+              <i class="fa-solid fa-magnifying-glass input-icon"></i>
+              <input type="text" id="industry_specific" name="industry_specific" readonly
+                placeholder="e.g. Pizza Resto, Coffee Shop, Barbershop">
+            </div>
             <small class="field-hint">Describe your specific business type within your industry.</small>
           </div>
 
           <div class="form-actions">
-            <button type="button" class="cancel-btn" id="cancel-btn" style="display:none;">Cancel</button>
+            <button type="button" class="cancel-btn" id="cancel-btn" style="display:none;">
+              <i class="fa-solid fa-xmark"></i>
+              Cancel
+            </button>
           </div>
+
         </form>
       </section>
 
-      <!-- REPORT MODULE -->
+      <!-- ── REPORT MODULE ── -->
       <section class="card reports-card hidden" id="reports-section">
+
         <div class="card-header">
-          <h2>Report Module</h2>
+          <div class="card-header-left">
+            <div class="card-icon">
+              <i class="fa-solid fa-chart-bar"></i>
+            </div>
+            <h2>Report Module</h2>
+          </div>
           <div class="card-actions">
             <button class="export-all-btn" id="export-all-btn">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
+              <i class="fa-solid fa-download"></i>
               Export CSV
             </button>
-            <button class="clear-btn" id="clear-reports-btn">Clear All</button>
+            <button class="clear-btn" id="clear-reports-btn">
+              <i class="fa-solid fa-trash-can"></i>
+              Clear All
+            </button>
           </div>
         </div>
 
         <!-- Date Filter Bar -->
         <div class="date-filter-bar">
           <div class="filter-group">
-            <label>Date Range:</label>
+            <label>
+              <i class="fa-regular fa-calendar"></i>
+              Date Range:
+            </label>
             <div class="date-inputs">
               <input type="date" id="filter-date-from" class="date-input" placeholder="From">
               <span class="date-sep">to</span>
               <input type="date" id="filter-date-to" class="date-input" placeholder="To">
             </div>
-            <button class="filter-clear-btn" id="clear-date-filter">Clear</button>
+            <button class="filter-clear-btn" id="clear-date-filter">
+              <i class="fa-solid fa-xmark"></i>
+              Clear
+            </button>
           </div>
           <div class="filter-stats" id="filter-stats"></div>
         </div>
@@ -137,10 +217,19 @@
         <!-- Export Modal -->
         <div class="modal-overlay" id="export-modal">
           <div class="export-modal-box">
+
             <div class="export-modal-header">
-              <h3>Export Reports to CSV</h3>
-              <button class="modal-close" id="close-export-modal">&times;</button>
+              <div class="modal-header-content">
+                <div class="modal-icon">
+                  <i class="fa-solid fa-file-csv"></i>
+                </div>
+                <h3>Export Reports to CSV</h3>
+              </div>
+              <button class="modal-close" id="close-export-modal">
+                <i class="fa-solid fa-xmark"></i>
+              </button>
             </div>
+
             <div class="export-modal-body">
 
               <div class="export-section">
@@ -200,7 +289,9 @@
                 <label class="export-label">Export Preview:</label>
                 <div class="export-preview">
                   <div class="preview-header">
-                    <span class="preview-icon">📊</span>
+                    <span class="preview-icon">
+                      <i class="fa-solid fa-chart-pie"></i>
+                    </span>
                     <span>Ready to export:</span>
                   </div>
                   <div class="preview-item">
@@ -208,29 +299,34 @@
                   </div>
                   <div class="preview-details" id="preview-details"></div>
                   <div id="no-data-warning" style="display:none;" class="no-data-warning">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
                     No data found with the selected criteria
                   </div>
                 </div>
               </div>
+
             </div>
+
             <div class="export-modal-footer">
               <button class="btn-cancel" id="cancel-export">Cancel</button>
               <button class="btn-export" id="confirm-export">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="7 10 12 15 17 10" />
-                  <line x1="12" y1="15" x2="12" y2="3" />
-                </svg>
+                <i class="fa-solid fa-download"></i>
                 Export CSV
               </button>
             </div>
+
           </div>
         </div>
 
+        <!-- Reports Grid -->
         <div class="reports-grid">
+
           <div class="report-block">
             <div class="report-block-title">
-              Search / Pin History
+              <span class="block-title-text">
+                <i class="fa-solid fa-magnifying-glass-location"></i>
+                Search / Pin History
+              </span>
               <span class="report-count" id="search-count"></span>
             </div>
             <div class="report-list scrollable" id="report-searchpins"></div>
@@ -238,7 +334,10 @@
 
           <div class="report-block">
             <div class="report-block-title">
-              Recommendation History
+              <span class="block-title-text">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                Recommendation History
+              </span>
               <span class="report-count" id="rec-count"></span>
             </div>
             <div class="report-list scrollable" id="report-recs"></div>
@@ -246,13 +345,18 @@
 
           <div class="report-block">
             <div class="report-block-title">
-              Saved History
+              <span class="block-title-text">
+                <i class="fa-solid fa-bookmark"></i>
+                Saved History
+              </span>
               <span class="report-count" id="saved-count"></span>
             </div>
             <div class="report-list scrollable" id="report-saved"></div>
           </div>
+
         </div>
       </section>
+
     </main>
   </div>
 
@@ -260,5 +364,4 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="/dashboard/ProfileReport.js"></script>
 </body>
-
 </html>
